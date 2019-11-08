@@ -456,3 +456,8 @@ class DepthGroupwiseTimeDelayLayerFake2D(_MultiTimeDelayLayer):
                   'input_dim': self.input_dim}
         base_config = super(DepthGroupwiseTimeDelayLayerFake2D, self).get_config()
         return {**base_config, **config}
+
+
+del absolute_import
+del division
+del print_function

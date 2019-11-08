@@ -6,7 +6,6 @@ from tensorflow.keras import layers as tfkl
 
 from dynastes import layers as vqkl
 
-
 def get_1d_layer(type,
                  output_dim,
                  output_mul,
@@ -29,7 +28,7 @@ def get_1d_layer(type,
     if type.lower() == 'TimeDelayLayer1D'.lower():
         if padding == 'causal':
             padding = 'same'
-        return vqkl.time_delay_layers.TimeDelayLayer1D(output_dim=output_dim,
+        return vqkl.TimeDelayLayer1D(output_dim=output_dim,
                                                        context_size=context_size,
                                                        stride=stride,
                                                        dilation=dilation,
@@ -46,7 +45,7 @@ def get_1d_layer(type,
     elif type.lower() == 'DepthGroupwiseTimeDelayLayer1D'.lower():
         if padding == 'causal':
             padding = 'same'
-        return vqkl.time_delay_layers.DepthGroupwiseTimeDelayLayer1D(output_mul=output_mul,
+        return vqkl.DepthGroupwiseTimeDelayLayer1D(output_mul=output_mul,
                                                                      context_size=context_size,
                                                                      stride=stride,
                                                                      dilation=dilation,

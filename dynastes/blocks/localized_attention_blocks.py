@@ -69,11 +69,11 @@ class LocalizedSelfAttentionBlock1D(tfkl.Layer):
         attention_padding = padding
         if attention_padding == 'causal':
             attention_padding = 'same'
-        self.attention_layer = vqkl.attention_layers.LocalizedAttentionLayer1D(stride=stride,
-                                                                               dilation=dilation,
-                                                                               num_heads=num_heads,
-                                                                               padding=attention_padding,
-                                                                               preshaped_q=True)
+        self.attention_layer = vqkl.LocalizedAttentionLayer1D(stride=stride,
+                                                              dilation=dilation,
+                                                              num_heads=num_heads,
+                                                              padding=attention_padding,
+                                                              preshaped_q=True)
 
     def call(self, inputs, **kwargs):
         x = inputs
