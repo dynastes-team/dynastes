@@ -10,7 +10,7 @@ class TimeDelayLayer1DTest(tf.test.TestCase):
     def test_simple(self):
         with custom_object_scope({'TimeDelayLayer1D': TimeDelayLayer1D}):
             layer_test(
-                TimeDelayLayer1D, kwargs={'output_dim': 4}, input_shape=(5, 32, 3))
+                TimeDelayLayer1D, kwargs={'filters': 4}, input_shape=(5, 32, 3))
 
 
 class SeparableTimeDelayLayer1DTest(tf.test.TestCase):
@@ -19,7 +19,7 @@ class SeparableTimeDelayLayer1DTest(tf.test.TestCase):
                 {'DepthGroupwiseTimeDelayLayer1D': DepthGroupwiseTimeDelayLayer1D,
                  'TimeDelayLayer1D': TimeDelayLayer1D}):
             layer_test(
-                DepthGroupwiseTimeDelayLayer1D, kwargs={'output_mul': 2}, input_shape=(5, 32, 3))
+                DepthGroupwiseTimeDelayLayer1D, kwargs={'depth_multiplier': 2}, input_shape=(5, 32, 3))
 
 
 class SeparableTimeDelayLayerFake2DTest(tf.test.TestCase):
@@ -33,7 +33,7 @@ class TimeDelayLayerFake2DTest(tf.test.TestCase):
     def test_simple(self):
         with custom_object_scope({'TimeDelayLayerFake2D': TimeDelayLayerFake2D}):
             layer_test(
-                TimeDelayLayerFake2D, kwargs={'output_dim': 4}, input_shape=(5, 16, 16, 3))
+                TimeDelayLayerFake2D, kwargs={'filters': 4}, input_shape=(5, 16, 16, 3))
 
 
 if __name__ == '__main__':

@@ -25,10 +25,10 @@ class LocalizedAttentionLayer1DTest(tf.test.TestCase):
             v_dim = dim * 2
             s = 2
 
-            layer = LocalizedAttentionLayer1D(patch_size=3,
-                                              stride=s,
+            layer = LocalizedAttentionLayer1D(kernel_size=3,
+                                              strides=s,
                                               num_heads=4,
-                                              dilation=2)
+                                              dilation_rate=2)
 
             q = to_tensor(normal(size=(bs, t_steps // s, dim))
                           .astype(np.float32))
@@ -60,10 +60,10 @@ class LocalizedAttentionLayer2DTest(tf.test.TestCase):
             v_dim = dim * 2
             s = 2
 
-            layer = LocalizedAttentionLayer2D(patch_size=(3, 3),
+            layer = LocalizedAttentionLayer2D(kernel_size=(3, 3),
                                               strides=(s, s),
                                               num_heads=2,
-                                              dilations=(1, 1))
+                                              dilation_rate=(1, 1))
 
             q = to_tensor(normal(size=(bs, in_shape[0] // s, in_shape[1] // s, dim))
                           .astype(np.float32))

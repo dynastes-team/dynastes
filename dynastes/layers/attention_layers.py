@@ -10,29 +10,29 @@ from dynastes.ops.localized_attention import localized_attention_1d, localized_a
 class LocalizedAttentionLayer1D(tfkl.Layer):
 
     def __init__(self,
-                 patch_size=3,
+                 kernel_size=3,
                  num_heads=1,
-                 stride=1,
-                 dilation=1,
+                 strides=1,
+                 dilation_rate=1,
                  padding='same',
                  preshaped_q=True, **kwargs):
         """
             Args:
-                patch_size: size of patches to perform localized attention within
+                kernel_size: size of patches to perform localized attention within
                 num_heads: number of attention heads
-                strides: the stride of the patch window, stride 2 halves output
-                dilations: the dilation of the patch window
+                strides: the strides of the patch window, strides 2 halves output
+                dilation_rate: the dilation_rate of the patch window
                 padding: one of 'same' or 'valid'
                 preshaped_q: True if q matches strided and padded kv
                     ex: kv: [B, 4, C]
-                        stride = 2
+                        strides = 2
                         q must be [B,2,C]
         """
         super(LocalizedAttentionLayer1D, self).__init__(**kwargs)
-        self.patch_size = patch_size
+        self.kernel_size = kernel_size
         self.num_heads = num_heads
-        self.stride = stride
-        self.dilation = dilation
+        self.strides = strides
+        self.dilation_rate = dilation_rate
         self.padding = padding
         self.preshaped_q = preshaped_q
 
@@ -46,16 +46,16 @@ class LocalizedAttentionLayer1D(tfkl.Layer):
                 raise SyntaxError
         return localized_attention_1d(q=q, k=k, v=v,
                                       num_heads=self.num_heads,
-                                      stride=self.stride,
-                                      dilation=self.dilation,
+                                      strides=self.strides,
+                                      dilation_rate=self.dilation_rate,
                                       padding=self.padding,
                                       preshaped_q=self.preshaped_q)
 
     def get_config(self):
-        config = {'patch_size': self.patch_size,
+        config = {'kernel_size': self.kernel_size,
                   'num_heads': self.num_heads,
-                  'stride': self.stride,
-                  'dilation': self.dilation,
+                  'strides': self.strides,
+                  'dilation_rate': self.dilation_rate,
                   'padding': self.padding,
                   'preshaped_q': self.preshaped_q}
         base_config = super(LocalizedAttentionLayer1D, self).get_config()
@@ -65,18 +65,18 @@ class LocalizedAttentionLayer1D(tfkl.Layer):
 class LocalizedAttentionLayer2D(tfkl.Layer):
 
     def __init__(self,
-                 patch_size=(3, 3),
+                 kernel_size=(3, 3),
                  num_heads=1,
                  strides=(1, 1),
-                 dilations=(1, 1),
+                 dilation_rate=(1, 1),
                  padding='same',
                  preshaped_q=True, **kwargs):
         """
             Args:
-                patch_size: size of patches to perform localized attention within
+                kernel_size: size of patches to perform localized attention within
                 num_heads: number of attention heads
-                strides: the stride of the patch window, stride 2 halves output
-                dilations: the dilation of the patch window
+                strides: the strides of the patch window, strides 2 halves output
+                dilation_rate: the dilation_rate of the patch window
                 padding: one of 'same' or 'valid'
                 preshaped_q: True if q matches strided and padded kv
                     ex: kv: [B, 4, 4, C]
@@ -84,10 +84,10 @@ class LocalizedAttentionLayer2D(tfkl.Layer):
                         q must be [B,2,2,C]
         """
         super(LocalizedAttentionLayer2D, self).__init__(**kwargs)
-        self.patch_size = patch_size
+        self.kernel_size = kernel_size
         self.num_heads = num_heads
         self.strides = strides
-        self.dilations = dilations
+        self.dilation_rate = dilation_rate
         self.padding = padding
         self.preshaped_q = preshaped_q
 
@@ -102,15 +102,15 @@ class LocalizedAttentionLayer2D(tfkl.Layer):
         return localized_attention_2d(q=q, k=k, v=v,
                                       num_heads=self.num_heads,
                                       strides=self.strides,
-                                      dilations=self.dilations,
+                                      dilation_rate=self.dilation_rate,
                                       padding=self.padding,
                                       preshaped_q=self.preshaped_q)
 
     def get_config(self):
-        config = {'patch_size': self.patch_size,
+        config = {'kernel_size': self.kernel_size,
                   'num_heads': self.num_heads,
                   'strides': self.strides,
-                  'dilations': self.dilations,
+                  'dilation_rate': self.dilation_rate,
                   'padding': self.padding,
                   'preshaped_q': self.preshaped_q}
         base_config = super(LocalizedAttentionLayer2D, self).get_config()

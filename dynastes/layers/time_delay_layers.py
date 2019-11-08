@@ -10,6 +10,7 @@ from tensorflow.python.keras import initializers
 from tensorflow.python.keras import regularizers
 from tensorflow.python.ops import nn
 
+from dynastes.ops.time_delay_ops import time_delay_nn_1d
 
 class _TimeDelayLayer(tfkl.Layer):
     def __init__(self,
@@ -88,10 +89,10 @@ class _TimeDelayLayer(tfkl.Layer):
 
 class TimeDelayLayer1D(_TimeDelayLayer):
     def __init__(self,
-                 output_dim,
-                 context_size=5,
-                 stride=1,
-                 dilation=1,
+                 filters,
+                 kernel_size=5,
+                 strides=1,
+                 dilation_rate=1,
                  padding='same',
                  activation=None,
                  use_bias=True,
@@ -115,34 +116,30 @@ class TimeDelayLayer1D(_TimeDelayLayer):
             bias_constraint=constraints.get(bias_constraint),
             **kwargs)
 
-        self.context_size = context_size
-        self.stride = stride
-        self.dilation = dilation
-        self.output_dim = output_dim
+        self.kernel_size = kernel_size
+        self.strides = strides
+        self.dilation_rate = dilation_rate
+        self.output_dim = filters
         self.padding = padding
 
     def build(self, input_shape):
         self.input_dim = int(input_shape[-1])
-        self.build_kernel([self.input_dim * self.context_size, self.output_dim])
+        self.build_kernel([self.input_dim * self.kernel_size, self.output_dim])
         self.build_bias(self.output_dim)
         super(TimeDelayLayer1D, self).build(input_shape)
 
     def call(self, x):
-        x = tf.expand_dims(x, -1)
-        x = tf.image.extract_patches(x,
-                                     sizes=[1, self.context_size, self.input_dim, 1],
-                                     strides=[1, self.stride, self.input_dim, 1],
-                                     rates=[1, self.dilation, 1, 1],
-                                     padding=self.padding.upper())
-        x = tf.squeeze(x, -2)
-        x = tf.matmul(x, self.kernel)
+        x = time_delay_nn_1d(x, self.kernel,
+                             kernel_size=self.kernel_size,
+                             strides=self.strides,
+                             dilation_rate=self.dilation_rate)
         return super(TimeDelayLayer1D, self).call(x)
 
     def get_config(self):
         config = {
-            'output_dim': self.output_dim,
-            'context_size': self.context_size,
-            'stride': self.stride,
+            'filters': self.output_dim,
+            'kernel_size': self.kernel_size,
+            'strides': self.strides,
             'padding': self.padding,
         }
         base_config = super(TimeDelayLayer1D, self).get_config()
@@ -180,9 +177,9 @@ class _MultiTimeDelayLayer(tfkl.Layer):
 
     def build_child_layer(self, filters):
         return TimeDelayLayer1D(filters,
-                                context_size=self.context_size,
-                                stride=self.stride,
-                                dilation=self.dilation,
+                                kernel_size=self.kernel_size,
+                                strides=self.strides,
+                                dilation_rate=self.dilation_rate,
                                 padding=self.padding,
                                 use_bias=False,
                                 kernel_initializer=self.kernel_initializer,
@@ -228,11 +225,11 @@ class _MultiTimeDelayLayer(tfkl.Layer):
 
 class DepthGroupwiseTimeDelayLayer1D(_MultiTimeDelayLayer):
     def __init__(self,
-                 output_mul=1,
-                 context_size=5,
-                 stride=1,
+                 depth_multiplier=1,
+                 kernel_size=5,
+                 strides=1,
                  group_size=1,
-                 dilation=1,
+                 dilation_rate=1,
                  grouped=False,
                  padding='same',
                  activation=None,
@@ -257,10 +254,10 @@ class DepthGroupwiseTimeDelayLayer1D(_MultiTimeDelayLayer):
             kernel_constraint=constraints.get(kernel_constraint),
             bias_constraint=constraints.get(bias_constraint),
             **kwargs)
-        self.context_size = context_size
-        self.stride = stride
-        self.dilation = dilation
-        self.output_mul = output_mul
+        self.kernel_size = kernel_size
+        self.strides = strides
+        self.dilation_rate = dilation_rate
+        self.depth_multiplier = depth_multiplier
         self.group_size = group_size
         self.grouped = grouped
         self.padding = padding
@@ -273,9 +270,9 @@ class DepthGroupwiseTimeDelayLayer1D(_MultiTimeDelayLayer):
         assert ((self.input_dim % self.group_size) == 0)
         if self.grouped:
             self.layer = super(DepthGroupwiseTimeDelayLayer1D, self).build_child_layer(
-                self.output_mul * self.group_size)
+                self.depth_multiplier * self.group_size)
         else:
-            self.layers = [super(DepthGroupwiseTimeDelayLayer1D, self).build_child_layer(self.output_mul) for _ in
+            self.layers = [super(DepthGroupwiseTimeDelayLayer1D, self).build_child_layer(self.depth_multiplier) for _ in
                            range(self.n_groups)]
 
     def build(self, input_shape):
@@ -283,7 +280,7 @@ class DepthGroupwiseTimeDelayLayer1D(_MultiTimeDelayLayer):
             self.input_dim = int(input_shape[-1])
             self.init_layers()
 
-        super(DepthGroupwiseTimeDelayLayer1D, self).build_bias(self.input_dim * self.output_mul)
+        super(DepthGroupwiseTimeDelayLayer1D, self).build_bias(self.input_dim * self.depth_multiplier)
         super(DepthGroupwiseTimeDelayLayer1D, self).build(input_shape)
 
     def call(self, x):
@@ -296,9 +293,9 @@ class DepthGroupwiseTimeDelayLayer1D(_MultiTimeDelayLayer):
 
     def get_config(self):
         config = {
-            'output_mul': self.output_mul,
-            'context_size': self.context_size,
-            'stride': self.stride,
+            'depth_multiplier': self.depth_multiplier,
+            'kernel_size': self.kernel_size,
+            'strides': self.strides,
             'group_size': self.group_size,
             'grouped': self.grouped,
             'padding': self.padding,
@@ -310,10 +307,10 @@ class DepthGroupwiseTimeDelayLayer1D(_MultiTimeDelayLayer):
 
 class TimeDelayLayerFake2D(_MultiTimeDelayLayer):
     def __init__(self,
-                 output_dim,
-                 context_size=5,
-                 stride=1,
-                 dilation=1,
+                 filters,
+                 kernel_size=5,
+                 strides=1,
+                 dilation_rate=1,
                  padding='same',
                  activation=None,
                  use_bias=True,
@@ -337,10 +334,10 @@ class TimeDelayLayerFake2D(_MultiTimeDelayLayer):
             kernel_constraint=kernel_constraint,
             bias_constraint=constraints.get(bias_constraint),
             **kwargs)
-        self.output_dim = output_dim
-        self.context_size = context_size
-        self.stride = stride
-        self.dilation = dilation
+        self.filters = filters
+        self.kernel_size = kernel_size
+        self.strides = strides
+        self.dilation_rate = dilation_rate
         self.padding = padding.upper()
         self.input_dim = input_dim
         self.layers = None
@@ -348,7 +345,7 @@ class TimeDelayLayerFake2D(_MultiTimeDelayLayer):
             self.init_layers()
 
     def init_layers(self):
-        self.layers = [super(TimeDelayLayerFake2D, self).build_child_layer(self.output_dim) for _ in
+        self.layers = [super(TimeDelayLayerFake2D, self).build_child_layer(self.filters) for _ in
                        range(self.input_dim)]
 
     def build(self, input_shape):
@@ -356,7 +353,7 @@ class TimeDelayLayerFake2D(_MultiTimeDelayLayer):
             self.input_dim = int(input_shape[-2])
             self.init_layers()
 
-        super(TimeDelayLayerFake2D, self).build_bias(self.output_dim)
+        super(TimeDelayLayerFake2D, self).build_bias(self.filters)
         super(TimeDelayLayerFake2D, self).build(input_shape)
 
     def call(self, x):
@@ -365,18 +362,18 @@ class TimeDelayLayerFake2D(_MultiTimeDelayLayer):
         return super(TimeDelayLayerFake2D, self).call(tf.concat(outs, axis=-2))
 
     def get_config(self):
-        config = {'output_dim': self.output_dim, 'context_size': self.context_size, 'stride': self.stride,
-                  'dilation': self.dilation, 'padding': self.padding, 'input_dim': self.input_dim}
+        config = {'filters': self.filters, 'kernel_size': self.kernel_size, 'strides': self.strides,
+                  'dilation_rate': self.dilation_rate, 'padding': self.padding, 'input_dim': self.input_dim}
         base_config = super(TimeDelayLayerFake2D, self).get_config()
         return {**base_config, **config}
 
 
 class DepthGroupwiseTimeDelayLayerFake2D(_MultiTimeDelayLayer):
     def __init__(self,
-                 output_mul=1,
-                 context_size=5,
-                 stride=1,
-                 dilation=1,
+                 depth_multiplier=1,
+                 kernel_size=5,
+                 strides=1,
+                 dilation_rate=1,
                  grouped=False,
                  group_size=1,
                  padding='same',
@@ -403,10 +400,10 @@ class DepthGroupwiseTimeDelayLayerFake2D(_MultiTimeDelayLayer):
             kernel_constraint=kernel_constraint,
             bias_constraint=constraints.get(bias_constraint),
             **kwargs)
-        self.output_mul = output_mul
-        self.context_size = context_size
-        self.stride = stride
-        self.dilation = dilation
+        self.depth_multiplier = depth_multiplier
+        self.kernel_size = kernel_size
+        self.strides = strides
+        self.dilation_rate = dilation_rate
         self.padding = padding
         self.layers = None
         self.input_dim = input_dim
@@ -415,13 +412,13 @@ class DepthGroupwiseTimeDelayLayerFake2D(_MultiTimeDelayLayer):
         if self.input_dim is not None:
             self.init_layers()
 
-    def build_child_layer(self, output_mul):
-        return DepthGroupwiseTimeDelayLayer1D(output_mul,
+    def build_child_layer(self, depth_multiplier):
+        return DepthGroupwiseTimeDelayLayer1D(depth_multiplier,
                                               grouped=self.grouped,
                                               group_size=self.group_size,
-                                              context_size=self.context_size,
-                                              stride=self.stride,
-                                              dilation=self.dilation,
+                                              kernel_size=self.kernel_size,
+                                              strides=self.strides,
+                                              dilation_rate=self.dilation_rate,
                                               padding=self.padding,
                                               use_bias=False,
                                               kernel_initializer=self.kernel_initializer,
@@ -429,7 +426,7 @@ class DepthGroupwiseTimeDelayLayerFake2D(_MultiTimeDelayLayer):
                                               kernel_constraint=self.kernel_constraint)
 
     def init_layers(self):
-        self.layers = [self.build_child_layer(self.output_mul) for _ in
+        self.layers = [self.build_child_layer(self.depth_multiplier) for _ in
                        range(self.input_dim)]
 
     def build(self, input_shape):
@@ -446,12 +443,12 @@ class DepthGroupwiseTimeDelayLayerFake2D(_MultiTimeDelayLayer):
         return super(DepthGroupwiseTimeDelayLayerFake2D, self).call(tf.concat(outs, axis=-2))
 
     def get_config(self):
-        config = {'output_mul': self.output_mul,
-                  'context_size': self.context_size,
+        config = {'depth_multiplier': self.depth_multiplier,
+                  'kernel_size': self.kernel_size,
                   'grouped': self.grouped,
                   'group_size': self.group_size,
-                  'stride': self.stride,
-                  'dilation': self.dilation,
+                  'strides': self.strides,
+                  'dilation_rate': self.dilation_rate,
                   'padding': self.padding,
                   'input_dim': self.input_dim}
         base_config = super(DepthGroupwiseTimeDelayLayerFake2D, self).get_config()

@@ -37,7 +37,7 @@ class LocalizedSelfAttentionBlock1D(tfkl.Layer):
                  bias_constraint=None,
                  **kwargs):
         super(LocalizedSelfAttentionBlock1D, self).__init__(**kwargs)
-        conv_partial = partial(layer_factory.get_1d_layer(context_size=context_size,
+        conv_partial = partial(layer_factory.get_1d_layer(kernel_size=context_size,
                                                           grouped=grouped,
                                                           group_size=group_size,
                                                           padding=padding,
@@ -69,8 +69,8 @@ class LocalizedSelfAttentionBlock1D(tfkl.Layer):
         attention_padding = padding
         if attention_padding == 'causal':
             attention_padding = 'same'
-        self.attention_layer = vqkl.LocalizedAttentionLayer1D(stride=stride,
-                                                              dilation=dilation,
+        self.attention_layer = vqkl.LocalizedAttentionLayer1D(strides=stride,
+                                                              dilation_rate=dilation,
                                                               num_heads=num_heads,
                                                               padding=attention_padding,
                                                               preshaped_q=True)
