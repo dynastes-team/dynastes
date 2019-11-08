@@ -3,88 +3,43 @@ from __future__ import division
 from __future__ import print_function
 
 import tensorflow as tf
-import tensorflow.keras.layers as tfkl
 from tensorflow.python.keras import activations
 from tensorflow.python.keras import constraints
 from tensorflow.python.keras import initializers
 from tensorflow.python.keras import regularizers
-from tensorflow.python.ops import nn
 
 from dynastes.ops.time_delay_ops import time_delay_nn_1d
+from dynastes.layers import ActivatedKernelBiasBaseLayer
 
-class _TimeDelayLayer(tfkl.Layer):
+
+class _TimeDelayLayer(ActivatedKernelBiasBaseLayer):
     def __init__(self,
                  activation=None,
                  use_bias=True,
-                 kernel_initializer='glorot_uniform',
+                 kernel_initializer='he_uniform',
                  bias_initializer='zeros',
                  kernel_regularizer=None,
                  bias_regularizer=None,
                  activity_regularizer=None,
                  kernel_constraint=None,
                  bias_constraint=None,
-                 trainable=True,
-                 name=None,
                  **kwargs):
         super(_TimeDelayLayer, self).__init__(
-            trainable=trainable,
-            name=name,
+            activation=activations.get(activation),
+            use_bias=use_bias,
+            kernel_initializer=initializers.get(kernel_initializer),
+            bias_initializer=initializers.get(bias_initializer),
+            kernel_regularizer=regularizers.get(kernel_regularizer),
+            bias_regularizer=regularizers.get(bias_regularizer),
             activity_regularizer=regularizers.get(activity_regularizer),
+            kernel_constraint=constraints.get(kernel_constraint),
+            bias_constraint=constraints.get(bias_constraint),
             **kwargs)
-        self.activation = activations.get(activation)
-        self.use_bias = use_bias
-        self.kernel_initializer = initializers.get(kernel_initializer)
-        self.bias_initializer = initializers.get(bias_initializer)
-        self.kernel_regularizer = regularizers.get(kernel_regularizer)
-        self.bias_regularizer = regularizers.get(bias_regularizer)
-        self.kernel_constraint = constraints.get(kernel_constraint)
-        self.bias_constraint = constraints.get(bias_constraint)
-
-    def build_kernel(self, shape):
-        self.kernel = self.add_weight(
-            name='kernel',
-            shape=shape,
-            initializer=self.kernel_initializer,
-            regularizer=self.kernel_regularizer,
-            constraint=self.kernel_constraint,
-            trainable=True,
-            dtype=self.dtype)
-
-    def build_bias(self, output_dim):
-        if self.use_bias:
-            self.bias = self.add_weight(
-                name='bias',
-                shape=(output_dim,),
-                initializer=self.bias_initializer,
-                regularizer=self.bias_regularizer,
-                constraint=self.bias_constraint,
-                trainable=True,
-                dtype=self.dtype)
-        else:
-            self.bias = None
-
-    def call(self, x):
-        if self.use_bias:
-            x = nn.bias_add(x, self.bias, data_format='NHWC')
-        if self.activation is not None:
-            return self.activation(x)
-        return x
 
     def get_config(self):
-        config = {
-            'activation': activations.serialize(self.activation),
-            'use_bias': self.use_bias,
-            'kernel_initializer': initializers.serialize(self.kernel_initializer),
-            'bias_initializer': initializers.serialize(self.bias_initializer),
-            'kernel_regularizer': regularizers.serialize(self.kernel_regularizer),
-            'bias_regularizer': regularizers.serialize(self.bias_regularizer),
-            'activity_regularizer':
-                regularizers.serialize(self.activity_regularizer),
-            'kernel_constraint': constraints.serialize(self.kernel_constraint),
-            'bias_constraint': constraints.serialize(self.bias_constraint)
-        }
+        config = {}
         base_config = super(_TimeDelayLayer, self).get_config()
-        return dict(list(base_config.items()) + list(config.items()))
+        return {**base_config, **config}
 
 
 class TimeDelayLayer1D(_TimeDelayLayer):
@@ -96,7 +51,7 @@ class TimeDelayLayer1D(_TimeDelayLayer):
                  padding='same',
                  activation=None,
                  use_bias=True,
-                 kernel_initializer='glorot_uniform',
+                 kernel_initializer='he_uniform',
                  bias_initializer='zeros',
                  kernel_regularizer=None,
                  bias_regularizer=None,
@@ -119,39 +74,39 @@ class TimeDelayLayer1D(_TimeDelayLayer):
         self.kernel_size = kernel_size
         self.strides = strides
         self.dilation_rate = dilation_rate
-        self.output_dim = filters
+        self.filters = filters
         self.padding = padding
 
     def build(self, input_shape):
         self.input_dim = int(input_shape[-1])
-        self.build_kernel([self.input_dim * self.kernel_size, self.output_dim])
-        self.build_bias(self.output_dim)
+        self.build_kernel([self.input_dim * self.kernel_size, self.filters])
+        self.build_bias(self.filters)
         super(TimeDelayLayer1D, self).build(input_shape)
 
-    def call(self, x):
-        x = time_delay_nn_1d(x, self.kernel,
+    def call(self, x, **kwargs):
+        x = time_delay_nn_1d(x, self.get_weight('kernel'),
                              kernel_size=self.kernel_size,
                              strides=self.strides,
                              dilation_rate=self.dilation_rate)
-        return super(TimeDelayLayer1D, self).call(x)
+        return super(TimeDelayLayer1D, self).call(x, **kwargs)
 
     def get_config(self):
         config = {
-            'filters': self.output_dim,
+            'filters': self.filters,
             'kernel_size': self.kernel_size,
             'strides': self.strides,
             'padding': self.padding,
         }
         base_config = super(TimeDelayLayer1D, self).get_config()
-        return dict(list(base_config.items()) + list(config.items()))
+        return {**base_config, **config}
 
 
-class _MultiTimeDelayLayer(tfkl.Layer):
+class _MultiTimeDelayLayer(ActivatedKernelBiasBaseLayer):
 
     def __init__(self,
                  activation=None,
                  use_bias=True,
-                 kernel_initializer='glorot_uniform',
+                 kernel_initializer='he_uniform',
                  bias_initializer='zeros',
                  kernel_regularizer=None,
                  bias_regularizer=None,
@@ -162,18 +117,16 @@ class _MultiTimeDelayLayer(tfkl.Layer):
                  name=None,
                  **kwargs):
         super(_MultiTimeDelayLayer, self).__init__(
-            trainable=trainable,
-            name=name,
+            activation=activations.get(activation),
+            use_bias=use_bias,
+            kernel_initializer=initializers.get(kernel_initializer),
+            bias_initializer=initializers.get(bias_initializer),
+            kernel_regularizer=regularizers.get(kernel_regularizer),
+            bias_regularizer=regularizers.get(bias_regularizer),
             activity_regularizer=regularizers.get(activity_regularizer),
+            kernel_constraint=constraints.get(kernel_constraint),
+            bias_constraint=constraints.get(bias_constraint),
             **kwargs)
-        self.activation = activations.get(activation)
-        self.use_bias = use_bias
-        self.bias_initializer = initializers.get(bias_initializer)
-        self.bias_regularizer = regularizers.get(bias_regularizer)
-        self.bias_constraint = constraints.get(bias_constraint)
-        self.kernel_initializer = kernel_initializer
-        self.kernel_regularizer = kernel_regularizer
-        self.kernel_constraint = kernel_constraint
 
     def build_child_layer(self, filters):
         return TimeDelayLayer1D(filters,
@@ -186,41 +139,10 @@ class _MultiTimeDelayLayer(tfkl.Layer):
                                 kernel_regularizer=self.kernel_regularizer,
                                 kernel_constraint=self.kernel_constraint)
 
-    def build_bias(self, output_dim):
-        if self.use_bias:
-            self.bias = self.add_weight(
-                name='bias',
-                shape=(output_dim,),
-                initializer=self.bias_initializer,
-                regularizer=self.bias_regularizer,
-                constraint=self.bias_constraint,
-                trainable=True,
-                dtype=self.dtype)
-        else:
-            self.bias = None
-
-    def call(self, x):
-        if self.use_bias:
-            x = nn.bias_add(x, self.bias, data_format='NHWC')
-        if self.activation is not None:
-            return self.activation(x)
-        return x
-
     def get_config(self):
-        config = {
-            'activation': activations.serialize(self.activation),
-            'use_bias': self.use_bias,
-            'kernel_initializer': self.kernel_initializer,
-            'bias_initializer': initializers.serialize(self.bias_initializer),
-            'kernel_regularizer': self.kernel_regularizer,
-            'bias_regularizer': regularizers.serialize(self.bias_regularizer),
-            'activity_regularizer':
-                regularizers.serialize(self.activity_regularizer),
-            'kernel_constraint': self.kernel_constraint,
-            'bias_constraint': constraints.serialize(self.bias_constraint)
-        }
+        config = {}
         base_config = super(_MultiTimeDelayLayer, self).get_config()
-        return dict(list(base_config.items()) + list(config.items()))
+        return {**base_config, **config}
 
 
 class DepthGroupwiseTimeDelayLayer1D(_MultiTimeDelayLayer):
@@ -234,7 +156,7 @@ class DepthGroupwiseTimeDelayLayer1D(_MultiTimeDelayLayer):
                  padding='same',
                  activation=None,
                  use_bias=True,
-                 kernel_initializer='glorot_uniform',
+                 kernel_initializer='he_uniform',
                  bias_initializer='zeros',
                  kernel_regularizer=None,
                  bias_regularizer=None,
@@ -283,13 +205,13 @@ class DepthGroupwiseTimeDelayLayer1D(_MultiTimeDelayLayer):
         super(DepthGroupwiseTimeDelayLayer1D, self).build_bias(self.input_dim * self.depth_multiplier)
         super(DepthGroupwiseTimeDelayLayer1D, self).build(input_shape)
 
-    def call(self, x):
+    def call(self, x, **kwargs):
         splits = tf.split(x, self.n_groups, -1)
         if self.grouped:
             outs = [self.layer(xs) for xs in splits]
         else:
             outs = [self.layers[i](xs) for i, xs in enumerate(splits)]
-        return super(DepthGroupwiseTimeDelayLayer1D, self).call(tf.concat(outs, axis=-1))
+        return super(DepthGroupwiseTimeDelayLayer1D, self).call(tf.concat(outs, axis=-1), **kwargs)
 
     def get_config(self):
         config = {
@@ -302,7 +224,7 @@ class DepthGroupwiseTimeDelayLayer1D(_MultiTimeDelayLayer):
             'input_dim': self.input_dim,
         }
         base_config = super(DepthGroupwiseTimeDelayLayer1D, self).get_config()
-        return dict(list(base_config.items()) + list(config.items()))
+        return {**base_config, **config}
 
 
 class TimeDelayLayerFake2D(_MultiTimeDelayLayer):
@@ -314,7 +236,7 @@ class TimeDelayLayerFake2D(_MultiTimeDelayLayer):
                  padding='same',
                  activation=None,
                  use_bias=True,
-                 kernel_initializer='glorot_uniform',
+                 kernel_initializer='he_uniform',
                  bias_initializer='zeros',
                  kernel_regularizer=None,
                  bias_regularizer=None,
@@ -326,19 +248,19 @@ class TimeDelayLayerFake2D(_MultiTimeDelayLayer):
         super(TimeDelayLayerFake2D, self).__init__(
             activation=activations.get(activation),
             use_bias=use_bias,
-            kernel_initializer=kernel_initializer,
+            kernel_initializer=initializers.get(kernel_initializer),
             bias_initializer=initializers.get(bias_initializer),
-            kernel_regularizer=kernel_regularizer,
+            kernel_regularizer=regularizers.get(kernel_regularizer),
             bias_regularizer=regularizers.get(bias_regularizer),
             activity_regularizer=regularizers.get(activity_regularizer),
-            kernel_constraint=kernel_constraint,
+            kernel_constraint=constraints.get(kernel_constraint),
             bias_constraint=constraints.get(bias_constraint),
             **kwargs)
         self.filters = filters
         self.kernel_size = kernel_size
         self.strides = strides
         self.dilation_rate = dilation_rate
-        self.padding = padding.upper()
+        self.padding = padding
         self.input_dim = input_dim
         self.layers = None
         if self.input_dim is not None:
@@ -356,10 +278,10 @@ class TimeDelayLayerFake2D(_MultiTimeDelayLayer):
         super(TimeDelayLayerFake2D, self).build_bias(self.filters)
         super(TimeDelayLayerFake2D, self).build(input_shape)
 
-    def call(self, x):
+    def call(self, x, **kwargs):
         splits = tf.split(x, self.input_dim, -2)
         outs = [tf.expand_dims(self.layers[i](tf.squeeze(xs, -2)), axis=-2) for i, xs in enumerate(splits)]
-        return super(TimeDelayLayerFake2D, self).call(tf.concat(outs, axis=-2))
+        return super(TimeDelayLayerFake2D, self).call(tf.concat(outs, axis=-2), **kwargs)
 
     def get_config(self):
         config = {'filters': self.filters, 'kernel_size': self.kernel_size, 'strides': self.strides,
@@ -379,7 +301,7 @@ class DepthGroupwiseTimeDelayLayerFake2D(_MultiTimeDelayLayer):
                  padding='same',
                  activation=None,
                  use_bias=True,
-                 kernel_initializer='glorot_uniform',
+                 kernel_initializer='he_uniform',
                  bias_initializer='zeros',
                  kernel_regularizer=None,
                  bias_regularizer=None,
@@ -392,12 +314,12 @@ class DepthGroupwiseTimeDelayLayerFake2D(_MultiTimeDelayLayer):
         super(DepthGroupwiseTimeDelayLayerFake2D, self).__init__(
             activation=activations.get(activation),
             use_bias=use_bias,
-            kernel_initializer=kernel_initializer,
+            kernel_initializer=initializers.get(kernel_initializer),
             bias_initializer=initializers.get(bias_initializer),
-            kernel_regularizer=kernel_regularizer,
+            kernel_regularizer=regularizers.get(kernel_regularizer),
             bias_regularizer=regularizers.get(bias_regularizer),
             activity_regularizer=regularizers.get(activity_regularizer),
-            kernel_constraint=kernel_constraint,
+            kernel_constraint=constraints.get(kernel_constraint),
             bias_constraint=constraints.get(bias_constraint),
             **kwargs)
         self.depth_multiplier = depth_multiplier
@@ -437,10 +359,10 @@ class DepthGroupwiseTimeDelayLayerFake2D(_MultiTimeDelayLayer):
         super(DepthGroupwiseTimeDelayLayerFake2D, self).build_bias(self.input_channels)
         super(DepthGroupwiseTimeDelayLayerFake2D, self).build(input_shape)
 
-    def call(self, x):
+    def call(self, x, **kwargs):
         splits = tf.split(x, self.input_dim, -2)
         outs = [tf.expand_dims(self.layers[i](tf.squeeze(xs, -2)), axis=-2) for i, xs in enumerate(splits)]
-        return super(DepthGroupwiseTimeDelayLayerFake2D, self).call(tf.concat(outs, axis=-2))
+        return super(DepthGroupwiseTimeDelayLayerFake2D, self).call(tf.concat(outs, axis=-2), **kwargs)
 
     def get_config(self):
         config = {'depth_multiplier': self.depth_multiplier,
