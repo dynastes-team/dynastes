@@ -1,27 +1,40 @@
-import platform
+import os
+import codecs
+import re
+from setuptools import setup, find_packages
 
-import setuptools
+current_path = os.path.abspath(os.path.dirname(__file__))
 
-with open("README.md", "r") as fh:
-    long_description = fh.read()
 
-# Dependencies
-REQUIRED_PACKAGES = [
-    'six >= 1.10.0',
-    'tensorflow >= 2.0.0'
-]
+def read_file(*parts):
+    with codecs.open(os.path.join(current_path, *parts), 'r', 'utf8') as reader:
+        return reader.read()
 
-setuptools.setup(
+
+def get_requirements(*parts):
+    with codecs.open(os.path.join(current_path, *parts), 'r', 'utf8') as reader:
+        return list(map(lambda x: x.strip(), reader.readlines()))
+
+
+def find_version(*file_paths):
+    version_file = read_file(*file_paths)
+    version_match = re.search(r"^__version__ = ['\"]([^'\"]*)['\"]", version_file, re.M)
+    if version_match:
+        return version_match.group(1)
+    raise RuntimeError('Unable to find version string.')
+
+
+setup(
     name="dynastes",
-    version="0.0.1",
+    version=find_version('dynastes', '__init__.py'),
     author="Göran Sandström (Veqtor)",
     author_email="v3qt0r@gmail.com",
     description="A collection of layers and utils for TensorFlow (Keras) 2.+",
-    long_description=long_description,
+    long_description=read_file('README.md'),
     long_description_content_type="text/markdown",
     url="https://github.com/veqtor/dynastes",
-    install_requires=REQUIRED_PACKAGES,
-    packages=setuptools.find_packages(),
+    install_requires=get_requirements('requirements.txt'),
+    packages=find_packages(),
     classifiers=[
         "Programming Language :: Python :: 3",
         "License :: Attribution-NonCommercial 4.0 International (CC BY-NC 4.0)",

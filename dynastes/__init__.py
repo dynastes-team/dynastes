@@ -6,6 +6,7 @@ from dynastes import layers
 from dynastes import util
 from dynastes import blocks
 
+__version__ = "0.0.1"
 # Cleanup symbols to avoid polluting namespace.
 del absolute_import
 del division
