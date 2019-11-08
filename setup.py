@@ -4,7 +4,7 @@ import re
 from setuptools import setup, find_packages
 
 tensorflow_dependency = 'tensorflow'
-tensorflow_version = '1.14.0'
+tensorflow_version = '2.0.0'
 current_path = os.path.abspath(os.path.dirname(__file__))
 
 
@@ -33,7 +33,7 @@ setup(
     install_requires=[
         "numpy",
         "six >= 1.10.0",
-        '{}=={}'.format(tensorflow_dependency, tensorflow_version),
+        '{}>={}'.format(tensorflow_dependency, tensorflow_version),
     ],
     packages=find_packages(),
     classifiers=[
