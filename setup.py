@@ -36,8 +36,9 @@ setup(
     install_requires=get_requirements('requirements.txt'),
     packages=find_packages(),
     classifiers=[
+        "Development Status :: 3 - Alpha",
         "Programming Language :: Python :: 3",
-        "License :: Attribution-NonCommercial 4.0 International (CC BY-NC 4.0)",
+        "License :: OSI Approved :: MIT License",
         "Operating System :: OS Independent",
     ],
     python_requires='>=3.6',
