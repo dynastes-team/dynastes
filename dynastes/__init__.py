@@ -7,7 +7,7 @@ from dynastes import ops
 from dynastes import util
 from dynastes import blocks
 
-__version__ = "0.0.2"
+__version__ = "0.0.3"
 # Cleanup symbols to avoid polluting namespace.
 del absolute_import
 del division
