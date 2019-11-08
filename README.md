@@ -3,29 +3,31 @@
 ![](https://img.shields.io/badge/keras-tensorflow-blue.svg)
 ![](https://img.shields.io/badge/keras-tf.keras-blue.svg)
 
-## Description
+### Description
 
 Collection of various of my custom TensorFlow-Keras 2.0+ layers, utils and such
 
-## Layers
+### Install
+
+```bash
+pip install dynastes
+```
+
+### Layers
 Localized Attention
 * Perform attention within "kernels", a bit like convolution
 
 Time-Delay Neural Network Layers
 
-## The name "Dynastes"
+### The name "Dynastes"
 Dynastes is a genus of large beetles belonging to the subfamily Dynastinae, rhinoceros [ῥῑνόκερως (rhīnókerōs)] beetles and it is also the name of the son of Heracles and Erato (Thespius 49th daughter). This is a play on the word Keras [κέρας (kéras, “horn”)].
 
-## Notes about sources:
+#### Notes about sources:
 
 This repository borrows code heavily from:
 
-Tensor2Tensor
+[Tensor2Tensor](https://github.com/tensorflow/tensor2tensor/)
 
-https://github.com/tensorflow/tensor2tensor/
+[TensorFlow 2.0 Tutorials](https://www.tensorflow.org/tutorials/)
 
-TensorFlow 2.0 Tutorials
-
-https://www.tensorflow.org/tutorials/
-
-Code is copied for stability onto this repository and attribution available when possible
+_Code is copied for stability onto this repository and attribution available when possible_
