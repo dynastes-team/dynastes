@@ -1,4 +1,6 @@
 # Dynastes
+[![Version](https://img.shields.io/pypi/v/dynastes.svg)](https://pypi.org/project/keras-bert/)
+![License](https://img.shields.io/pypi/l/keras-bert.svg)
 
 ![](https://img.shields.io/badge/keras-tensorflow-blue.svg)
 ![](https://img.shields.io/badge/keras-tf.keras-blue.svg)

@@ -1,10 +1,6 @@
-from __future__ import absolute_import
-from __future__ import division
-from __future__ import print_function
-
 import tensorflow as tf
 
-from dynastes.util.attention import split_heads, scaled_dot_product_attention, merge_heads
+from dynastes.ops.attention import split_heads, scaled_dot_product_attention, merge_heads
 
 
 def extract_and_split_2d(x, num_heads, patch_size=(3, 3), strides=(1, 1), dilations=(1, 1), padding='SAME'):

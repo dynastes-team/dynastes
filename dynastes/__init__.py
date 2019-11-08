@@ -3,6 +3,7 @@ from __future__ import division
 from __future__ import print_function
 
 from dynastes import layers
+from dynastes import ops
 from dynastes import util
 from dynastes import blocks
 

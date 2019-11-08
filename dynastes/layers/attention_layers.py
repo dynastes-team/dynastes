@@ -4,7 +4,7 @@ from __future__ import print_function
 
 import tensorflow.keras.layers as tfkl
 
-from dynastes.util import localized_attention
+from dynastes.ops.localized_attention import localized_attention_1d, localized_attention_2d
 
 
 class LocalizedAttentionLayer1D(tfkl.Layer):
@@ -44,12 +44,12 @@ class LocalizedAttentionLayer1D(tfkl.Layer):
                 q, k, v, mask = q
             else:
                 raise SyntaxError
-        return localized_attention.localized_attention_1d(q=q, k=k, v=v,
-                                                          num_heads=self.num_heads,
-                                                          stride=self.stride,
-                                                          dilation=self.dilation,
-                                                          padding=self.padding,
-                                                          preshaped_q=self.preshaped_q)
+        return localized_attention_1d(q=q, k=k, v=v,
+                                      num_heads=self.num_heads,
+                                      stride=self.stride,
+                                      dilation=self.dilation,
+                                      padding=self.padding,
+                                      preshaped_q=self.preshaped_q)
 
     def get_config(self):
         config = {'patch_size': self.patch_size,
@@ -99,12 +99,12 @@ class LocalizedAttentionLayer2D(tfkl.Layer):
                 q, k, v, mask = q
             else:
                 raise SyntaxError
-        return localized_attention.localized_attention_2d(q=q, k=k, v=v,
-                                                          num_heads=self.num_heads,
-                                                          strides=self.strides,
-                                                          dilations=self.dilations,
-                                                          padding=self.padding,
-                                                          preshaped_q=self.preshaped_q)
+        return localized_attention_2d(q=q, k=k, v=v,
+                                      num_heads=self.num_heads,
+                                      strides=self.strides,
+                                      dilations=self.dilations,
+                                      padding=self.padding,
+                                      preshaped_q=self.preshaped_q)
 
     def get_config(self):
         config = {'patch_size': self.patch_size,
