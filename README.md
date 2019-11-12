@@ -18,7 +18,7 @@ pip install dynastes
 
 ### Layers
 - Localized Attention (1D and 2D)
- - Perform attention within "kernels", a bit like convolution
+  - Perform attention within "kernels", a bit like convolution
 - Time-Delay Neural Network Layers
 
 All layers support Spectral Normalization of kernels:
