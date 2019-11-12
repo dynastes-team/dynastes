@@ -1,6 +1,7 @@
-
 import tensorflow as tf
+
 from dynastes.ops.pad_ops import pad_input_2d
+
 
 def time_delay_nn_1d(x, kernel, kernel_size, strides, dilation_rate, padding='valid'):
     shape = x.shape.as_list()

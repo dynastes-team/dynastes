@@ -1,7 +1,7 @@
 import tensorflow as tf
 
 from dynastes.ops.attention import split_heads, scaled_dot_product_attention, merge_heads
-from dynastes.ops.pad_ops import pad_input_1d, pad_input_2d
+from dynastes.ops.pad_ops import pad_input_2d
 
 
 def extract_and_split_2d(x, num_heads, kernel_size=(3, 3), strides=(1, 1), dilation_rate=(1, 1), padding='same'):
@@ -25,7 +25,6 @@ def localized_attention_2d(q, k, v, num_heads=1,
                            dilation_rate=(1, 1),
                            padding='same',
                            preshaped_q=True):
-
     xk = extract_and_split_2d(k,
                               num_heads=num_heads,
                               kernel_size=kernel_size,
@@ -58,8 +57,8 @@ def localized_attention_2d(q, k, v, num_heads=1,
     return x
 
 
-def localized_attention_1d(q, k, v, num_heads=1, kernel_size=2, strides=1, dilation_rate=1, padding='same', preshaped_q=True):
-
+def localized_attention_1d(q, k, v, num_heads=1, kernel_size=2, strides=1, dilation_rate=1, padding='same',
+                           preshaped_q=True):
     q = tf.expand_dims(q, 1)
     k = tf.expand_dims(k, 1)
     v = tf.expand_dims(v, 1)

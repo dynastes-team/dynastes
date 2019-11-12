@@ -115,7 +115,3 @@ class LocalizedAttentionLayer2D(tfkl.Layer):
                   'preshaped_q': self.preshaped_q}
         base_config = super(LocalizedAttentionLayer2D, self).get_config()
         return {**base_config, **config}
-
-del absolute_import
-del division
-del print_function

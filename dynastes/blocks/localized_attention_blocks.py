@@ -5,10 +5,6 @@ from __future__ import print_function
 from functools import partial
 
 from tensorflow.python.keras import activations
-from tensorflow.python.keras import constraints
-from tensorflow.python.keras import initializers
-from tensorflow.python.keras import regularizers
-from tensorflow.python.ops import nn
 
 from dynastes import layers as vqkl
 from dynastes.blocks import layer_factory
@@ -33,24 +29,10 @@ class LocalizedSelfAttentionBlock1D(ActivatedKernelBiasBaseLayer):
                  padding='same',
                  activation=None,
                  use_bias=True,
-                 kernel_initializer='he_uniform',
-                 bias_initializer='zeros',
-                 kernel_regularizer=None,
-                 bias_regularizer=None,
-                 activity_regularizer=None,
-                 kernel_constraint=None,
-                 bias_constraint=None,
                  **kwargs):
         super(LocalizedSelfAttentionBlock1D, self).__init__(
             activation=activations.get(activation),
             use_bias=use_bias,
-            kernel_initializer=initializers.get(kernel_initializer),
-            bias_initializer=initializers.get(bias_initializer),
-            kernel_regularizer=regularizers.get(kernel_regularizer),
-            bias_regularizer=regularizers.get(bias_regularizer),
-            activity_regularizer=regularizers.get(activity_regularizer),
-            kernel_constraint=constraints.get(kernel_constraint),
-            bias_constraint=constraints.get(bias_constraint),
             **kwargs)
         self.attention_dim = attention_dim
         self.output_dim = output_dim
@@ -62,32 +44,31 @@ class LocalizedSelfAttentionBlock1D(ActivatedKernelBiasBaseLayer):
         self.activation = activations.get(activation)
         self.use_bias = use_bias
 
-        conv_partial = partial(layer_factory.get_1d_layer(kernel_size=kernel_size,
+        conv_partial = partial(layer_factory.get_1d_layer(filters='attention_dim',
+                                                          kernel_size=kernel_size,
                                                           grouped=grouped,
                                                           group_size=group_size,
+                                                          depth_multiplier=depth_multiplier,
                                                           padding=padding,
                                                           activation=None,
                                                           use_bias=True,
-                                                          kernel_initializer=self.kernel_initializer,
-                                                          bias_initializer=self.bias_initializer,
-                                                          kernel_regularizer=self.kernel_regularizer,
-                                                          bias_regularizer=self.bias_regularizer,
+                                                          kernel_initializer=self.get_initializer('kernel'),
+                                                          bias_initializer=self.get_initializer('bias'),
+                                                          kernel_regularizer=self.get_regularizer('kernel'),
+                                                          bias_regularizer=self.get_regularizer('bias'),
                                                           activity_regularizer=None,
-                                                          kernel_constraint=self.kernel_constraint,
-                                                          bias_constraint=self.bias_constraint))
+                                                          kernel_constraint=self.get_constraint('kernel'),
+                                                          bias_constraint=self.get_constraint('bias')))
         self.q_layer = conv_partial(type=q_type,
                                     output_dim=attention_dim,
-                                    output_mul=depth_multiplier,
                                     stride=strides,
                                     dilation=dilation_rate, name='Conv-Q')
         self.k_layer = conv_partial(type=k_type,
                                     output_dim=attention_dim,
-                                    output_mul=depth_multiplier,
                                     stride=1,
                                     dilation=1, name='Conv-K')
         self.v_layer = conv_partial(type=v_type,
                                     output_dim=output_dim,
-                                    output_mul=depth_multiplier,
                                     stride=1,
                                     dilation=1, name='Conv-K')
 
@@ -102,7 +83,6 @@ class LocalizedSelfAttentionBlock1D(ActivatedKernelBiasBaseLayer):
         self.build_bias(self.output_dim)
 
     def call(self, inputs, **kwargs):
-
         x = inputs
         q = self.q_layer(x)
         k = self.k_layer(x)

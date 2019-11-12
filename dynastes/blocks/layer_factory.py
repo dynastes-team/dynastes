@@ -6,6 +6,7 @@ from tensorflow.keras import layers as tfkl
 
 from dynastes import layers as vqkl
 
+
 def get_1d_layer(type,
                  filters,
                  depth_multiplier,

@@ -2,15 +2,13 @@ from __future__ import absolute_import
 from __future__ import division
 from __future__ import print_function
 
-from .base_layers import ActivatedKernelBiasBaseLayer
-
 from .attention_layers import LocalizedAttentionLayer1D
 from .attention_layers import LocalizedAttentionLayer2D
-
-from .time_delay_layers import TimeDelayLayer1D
-from .time_delay_layers import TimeDelayLayerFake2D
+from .base_layers import ActivatedKernelBiasBaseLayer
 from .time_delay_layers import DepthGroupwiseTimeDelayLayer1D
 from .time_delay_layers import DepthGroupwiseTimeDelayLayerFake2D
+from .time_delay_layers import TimeDelayLayer1D
+from .time_delay_layers import TimeDelayLayerFake2D
 
 # Cleanup symbols to avoid polluting namespace.
 del absolute_import

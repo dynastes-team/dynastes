@@ -1,7 +1,7 @@
-
 import tensorflow as tf
 
 from tensorflow.python.keras import backend as tf_keras_backend
+
 
 def image_data_format():
     """Returns the default image data format convention.
@@ -14,6 +14,7 @@ def image_data_format():
     ```
     """
     return tf_keras_backend.image_data_format()
+
 
 def normalize_data_format(value):
     """Checks that the value correspond to a valid data format.
@@ -40,6 +41,7 @@ def normalize_data_format(value):
                          '"channels_first", "channels_last". Received: ' +
                          str(value))
     return data_format
+
 
 def transpose_shape(shape, target_format, spatial_axes):
     """Converts a tuple or a list to the correct `data_format`.
@@ -84,6 +86,7 @@ def transpose_shape(shape, target_format, spatial_axes):
                          '"channels_first", "channels_last". Received: ' +
                          str(target_format))
 
+
 def _preprocess_padding(padding):
     """Convert keras' padding to tensorflow's padding.
     # Arguments
@@ -101,6 +104,7 @@ def _preprocess_padding(padding):
         raise ValueError('Invalid padding: ' + str(padding))
     return padding
 
+
 def _padding_1d(x, padding=(1, 1)):
     """Pads the middle dimension of a 3D tensor.
     # Arguments
@@ -113,6 +117,7 @@ def _padding_1d(x, padding=(1, 1)):
     assert len(padding) == 2
     pattern = [[0, 0], [padding[0], padding[1]], [0, 0]]
     return tf.pad(x, pattern)
+
 
 def _padding_2d(x, padding=((1, 1), (1, 1)), data_format=None):
     """Pads the 2nd and 3rd dimensions of a 4D tensor.
@@ -138,6 +143,7 @@ def _padding_2d(x, padding=((1, 1), (1, 1)), data_format=None):
     pattern = transpose_shape(pattern, data_format, spatial_axes=(1, 2))
     return tf.pad(x, pattern)
 
+
 def pad_input_1d(x, padding, kernel_size, dilation_rate):
     if padding == 'causal':
         left_pad = dilation_rate * (kernel_size - 1)
@@ -146,7 +152,8 @@ def pad_input_1d(x, padding, kernel_size, dilation_rate):
     padding = _preprocess_padding(padding)
     return x, padding
 
-def pad_input_2d(x, padding, kernel_size, dilation_rate=(0,0)):
+
+def pad_input_2d(x, padding, kernel_size, dilation_rate=(0, 0)):
     if padding == 'causal':
         left_pad = dilation_rate[0] * (kernel_size[0] - 1)
         x = _padding_2d(x, (left_pad, 0), (0, 0))
