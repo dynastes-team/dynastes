@@ -8,6 +8,10 @@ from tensorflow.python.keras.utils.generic_utils import serialize_keras_object
 
 from .spectral import SpectralNormalization
 
+object_scope = {
+    'SpectralNormalization': SpectralNormalization,
+}
+
 
 def get(identifier):
     if identifier is None:
@@ -31,7 +35,7 @@ def serialize(regularizer):
 
 
 def deserialize(config, custom_objects={}):
-    custom_objects = {**custom_objects, **{'SpectralNormalization': SpectralNormalization}}
+    custom_objects = {**custom_objects, **object_scope}
     return deserialize_keras_object(
         config,
         module_objects=globals(),

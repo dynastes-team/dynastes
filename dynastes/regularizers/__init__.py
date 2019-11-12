@@ -10,13 +10,17 @@ from tensorflow.python.keras.regularizers import serialize as _serialize
 from . import orthogonal
 from .orthogonal import Orthogonal
 
+object_scope = {
+    'Orthogonal': Orthogonal
+}
+
 
 def serialize(regularizer):
     return _serialize(regularizer)
 
 
 def deserialize(config, custom_objects={}):
-    custom_objects = {**custom_objects, **{'Orthogonal': Orthogonal}}
+    custom_objects = {**custom_objects, **object_scope}
     return _deserialize(config, custom_objects)
 
 
@@ -24,7 +28,7 @@ def get(regularizer):
     if type(regularizer) == str:
         if regularizer == 'orthogonal':
             return Orthogonal()
-    with custom_object_scope({'Orthogonal': Orthogonal}):
+    with custom_object_scope(object_scope):
         return tf_regularizers.get(regularizer)
 
 

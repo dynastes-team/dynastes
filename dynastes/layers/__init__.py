@@ -10,6 +10,16 @@ from .time_delay_layers import DepthGroupwiseTimeDelayLayerFake2D
 from .time_delay_layers import TimeDelayLayer1D
 from .time_delay_layers import TimeDelayLayerFake2D
 
+object_scope = {
+    'LocalizedAttentionLayer1D': LocalizedAttentionLayer1D,
+    'LocalizedAttentionLayer2D': LocalizedAttentionLayer2D,
+    'ActivatedKernelBiasBaseLayer': ActivatedKernelBiasBaseLayer,
+    'DepthGroupwiseTimeDelayLayer1D': DepthGroupwiseTimeDelayLayer1D,
+    'DepthGroupwiseTimeDelayLayerFake2D': DepthGroupwiseTimeDelayLayerFake2D,
+    'TimeDelayLayer1D': TimeDelayLayer1D,
+    'TimeDelayLayerFake2D': TimeDelayLayerFake2D,
+}
+
 # Cleanup symbols to avoid polluting namespace.
 del absolute_import
 del division

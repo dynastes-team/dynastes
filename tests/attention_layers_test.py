@@ -3,6 +3,7 @@ import tensorflow as tf
 from tensorflow.keras.utils import custom_object_scope
 from tensorflow.python.framework import test_util
 
+import dynastes as d
 from dynastes.layers.attention_layers import LocalizedAttentionLayer1D, LocalizedAttentionLayer2D
 
 def _test_grads(testCase: tf.test.TestCase, func, input):
@@ -18,7 +19,7 @@ normal = np.random.normal
 class LocalizedAttentionLayer1DTest(tf.test.TestCase):
     @test_util.use_deterministic_cudnn
     def test_simple(self):
-        with custom_object_scope({'LocalizedAttentionLayer1D': LocalizedAttentionLayer1D}):
+        with custom_object_scope(d.object_scope):
             t_steps = 12
             bs = 2
             dim = 16
@@ -53,7 +54,7 @@ class LocalizedAttentionLayer1DTest(tf.test.TestCase):
 class LocalizedAttentionLayer2DTest(tf.test.TestCase):
     @test_util.use_deterministic_cudnn
     def test_simple(self):
-        with custom_object_scope({'LocalizedAttentionLayer2D': LocalizedAttentionLayer2D}):
+        with custom_object_scope(d.object_scope):
             in_shape = [4, 4]
             bs = 1
             heads = 2
@@ -87,7 +88,7 @@ class LocalizedAttentionLayer2DTest(tf.test.TestCase):
 
     @test_util.use_deterministic_cudnn
     def test_multiquery(self):
-        with custom_object_scope({'LocalizedAttentionLayer2D': LocalizedAttentionLayer2D}):
+        with custom_object_scope(d.object_scope):
             in_shape = [4, 4]
             bs = 1
             heads = 2

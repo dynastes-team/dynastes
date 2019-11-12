@@ -9,7 +9,14 @@ from dynastes import ops
 from dynastes import regularizers
 from dynastes import util
 
-__version__ = "0.1.3"
+object_scope = {
+    **blocks.object_scope,
+    **layers.object_scope,
+    **normalizers.object_scope,
+    **regularizers.object_scope,
+}
+
+__version__ = "0.1.4"
 # Cleanup symbols to avoid polluting namespace.
 del absolute_import
 del division
