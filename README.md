@@ -8,6 +8,7 @@
 ### Description
 
 Collection of various of my custom TensorFlow-Keras 2.0+ layers, utils and such
+Focus is on time-series, audio, DSP and GAN related networks
 
 ### Install
 
