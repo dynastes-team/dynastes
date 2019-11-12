@@ -20,14 +20,14 @@ def _get_regularizers_from_keywords(kwargs):
 
     for kwarg in kwarg_keys:
         if kwarg.endswith('initializer'):
-            _initializers[kwarg.split('_initializer')[0]] = initializers.get(kwargs.pop(kwarg))
+            _initializers[kwarg.split('_initializer')[0]] = initializers.get(kwargs.pop(kwarg, None))
         elif kwarg.endswith('regularizer'):
             if kwarg != 'activity_regularizer':
                 _regularizers[kwarg.split('_regularizer')[0]] = regularizers.get(kwargs.pop(kwarg))
         elif kwarg.endswith('constraint'):
             _constraints[kwarg.split('_constraint')[0]] = constraints.get(kwargs.pop(kwarg))
         elif kwarg.endswith('normalizer'):
-            _constraints[kwarg.split('_normalizer')[0]] = normalizers.get(kwargs.pop(kwarg))
+            _normalizers[kwarg.split('_normalizer')[0]] = normalizers.get(kwargs.pop(kwarg))
 
     return _initializers, _regularizers, _constraints, _normalizers
 
@@ -39,8 +39,7 @@ class DynastesBaseLayer(tfkl.Layer):
                  name=None,
                  **kwargs):
         self.weights_dict = {}
-        self.initializers, self.regularizers, self.constraints, self.normalizers = _get_regularizers_from_keywords(
-            kwargs)
+        self.initializers, self.regularizers, self.constraints, self.normalizers = _get_regularizers_from_keywords(kwargs)
 
         super(DynastesBaseLayer, self).__init__(
             trainable=trainable,

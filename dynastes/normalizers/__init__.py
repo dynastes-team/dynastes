@@ -30,7 +30,7 @@ def serialize(regularizer):
     return serialize_keras_object(regularizer)
 
 
-def deserialize(config, custom_objects=None):
+def deserialize(config, custom_objects={}):
     custom_objects = {**custom_objects, **{'SpectralNormalization': SpectralNormalization}}
     return deserialize_keras_object(
         config,

@@ -7,6 +7,7 @@ class SpectralNormalization(tfkl.Layer):
     def __init__(self,
                  power_iteration_rounds=1,
                  equality_constrained=True,
+                 trainable=False,
                  **kwargs):
         super(SpectralNormalization, self).__init__(**kwargs, trainable=False)
         self.power_iteration_rounds = power_iteration_rounds
@@ -33,19 +34,20 @@ class SpectralNormalization(tfkl.Layer):
                                  initializer=tfk.initializers.RandomNormal(),
                                  trainable=False,
                                  aggregation=aggregation)
+        super(SpectralNormalization, self).build(input_shape)
 
     def _compute_spectral_norm(self, w, training=None):
         w = tf.reshape(w, (-1, w.get_shape()[-1]))
-        u_var = self.u
+        u = self.u
         # Use power iteration method to approximate spectral norm.
-        for _ in range(self.power_iteration_rounds):
+        for i in range(self.power_iteration_rounds):
             # `v` approximates the first right singular vector of matrix `w`.
             v = tf.nn.l2_normalize(tf.matmul(a=w, b=u, transpose_a=True))
             u = tf.nn.l2_normalize(tf.matmul(w, v))
 
         # Update persisted approximation.
         if training:
-            with tf.control_dependencies([u_var.assign(u, name='update_u')]):
+            with tf.control_dependencies([self.u.assign(u, name='update_u')]):
                 u = tf.identity(u)
 
         u = tf.stop_gradient(u)
@@ -58,6 +60,7 @@ class SpectralNormalization(tfkl.Layer):
 
         return spectral_norm[0][0]
 
+    @tf.function
     def call(self, w, training=None):
 
         normalization_factor = self._compute_spectral_norm(w, training=training)

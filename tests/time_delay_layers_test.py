@@ -12,6 +12,13 @@ class TimeDelayLayer1DTest(tf.test.TestCase):
             layer_test(
                 TimeDelayLayer1D, kwargs={'filters': 4}, input_shape=(5, 32, 3))
 
+    def test_specnorm(self):
+        with custom_object_scope({'TimeDelayLayer1D': TimeDelayLayer1D}):
+            layer_test(
+                TimeDelayLayer1D, kwargs={'filters': 4,
+                                          'kernel_normalizer': 'spectral',
+                                          'kernel_regularizer': 'orthogonal'}, input_shape=(5, 32, 3))
+
 
 class SeparableTimeDelayLayer1DTest(tf.test.TestCase):
     def test_simple(self):
