@@ -16,10 +16,26 @@ pip install dynastes
 ```
 
 ### Layers
-Localized Attention
+Localized Attention (1D and 2D)
 * Perform attention within "kernels", a bit like convolution
 
 Time-Delay Neural Network Layers
+
+All layers support Spectral Normalization of kernels:
+```
+kernel_normalizer='spectral'
+```
+
+### Functions
+ND-Attention
+* Supports "Multi-Query Attention" from [Fast Transformer Decoding: One Write-Head is All You Need](https://arxiv.org/abs/1911.02150)
+
+### Roadmap:
+* More attention variants (1D, 2D, Relative, Local, Area) from T2T
+* GAN-scaffoldings (ProGAN, StyleGAN, BiGAN, BiStyleGAN?)
+
+### Why?
+Keras in TensorFlow 2.0 is nice, but sometimes you need exotic layers and functions that are cumbersome to implement, and I've found myself reimplementing or porting parts of T2T and other things for work and in private, over and over. This library aims to consolidate some of that and maintain tests for it.
 
 ### The name "Dynastes"
 Dynastes is a genus of large beetles belonging to the subfamily Dynastinae, rhinoceros [ῥῑνόκερως (rhīnókerōs)] beetles and it is also the name of the son of Heracles and Erato (Thespius 49th daughter). This is a play on the word Keras [κέρας (kéras, “horn”)].
