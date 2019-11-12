@@ -35,7 +35,7 @@ This has some caveats, if you call super.get_weight(name) you get the normalized
 
 ### Functions
 - nD-Attention
- - Supports "Multi-Query Attention" from [Fast Transformer Decoding: One Write-Head is All You Need](https://arxiv.org/abs/1911.02150)
+  - Supports "Multi-Query Attention" from [Fast Transformer Decoding: One Write-Head is All You Need](https://arxiv.org/abs/1911.02150)
 
 ### Roadmap:
 - More attention variants (1D, 2D, Relative, Local, Area) from T2T
