@@ -17,10 +17,9 @@ pip install dynastes
 ```
 
 ### Layers
-Localized Attention (1D and 2D)
-* Perform attention within "kernels", a bit like convolution
-
-Time-Delay Neural Network Layers
+- Localized Attention (1D and 2D)
+ - Perform attention within "kernels", a bit like convolution
+- Time-Delay Neural Network Layers
 
 All layers support Spectral Normalization of kernels:
 ```
@@ -30,13 +29,17 @@ All you need to do in a GAN training is then to call network(x/z, training=True)
 If you implement a custom layer that inherits from DynastesBaseLayer you can assign spectral normalization simply by passing wname_normalizer to the creation args, where wname is the name you give your weight.
 This has some caveats, if you call super.get_weight(name) you get the normalized weight, not the actual var / rvar
 
+### Regularizers, Normalization, Constraints, Initializers
+- Orthogonal Regularization
+- Spectral Normalization
+
 ### Functions
-ND-Attention
-* Supports "Multi-Query Attention" from [Fast Transformer Decoding: One Write-Head is All You Need](https://arxiv.org/abs/1911.02150)
+- nD-Attention
+ - Supports "Multi-Query Attention" from [Fast Transformer Decoding: One Write-Head is All You Need](https://arxiv.org/abs/1911.02150)
 
 ### Roadmap:
-* More attention variants (1D, 2D, Relative, Local, Area) from T2T
-* GAN-scaffoldings (ProGAN, StyleGAN, BiGAN, BiStyleGAN?)
+- More attention variants (1D, 2D, Relative, Local, Area) from T2T
+- GAN-scaffoldings (ProGAN, StyleGAN, BiGAN, BiStyleGAN?)
 
 ### Why?
 Keras in TensorFlow 2.0 is nice, but sometimes you need exotic layers and functions that are cumbersome to implement, and I've found myself reimplementing or porting parts of T2T and other things for work and in private, over and over. This library aims to consolidate some of that and maintain tests for it.
