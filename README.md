@@ -26,6 +26,9 @@ All layers support Spectral Normalization of kernels:
 ```
 kernel_normalizer='spectral'
 ```
+All you need to do in a GAN training is then to call network(x/z, training=True) when training generator or discriminator, updates are automatically performed on the u-variable if training=True. This is enabled by having a "normalizers" dictionary for every weight.
+If you implement a custom layer that inherits from DynastesBaseLayer you can assign spectral normalization simply by passing wname_normalizer to the creation args, where wname is the name you give your weight.
+This has some caveats, if you call super.get_weight(name) you get the normalized weight, not the actual var / rvar
 
 ### Functions
 ND-Attention
