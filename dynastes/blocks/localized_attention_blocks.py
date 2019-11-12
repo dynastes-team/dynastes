@@ -21,6 +21,7 @@ class LocalizedSelfAttentionBlock1D(ActivatedKernelBiasBaseLayer):
                  k_type='Conv1D',
                  v_type='Conv1D',
                  num_heads=1,
+                 multiquery_attention=False,
                  depth_multiplier=1,
                  strides=1,
                  dilation_rate=1,
@@ -43,9 +44,9 @@ class LocalizedSelfAttentionBlock1D(ActivatedKernelBiasBaseLayer):
         self.padding = padding
         self.activation = activations.get(activation)
         self.use_bias = use_bias
+        self.multiquery_attention = multiquery_attention
 
-        conv_partial = partial(layer_factory.get_1d_layer(filters='attention_dim',
-                                                          kernel_size=kernel_size,
+        conv_partial = partial(layer_factory.get_1d_layer(kernel_size=kernel_size,
                                                           grouped=grouped,
                                                           group_size=group_size,
                                                           depth_multiplier=depth_multiplier,
@@ -59,18 +60,26 @@ class LocalizedSelfAttentionBlock1D(ActivatedKernelBiasBaseLayer):
                                                           activity_regularizer=None,
                                                           kernel_constraint=self.get_constraint('kernel'),
                                                           bias_constraint=self.get_constraint('bias')))
+        q_filters = attention_dim
+        k_filters = attention_dim
+        v_filters = output_dim
+
+        if multiquery_attention:
+            k_filters /= num_heads
+            v_filters /= num_heads
+
         self.q_layer = conv_partial(type=q_type,
-                                    output_dim=attention_dim,
+                                    filters=q_filters,
                                     stride=strides,
                                     dilation=dilation_rate, name='Conv-Q')
         self.k_layer = conv_partial(type=k_type,
-                                    output_dim=attention_dim,
+                                    filters=k_filters,
                                     stride=1,
                                     dilation=1, name='Conv-K')
         self.v_layer = conv_partial(type=v_type,
-                                    output_dim=output_dim,
+                                    filters=v_filters,
                                     stride=1,
-                                    dilation=1, name='Conv-K')
+                                    dilation=1, name='Conv-V')
 
         attention_padding = padding
         self.attention_layer = vqkl.LocalizedAttentionLayer1D(strides=strides,

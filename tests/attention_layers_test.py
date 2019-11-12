@@ -56,20 +56,21 @@ class LocalizedAttentionLayer2DTest(tf.test.TestCase):
         with custom_object_scope({'LocalizedAttentionLayer2D': LocalizedAttentionLayer2D}):
             in_shape = [4, 4]
             bs = 1
-            dim = 4
+            heads = 2
+            dim = 2
             v_dim = dim * 2
             s = 2
 
             layer = LocalizedAttentionLayer2D(kernel_size=(3, 3),
                                               strides=(s, s),
-                                              num_heads=2,
+                                              num_heads=heads,
                                               dilation_rate=(1, 1))
 
-            q = to_tensor(normal(size=(bs, in_shape[0] // s, in_shape[1] // s, dim))
+            q = to_tensor(normal(size=(bs, in_shape[0] // s, in_shape[1] // s, dim*heads))
                           .astype(np.float32))
-            k = to_tensor(normal(size=(bs, in_shape[0], in_shape[1], dim))
+            k = to_tensor(normal(size=(bs, in_shape[0], in_shape[1], dim*heads))
                           .astype(np.float32))
-            v = to_tensor(normal(size=(bs, in_shape[0], in_shape[1], v_dim))
+            v = to_tensor(normal(size=(bs, in_shape[0], in_shape[1], v_dim*heads))
                           .astype(np.float32))
 
             @tf.function
@@ -78,7 +79,41 @@ class LocalizedAttentionLayer2DTest(tf.test.TestCase):
 
             r = test_func(q, _k=k, _v=v)
 
-            ex_res_shape = np.zeros((bs, in_shape[0] // s, in_shape[1] // s, v_dim))
+            ex_res_shape = np.zeros((bs, in_shape[0] // s, in_shape[1] // s, v_dim*heads))
+
+            self.assertShapeEqual(ex_res_shape, r)
+
+            _test_grads(self, test_func, [q, k, v])
+
+    @test_util.use_deterministic_cudnn
+    def test_multiquery(self):
+        with custom_object_scope({'LocalizedAttentionLayer2D': LocalizedAttentionLayer2D}):
+            in_shape = [4, 4]
+            bs = 1
+            heads = 2
+            dim = 2
+            v_dim = dim * 2
+            s = 2
+
+            layer = LocalizedAttentionLayer2D(kernel_size=(3, 3),
+                                              strides=(s, s),
+                                              num_heads=heads,
+                                              dilation_rate=(1, 1), multiquery_attention=True)
+
+            q = to_tensor(normal(size=(bs, in_shape[0] // s, in_shape[1] // s, dim * heads))
+                          .astype(np.float32))
+            k = to_tensor(normal(size=(bs, in_shape[0], in_shape[1], dim))
+                          .astype(np.float32))
+            v = to_tensor(normal(size=(bs, in_shape[0], in_shape[1], v_dim))
+                          .astype(np.float32))
+
+            @tf.function
+            def test_func(_q, _k, _v):
+                return layer(_q, k=_k, v=_v)
+
+            r = test_func(q, _k=k, _v=v)
+
+            ex_res_shape = np.zeros((bs, in_shape[0] // s, in_shape[1] // s, v_dim * heads))
 
             self.assertShapeEqual(ex_res_shape, r)
 

@@ -4,7 +4,7 @@ from __future__ import print_function
 
 import tensorflow.keras.layers as tfkl
 
-from dynastes.ops.localized_attention import localized_attention_1d, localized_attention_2d
+from dynastes.ops.localized_attention_nd import localized_attention_1d, localized_attention_2d
 
 
 class LocalizedAttentionLayer1D(tfkl.Layer):
@@ -70,7 +70,9 @@ class LocalizedAttentionLayer2D(tfkl.Layer):
                  strides=(1, 1),
                  dilation_rate=(1, 1),
                  padding='same',
-                 preshaped_q=True, **kwargs):
+                 preshaped_q=True,
+                 multiquery_attention=False,
+                 **kwargs):
         """
             Args:
                 kernel_size: size of patches to perform localized attention within
@@ -90,6 +92,7 @@ class LocalizedAttentionLayer2D(tfkl.Layer):
         self.dilation_rate = dilation_rate
         self.padding = padding
         self.preshaped_q = preshaped_q
+        self.multiquery_attention = multiquery_attention
 
     def call(self, q, k, v):
         if type(q) == list:
@@ -104,7 +107,8 @@ class LocalizedAttentionLayer2D(tfkl.Layer):
                                       strides=self.strides,
                                       dilation_rate=self.dilation_rate,
                                       padding=self.padding,
-                                      preshaped_q=self.preshaped_q)
+                                      preshaped_q=self.preshaped_q,
+                                      multiquery_attention=self.multiquery_attention)
 
     def get_config(self):
         config = {'kernel_size': self.kernel_size,
@@ -112,6 +116,7 @@ class LocalizedAttentionLayer2D(tfkl.Layer):
                   'strides': self.strides,
                   'dilation_rate': self.dilation_rate,
                   'padding': self.padding,
-                  'preshaped_q': self.preshaped_q}
+                  'preshaped_q': self.preshaped_q,
+                  'multiquery_attention': self.multiquery_attention}
         base_config = super(LocalizedAttentionLayer2D, self).get_config()
         return {**base_config, **config}

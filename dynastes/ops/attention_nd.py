@@ -4,8 +4,10 @@ from __future__ import print_function
 
 import tensorflow as tf
 
+from dynastes.util.precision_util import large_compatible_negative
 
-def scaled_dot_product_attention(q, k, v, mask):
+
+def scaled_dot_product_attention(q, k, v, mask, multiquery_attention=False):
     """Calculate the attention weights.
     q, k, v must have matching leading dimensions.
     k, v must have matching penultimate dimension, i.e.: seq_len_k = seq_len_v.
@@ -18,6 +20,8 @@ def scaled_dot_product_attention(q, k, v, mask):
       v: value shape == (..., seq_len_v, depth_v)
       mask: Float tensor with shape broadcastable
             to (..., seq_len_q, seq_len_k). Defaults to None.
+      multiquery_attention: Use one head for K and V,
+            see https://arxiv.org/abs/1911.02150v1
 
     Returns:
       output, attention_weights
@@ -25,22 +29,31 @@ def scaled_dot_product_attention(q, k, v, mask):
     Source:
     https://www.tensorflow.org/tutorials/text/transformer
     """
+    leading_dims = ['b', 'x', 'y', 'z', 'q', 'a', 'c']
+    shape = q.shape.as_list()
+    ldim = ''.join(leading_dims[:len(shape) - 3])
+    ld3 = (ldim, ldim, ldim)
 
-    matmul_qk = tf.matmul(q, k, transpose_b=True)  # (..., seq_len_q, seq_len_k)
+    if multiquery_attention:
+        logits = tf.einsum("%shnk,%smk->%shnm" % ld3, q, k)
+    else:
+        logits = tf.einsum("%shnk,%shmk->%shnm" % ld3, q, k)
 
     # scale matmul_qk
     dk = tf.cast(tf.shape(k)[-1], tf.float32)
-    scaled_attention_logits = matmul_qk / tf.math.sqrt(dk)
+    scaled_attention_logits = logits / tf.math.sqrt(dk)
 
     # add the mask to the scaled tensor.
     if mask is not None:
-        scaled_attention_logits += (mask * -1e9)
+        scaled_attention_logits += (mask * large_compatible_negative(mask.dtype))
 
     # softmax is normalized on the last axis (seq_len_k) so that the scores
     # add up to 1.
     attention_weights = tf.nn.softmax(scaled_attention_logits, axis=-1)  # (..., seq_len_q, seq_len_k)
-
-    output = tf.matmul(attention_weights, v)  # (..., seq_len_q, depth_v)
+    if multiquery_attention:
+        output = tf.einsum("%shnm,%smv->%shnv" % ld3, attention_weights, v)
+    else:
+        output = tf.einsum("%shnm,%shmv->%shnv" % ld3, attention_weights, v)
 
     return output, attention_weights
 

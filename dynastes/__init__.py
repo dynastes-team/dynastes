@@ -9,7 +9,7 @@ from dynastes import ops
 from dynastes import regularizers
 from dynastes import util
 
-__version__ = "0.1.1"
+__version__ = "0.1.2"
 # Cleanup symbols to avoid polluting namespace.
 del absolute_import
 del division
