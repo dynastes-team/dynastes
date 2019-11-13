@@ -7,14 +7,16 @@ class SpectralNormalization(tfkl.Layer):
     def __init__(self,
                  power_iteration_rounds=1,
                  equality_constrained=True,
-                 trainable=False,
+                 transposed=False,
                  **kwargs):
         super(SpectralNormalization, self).__init__(**kwargs, trainable=False)
         self.power_iteration_rounds = power_iteration_rounds
         self.equality_constrained = equality_constrained
+        self.transposed = transposed
 
     def build(self, input_shape):
-
+        if self.transposed:
+            input_shape = input_shape[:-2] + [input_shape[-1], input_shape[-2]]
         u_shape = (sum(input_shape[:-1]), 1)
 
         replica_context = tf.distribute.get_replica_context()
@@ -34,6 +36,8 @@ class SpectralNormalization(tfkl.Layer):
                                  initializer=tfk.initializers.RandomNormal(),
                                  trainable=False,
                                  aggregation=aggregation)
+        if self.transposed:
+            input_shape = input_shape[:-2] + [input_shape[-1], input_shape[-2]]
         super(SpectralNormalization, self).build(input_shape)
 
     def _compute_spectral_norm(self, w, training=None):
@@ -62,17 +66,25 @@ class SpectralNormalization(tfkl.Layer):
 
     @tf.function
     def call(self, w, training=None):
-
+        if self.transposed:
+            w_shape = w.shape.as_list()
+            dims = list(range(len(w_shape)))
+            w = tf.transpose(w, perm=dims[:-2] + [dims[-1], dims[-2]])
         normalization_factor = self._compute_spectral_norm(w, training=training)
         if not self.equality_constrained:
             normalization_factor = tf.maximum(1., normalization_factor)
         w_normalized = w / normalization_factor
-        return tf.reshape(w_normalized, w.get_shape())
+        w_normalized = tf.reshape(w_normalized, w.get_shape())
+        if self.transposed:
+            w_normalized = tf.transpose(w_normalized, perm=dims[:-2] + [dims[-1], dims[-2]])
+        return w_normalized
+
 
     def get_config(self):
         config = {
             'power_iteration_rounds': self.power_iteration_rounds,
             'equality_constrained': self.equality_constrained,
+            'transposed': self.transposed
         }
         base_config = super(SpectralNormalization, self).get_config()
         return {**base_config, **config}

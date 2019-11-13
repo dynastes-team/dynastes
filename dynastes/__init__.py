@@ -8,6 +8,7 @@ from dynastes import normalizers
 from dynastes import ops
 from dynastes import regularizers
 from dynastes import util
+from dynastes.core import backend
 
 object_scope = {
     **blocks.object_scope,
