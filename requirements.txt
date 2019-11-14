@@ -1,2 +1,3 @@
-tensorflow=2.0.0
+tensorflow==2.0.0
 numpy
+six >= 1.10.0
