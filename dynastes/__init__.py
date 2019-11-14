@@ -2,6 +2,7 @@ from __future__ import absolute_import
 from __future__ import division
 from __future__ import print_function
 
+from tensorflow.python.ops.bitwise_ops import PopulationCount
 from dynastes import blocks
 from dynastes import layers
 from dynastes import normalizers
