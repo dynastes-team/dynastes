@@ -1,6 +1,7 @@
 # Dynastes
+[![Travis](https://travis-ci.org/veqtor/dynastes.svg)](https://travis-ci.org/veqtor/dynastes)
 [![Version](https://img.shields.io/pypi/v/dynastes.svg)](https://pypi.org/project/dynastes/)
-![License](https://img.shields.io/pypi/l/keras-bert.svg)
+![License](https://img.shields.io/pypi/l/veqtor.svg)
 
 ![](https://img.shields.io/badge/keras-tensorflow-blue.svg)
 ![](https://img.shields.io/badge/keras-tf.keras-blue.svg)
