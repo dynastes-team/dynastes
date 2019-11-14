@@ -3,8 +3,6 @@ import codecs
 import re
 from setuptools import setup, find_packages
 
-tensorflow_dependency = 'tensorflow'
-tensorflow_version = '2.0.0'
 current_path = os.path.abspath(os.path.dirname(__file__))
 
 
@@ -12,6 +10,9 @@ def read_file(*parts):
     with codecs.open(os.path.join(current_path, *parts), 'r', 'utf8') as reader:
         return reader.read()
 
+def get_requirements(*parts):
+    with codecs.open(os.path.join(current_path, *parts), 'r', 'utf8') as reader:
+        return list(map(lambda x: x.strip(), reader.readlines()))
 
 def find_version(*file_paths):
     version_file = read_file(*file_paths)
@@ -30,11 +31,7 @@ setup(
     long_description=read_file('README.md'),
     long_description_content_type="text/markdown",
     url="https://github.com/veqtor/dynastes",
-    install_requires=[
-        "numpy",
-        "six >= 1.10.0",
-        '{}>={}'.format(tensorflow_dependency, tensorflow_version),
-    ],
+    install_requires=get_requirements('requirements.txt'),
     packages=find_packages(),
     classifiers=[
         "Development Status :: 3 - Alpha",
