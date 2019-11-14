@@ -13,6 +13,6 @@ install:
   - export LD_LIBRARY_PATH=$HOME/miniconda/envs/test-environment/lib/:$LD_LIBRARY_PATH
   - pip install --upgrade pip
   - pip install -r requirements.txt
-test:
+script:
   - pip install pytest
   - pytest
