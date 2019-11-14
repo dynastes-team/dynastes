@@ -8,6 +8,7 @@ class SpectralNormalization(tfkl.Layer):
                  power_iteration_rounds=1,
                  equality_constrained=True,
                  transposed=False,
+                 trainable=None,
                  **kwargs):
         super(SpectralNormalization, self).__init__(**kwargs, trainable=False)
         self.power_iteration_rounds = power_iteration_rounds
