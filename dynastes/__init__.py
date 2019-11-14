@@ -19,7 +19,7 @@ object_scope = {
     **regularizers.object_scope,
 }
 
-__version__ = "0.1.6"
+__version__ = "0.1.7"
 # Cleanup symbols to avoid polluting namespace.
 del absolute_import
 del division
