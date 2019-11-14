@@ -1,5 +1,5 @@
 # Dynastes
-[![Travis](https://travis-ci.org/veqtor/dynastes.svg)](https://travis-ci.org/veqtor/dynastes)
+[![Travis](https://travis-ci.com/veqtor/dynastes.svg)](https://travis-ci.com/veqtor/dynastes)
 [![Version](https://img.shields.io/pypi/v/dynastes.svg)](https://pypi.org/project/dynastes/)
 ![License](https://img.shields.io/pypi/l/dynastes.svg)
 
