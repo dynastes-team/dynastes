@@ -45,22 +45,22 @@ def bit_population_count(x):
     return bitwise_ops.PopulationCount(x=x)
 
 
-def _idx_to_bits(i, nb_hyperplanes):
+def _idx_to_bits(i, bucket_length):
     """Convert an group index to its bit representation."""
-    bits = bin(i)[2:].zfill(nb_hyperplanes)  # Pad the bits str with 0
+    bits = bin(i)[2:].zfill(bucket_length)  # Pad the bits str with 0
     return [-1.0 if b == "0" else 1.0 for b in bits]
 
 
-def _get_lsh_clusters(x, t_group, nb_hyperplanes, threshold=0.5, dtype=tf.float16):
+def _get_lsh_clusters(x, t_group, bucket_length, threshold=0.5, dtype=tf.float16):
     x = tf.sign(x)  # Get on which side of the hyperplane the keys are.
 
     # Prefer native implementation
-    if nb_hyperplanes >= 8:
+    if bucket_length % 8 == 0:
         return gen_math_ops.compare_and_bitpack(input=x, threshold=threshold)
     # x = tf.reshape(x, [-1, nb_replicat, nb_vector])
     # [length, replicat, nb_vector] * [nb_vector, 2^nb_vector - 1]
 
-    x = tf.matmul(x, tf.cast(t_group, dtype), transpose_b=True) / nb_hyperplanes
+    x = tf.matmul(x, tf.cast(t_group, dtype), transpose_b=True) / bucket_length
     x = tf.expand_dims(x, axis=-1)
     # We get a similarity score for each of the group between [-1, 1]
     # [length, (replicat,) 2^nb_vector - 1]
@@ -76,7 +76,7 @@ def _mul_lsh_vectors(x, t_vectors, dtype=tf.float16):
     return tf.matmul(y, t_vectors)
 
 
-def _lsh_similarity_grad_forward(x, y, t_vectors_x, t_group, nb_hyperplanes, threshold=0.5,
+def _lsh_similarity_grad_forward(x, y, t_vectors_x, t_group, bucket_length, threshold=0.5,
                                  dtype=tf.float16,
                                  t_vectors_y=None):
     t_vectors_x = tf.cast(t_vectors_x, dtype)
@@ -88,8 +88,8 @@ def _lsh_similarity_grad_forward(x, y, t_vectors_x, t_group, nb_hyperplanes, thr
     xh = tf.matmul(tf.cast(x, dtype), t_vectors_x)
     yh = tf.matmul(tf.cast(y, dtype), t_vectors_y)
 
-    xb = tf.matmul(xh, t_group, transpose_b=True) / nb_hyperplanes
-    yb = tf.matmul(yh, t_group, transpose_b=True) / nb_hyperplanes
+    xb = tf.matmul(xh, t_group, transpose_b=True) / bucket_length
+    yb = tf.matmul(yh, t_group, transpose_b=True) / bucket_length
 
     # xb_norm = nn.l2_normalize(xb, axis=-1)
     # yb_norm = nn.l2_normalize(yb, axis=-1)
@@ -100,7 +100,7 @@ def _lsh_similarity_grad_forward(x, y, t_vectors_x, t_group, nb_hyperplanes, thr
     return nn.l2_normalize(tf.matmul(xb, yb, transpose_b=True))
 
 
-def _lsh_similarity(x, y, t_vectors_x, t_group, nb_hyperplanes, threshold=0.5,
+def _lsh_similarity(x, y, t_vectors_x, t_group, bucket_length, threshold=0.5,
                     dtype=tf.float16,
                     t_vectors_y=None):
     t_vectors_x = tf.cast(t_vectors_x, dtype)
@@ -111,62 +111,64 @@ def _lsh_similarity(x, y, t_vectors_x, t_group, nb_hyperplanes, threshold=0.5,
     xh = _mul_lsh_vectors(x, t_vectors_x, dtype=dtype)
     yh = _mul_lsh_vectors(y, t_vectors_y, dtype=dtype)
 
-    xb = _get_lsh_clusters(xh, t_group=t_group, nb_hyperplanes=nb_hyperplanes)
-    yb = _get_lsh_clusters(yh, t_group=t_group, nb_hyperplanes=nb_hyperplanes)
+    xb = _get_lsh_clusters(xh, t_group=t_group, bucket_length=bucket_length)
+    yb = _get_lsh_clusters(yh, t_group=t_group, bucket_length=bucket_length)
 
     bw_sim = tf.bitwise.bitwise_xor(tf.expand_dims(xb, axis=-3), tf.expand_dims(yb, axis=-2))
     p_count = bit_population_count(bw_sim)
     p_count = tf.reduce_sum(p_count, axis=-1)
-    indices = tf.where(p_count < int(nb_hyperplanes * threshold))
-    distances = tf.cast((nb_hyperplanes - tf.gather_nd(p_count, indices)), dtype) / nb_hyperplanes
+    indices = tf.where(p_count < int(bucket_length * threshold))
+    distances = tf.cast((bucket_length - tf.gather_nd(p_count, indices)), dtype) / bucket_length
     return tf.SparseTensor(indices, distances, dense_shape=p_count.shape)
 
 
-def lsh_similary_back_fn(x, y, t_vectors, t_group, nb_hyperplanes, threshold=0.5,
+def lsh_similary_back_fn(x, y, t_vectors, t_group, bucket_length, threshold=0.5,
                          dtype=tf.float16,
                          t_vectors_y=None):
     return _lsh_similarity_grad_forward(x, y,
                                         t_vectors_x=t_vectors,
                                         t_group=t_group,
-                                        nb_hyperplanes=nb_hyperplanes,
+                                        bucket_length=bucket_length,
                                         threshold=threshold,
                                         dtype=dtype,
                                         t_vectors_y=t_vectors_y)
 
 
 @custom_gradient_back_fn(lsh_similary_back_fn)
-def lsh_similarity(x, y, t_vectors, t_group, nb_hyperplanes, threshold=0.5,
+def lsh_similarity(x, y, t_vectors, t_group, bucket_length, threshold=0.5,
                    dtype=tf.float16,
                    t_vectors_y=None):
     r = _lsh_similarity(x, y,
                         t_vectors_x=t_vectors,
                         t_group=t_group,
-                        nb_hyperplanes=nb_hyperplanes,
+                        bucket_length=bucket_length,
                         threshold=threshold,
                         dtype=dtype,
                         t_vectors_y=t_vectors_y)
     return tf.sparse.to_dense(r, default_value=0.)
 
 
-def lsh_attention_back_fn(q, k, v, t_vectors_q, t_group, nb_hyperplanes, threshold=0.5, dtype=tf.float16,
+def lsh_attention_back_fn(q, k, v, t_vectors_q, t_group, bucket_length, threshold=0.5, dtype=tf.float16,
                           t_vectors_k=None):
     logits = _lsh_similarity_grad_forward(q, k,
                                           t_vectors_x=t_vectors_q,
                                           t_group=t_group,
-                                          nb_hyperplanes=nb_hyperplanes,
+                                          bucket_length=bucket_length,
                                           threshold=threshold,
                                           dtype=dtype,
                                           t_vectors_y=t_vectors_k)
     attention_weights = tf.nn.softmax(tf.cast(logits, tf.float32), axis=-1)
     return tf.matmul(attention_weights, v)
 
-
+##
+# WARNING: This is slow, really just an experiment, do not use
+##
 @custom_gradient_back_fn(lsh_attention_back_fn)
-def lsh_attention(q, k, v, t_vectors_q, t_group, nb_hyperplanes, threshold=0.5, dtype=tf.float16, t_vectors_k=None):
+def lsh_attention(q, k, v, t_vectors_q, t_group, bucket_length, threshold=0.5, dtype=tf.float16, t_vectors_k=None):
     logits = _lsh_similarity(q, k,
                              t_vectors_x=t_vectors_q,
                              t_group=t_group,
-                             nb_hyperplanes=nb_hyperplanes,
+                             bucket_length=bucket_length,
                              threshold=threshold,
                              dtype=dtype,
                              t_vectors_y=t_vectors_k)
