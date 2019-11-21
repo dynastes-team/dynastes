@@ -7,7 +7,7 @@ import tensorflow as tf
 from dynastes.util.precision_util import large_compatible_negative
 
 
-def scaled_dot_product_attention(q, k, v, mask, multiquery_attention=False):
+def scaled_dot_product_attention(q, k, v, bias, multiquery_attention=False):
     """Calculate the attention weights.
     q, k, v must have matching leading dimensions.
     k, v must have matching penultimate dimension, i.e.: seq_len_k = seq_len_v.
@@ -18,7 +18,7 @@ def scaled_dot_product_attention(q, k, v, mask, multiquery_attention=False):
       q: query shape == (..., seq_len_q, depth)
       k: key shape == (..., seq_len_k, depth)
       v: value shape == (..., seq_len_v, depth_v)
-      mask: Float tensor with shape broadcastable
+      bias: Float tensor with shape broadcastable
             to (..., seq_len_q, seq_len_k). Defaults to None.
       multiquery_attention: Use one head for K and V,
             see https://arxiv.org/abs/1911.02150v1
@@ -43,9 +43,9 @@ def scaled_dot_product_attention(q, k, v, mask, multiquery_attention=False):
     dk = tf.cast(tf.shape(k)[-1], tf.float32)
     scaled_attention_logits = logits / tf.math.sqrt(dk)
 
-    # add the mask to the scaled tensor.
-    if mask is not None:
-        scaled_attention_logits += (mask * large_compatible_negative(mask.dtype))
+    # add the bias to the scaled tensor.
+    if bias is not None:
+        scaled_attention_logits += bias
 
     # softmax is normalized on the last axis (seq_len_k) so that the scores
     # add up to 1.

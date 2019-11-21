@@ -40,7 +40,8 @@ class LocalizedAttentionLayer1DTest(tf.test.TestCase):
 
             @tf.function
             def test_func(q, k, v):
-                return layer(q, k, v)
+                r, _ = layer(q, k, v)
+                return r
 
             r = test_func(q, k=k, v=v)
 

@@ -54,7 +54,8 @@ class DynastesBaseLayer(tfkl.Layer):
             elif name == 'bias':
                 self.initializers['bias'] = initializers.get('zeros')
             else:
-                self.initializers['name'] = initializers.get('glorot_uniform')
+                self.initializers[name] = initializers.get('glorot_uniform')
+
         return self.initializers[name]
 
     def get_regularizer(self, name):
@@ -72,9 +73,18 @@ class DynastesBaseLayer(tfkl.Layer):
                    shape=None,
                    trainable=None,
                    partitioner=None,
+                   initializer=None,
+                   regularizer=None,
+                   constraint=None,
                    dtype=None,
                    use_resource=None,
                    **kwargs):
+        if initializer is not None:
+            self.initializers[name] = initializers.get(initializer)
+        if regularizer is not None:
+            self.regularizers[name] = regularizers.get(regularizer)
+        if constraint is not None:
+            self.constraints[name] = constraints.get(constraint)
         weight = super(DynastesBaseLayer, self).add_weight(name=name,
                                                            shape=shape,
                                                            initializer=self.get_initializer(name),

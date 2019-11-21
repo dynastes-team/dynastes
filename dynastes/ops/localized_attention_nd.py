@@ -51,7 +51,7 @@ def localized_attention_2d(q, k, v, num_heads=1,
                                   padding=padding)
         xq = split_heads(xq, num_heads=num_heads, ignore_dims=2)
 
-    r, _ = scaled_dot_product_attention(q=xq, k=xk, v=xv, mask=None, multiquery_attention=multiquery_attention)
+    r, _ = scaled_dot_product_attention(q=xq, k=xk, v=xv, bias=None, multiquery_attention=multiquery_attention)
 
     x = merge_heads(r, 2)
     x = tf.squeeze(x, -2)
