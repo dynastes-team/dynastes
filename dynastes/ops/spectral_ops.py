@@ -124,9 +124,10 @@ def stfts_to_melspecgrams(stfts: tf.Tensor, l2mel, ifreq=True) -> tf.Tensor:
     stfts = tf.transpose(stfts, perm=perm)
     stfts = tf.expand_dims(stfts, axis=-1)  # [..., channels, time, freq, 1]
     melspecgrams = _stfts_to_melspecgrams(stfts, l2mel=l2mel, ifreq=ifreq)  # [..., channels, time, freq, 2]
+
     melspecgrams_shape = melspecgrams.shape.as_list()
     perm = list(range(len(melspecgrams_shape)))
-    perm = perm[:-4] + [perm[-2], perm[-3], perm[-4], perm[-1]]
+    perm = perm[:-4] + [perm[-3], perm[-2], perm[-4], perm[-1]]
     melspecgrams = tf.transpose(melspecgrams, perm=perm)  # [..., time, freq, channels, 2]
     melspecgrams_shape = melspecgrams.shape.as_list()
     melspecgrams = tf.reshape(melspecgrams, melspecgrams_shape[:-2] + [
@@ -202,7 +203,7 @@ def _stfts_to_waves(stfts, n_fft=512, hop_length=256, discard_dc=True, pad_l=128
         frame_length=n_fft,
         frame_step=hop_length,
         fft_length=n_fft,
-        window_fn=inverse_stft_window_fn(frame_step=n_fft))
+        window_fn=inverse_stft_window_fn(frame_step=hop_length))
     waves_resyn = tf.linalg.matrix_transpose(waves_resyn)
     crops = np.reshape(np.asarray([0, 0] * (len(stfts_shape) - 3)), (-1, 2)).tolist() + [[pad_l, pad_r], [0, 0]]
     return d_array_ops.crop(waves_resyn, crops)
@@ -325,13 +326,13 @@ def _melspecgrams_to_stfts(melspecgrams, mel2l, ifreq=True):
         """
     logmelmag, mel_p = tf.unstack(melspecgrams, axis=-1)
 
-    mag = tf.matmul(tf.exp(logmelmag), mel2l, transpose_a=True)
+    mag = tf.matmul(tf.exp(logmelmag), mel2l)
     if ifreq:
         mel_phase_angle = tf.cumsum(mel_p * np.pi, axis=-2)
     else:
         mel_phase_angle = mel_p * np.pi
 
-    phase_angle = tf.matmul(mel_phase_angle, mel2l, transpose_a=True)
+    phase_angle = tf.matmul(mel_phase_angle, mel2l)
 
     return tf.expand_dims(polar2rect(mag, phase_angle), axis=-1)
 
