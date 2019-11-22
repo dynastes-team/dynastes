@@ -19,9 +19,19 @@ pip install dynastes
 ```
 
 ### Layers
-- Localized Attention (1D and 2D)
+- Generalized Multihead-Attention
+  - Works with any 1D-transform for QKV
+  - Works with any 1D-attention layer
+- Tensor2Tensor 1D-Attention:
+  - Dot Product Attention*
+  - Dot Product Relative Self-Attention (Masked/Unmasked)*
+  - Sparse Attention (Truncated)
+  - Local Attention (Masked/Unmasked)*
+- Localized Attention (1D and 2D)*
   - Perform attention within "kernels", a bit like convolution
 - Time-Delay Neural Network Layers
+
+*Supports multiquery attention
 
 All layers support Spectral Normalization of kernels:
 ```
@@ -35,9 +45,12 @@ This has some caveats, if you call super.get_weight(name) you get the normalized
 - Orthogonal Regularization
 - Spectral Normalization
 
-### Functions
+### Functions / ops
 - nD-Attention
   - Supports "Multi-Query Attention" from [Fast Transformer Decoding: One Write-Head is All You Need](https://arxiv.org/abs/1911.02150)
+- Spectral ops:
+  - Wave <-> STFT
+  - STFT <-> IF-Mel-spectrogram
 
 ### Roadmap:
 - More attention variants (1D, 2D, Relative, Local, Area) from T2T
