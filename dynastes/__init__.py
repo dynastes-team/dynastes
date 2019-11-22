@@ -9,6 +9,7 @@ from dynastes import normalizers
 from dynastes import ops
 from dynastes import regularizers
 from dynastes import util
+from dynastes import core
 from dynastes.core import backend
 from dynastes import helpers
 
