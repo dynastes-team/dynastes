@@ -37,6 +37,11 @@ All layers support Spectral Normalization of kernels:
 ```
 kernel_normalizer='spectral'
 ```
+even relative attention layers:
+```
+key_embedding_normalizer='spectral'
+value_embedding_normalizer='spectral'
+```
 All you need to do in a GAN training is then to call network(x/z, training=True) when training generator or discriminator, updates are automatically performed on the u-variable if training=True. This is enabled by having a "normalizers" dictionary for every weight.
 If you implement a custom layer that inherits from DynastesBaseLayer you can assign spectral normalization simply by passing wname_normalizer to the creation args, where wname is the name you give your weight.
 This has some caveats, if you call super.get_weight(name) you get the normalized weight, not the actual var / rvar
@@ -54,7 +59,11 @@ This has some caveats, if you call super.get_weight(name) you get the normalized
 
 ### Roadmap:
 - More attention variants (1D, 2D, Relative, Local, Area) from T2T
+- Reimplementations of standard TF-Keras layers to support spectral normalization, etc
 - GAN-scaffoldings (ProGAN, StyleGAN, BiGAN, BiStyleGAN?)
+- Graph-attention/convolutional embedding layer
+  - supply CSR-matrix/ces for node-connections
+  - if training=True then it updates, otherwise reads stored value
 
 ### Why?
 Keras in TensorFlow 2.0 is nice, but sometimes you need exotic layers and functions that are cumbersome to implement, and I've found myself reimplementing or porting parts of T2T and other things for work and in private, over and over. This library aims to consolidate some of that and maintain tests for it.
