@@ -149,7 +149,7 @@ class SelfAttentionBlock1D(ActivatedKernelBiasBaseLayer):
 
         if mask is not None:
             mask = [mask, mask, mask]
-        x, weights = self.attention_layer([q,k,v], mask=mask, training=training)
+        x, weights = self.attention_layer([q, k, v], mask=mask, training=training)
 
         return super(SelfAttentionBlock1D, self).call(x, **kwargs), weights
 

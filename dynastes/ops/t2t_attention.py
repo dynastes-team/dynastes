@@ -5,116 +5,117 @@ from . import t2t_common
 
 
 def split_last_dimension(x, n):
-  """Reshape x so that the last dimension becomes two dimensions.
-  The first of these two dimensions is n.
-  Args:
-    x: a Tensor with shape [..., m]
-    n: an integer.
-  Returns:
-    a Tensor with shape [..., n, m/n]
-  """
-  x_shape = t2t_common.shape_list(x)
-  m = x_shape[-1]
-  if isinstance(m, int) and isinstance(n, int):
-    assert m % n == 0
-  return tf.reshape(x, x_shape[:-1] + [n, m // n])
+    """Reshape x so that the last dimension becomes two dimensions.
+    The first of these two dimensions is n.
+    Args:
+      x: a Tensor with shape [..., m]
+      n: an integer.
+    Returns:
+      a Tensor with shape [..., n, m/n]
+    """
+    x_shape = t2t_common.shape_list(x)
+    m = x_shape[-1]
+    if isinstance(m, int) and isinstance(n, int):
+        assert m % n == 0
+    return tf.reshape(x, x_shape[:-1] + [n, m // n])
 
 
 def combine_last_two_dimensions(x):
-  """Reshape x so that the last two dimension become one.
-  Args:
-    x: a Tensor with shape [..., a, b]
-  Returns:
-    a Tensor with shape [..., ab]
-  """
-  x_shape = t2t_common.shape_list(x)
-  a, b = x_shape[-2:]
-  return tf.reshape(x, x_shape[:-2] + [a * b])
+    """Reshape x so that the last two dimension become one.
+    Args:
+      x: a Tensor with shape [..., a, b]
+    Returns:
+      a Tensor with shape [..., ab]
+    """
+    x_shape = t2t_common.shape_list(x)
+    a, b = x_shape[-2:]
+    return tf.reshape(x, x_shape[:-2] + [a * b])
 
 
 def combine_first_two_dimensions(x):
-  """Reshape x so that the first two dimension become one.
-  Args:
-    x: a Tensor with shape [a, b, ...]
-  Returns:
-    a Tensor with shape [ab, ...]
-  """
-  ret = tf.reshape(x, tf.concat([[-1], t2t_common.shape_list(x)[2:]], 0))
-  old_shape = x.get_shape().dims
-  a, b = old_shape[:2]
-  new_shape = [a * b if a and b else None] + old_shape[2:]
-  ret.set_shape(new_shape)
-  return ret
+    """Reshape x so that the first two dimension become one.
+    Args:
+      x: a Tensor with shape [a, b, ...]
+    Returns:
+      a Tensor with shape [ab, ...]
+    """
+    ret = tf.reshape(x, tf.concat([[-1], t2t_common.shape_list(x)[2:]], 0))
+    old_shape = x.get_shape().dims
+    a, b = old_shape[:2]
+    new_shape = [a * b if a and b else None] + old_shape[2:]
+    ret.set_shape(new_shape)
+    return ret
 
 
 def split_heads(x, num_heads):
-  """Split channels (dimension 2) into multiple heads (becomes dimension 1).
-  Args:
-    x: a Tensor with shape [batch, length, channels]
-    num_heads: an integer
-  Returns:
-    a Tensor with shape [batch, num_heads, length, channels / num_heads]
-  """
-  return tf.transpose(split_last_dimension(x, num_heads), [0, 2, 1, 3])
+    """Split channels (dimension 2) into multiple heads (becomes dimension 1).
+    Args:
+      x: a Tensor with shape [batch, length, channels]
+      num_heads: an integer
+    Returns:
+      a Tensor with shape [batch, num_heads, length, channels / num_heads]
+    """
+    return tf.transpose(split_last_dimension(x, num_heads), [0, 2, 1, 3])
 
 
 def split_heads_2d(x, num_heads):
-  """Split channels (dimension 3) into multiple heads (becomes dimension 1).
-  Args:
-    x: a Tensor with shape [batch, height, width, channels]
-    num_heads: an integer
-  Returns:
-    a Tensor with shape [batch, num_heads, height, width, channels / num_heads]
-  """
-  return tf.transpose(split_last_dimension(x, num_heads), [0, 3, 1, 2, 4])
+    """Split channels (dimension 3) into multiple heads (becomes dimension 1).
+    Args:
+      x: a Tensor with shape [batch, height, width, channels]
+      num_heads: an integer
+    Returns:
+      a Tensor with shape [batch, num_heads, height, width, channels / num_heads]
+    """
+    return tf.transpose(split_last_dimension(x, num_heads), [0, 3, 1, 2, 4])
 
 
 def split_heads_nd(x, num_heads):
-  """Split the depth dimension (last dimension) into multiple heads.
-  Args:
-    x: a [batch, d1, ..., dn, depth] tensor
-    num_heads: an integer
-  Returns:
-    a [batch, num_heads, d1, ..., dn, depth // num_heads]
-  """
-  num_dimensions = len(t2t_common.shape_list(x)) - 2
-  return tf.transpose(
-      split_last_dimension(x, num_heads), [0, num_dimensions + 1] +
-      list(range(1, num_dimensions + 1)) + [num_dimensions + 2])
+    """Split the depth dimension (last dimension) into multiple heads.
+    Args:
+      x: a [batch, d1, ..., dn, depth] tensor
+      num_heads: an integer
+    Returns:
+      a [batch, num_heads, d1, ..., dn, depth // num_heads]
+    """
+    num_dimensions = len(t2t_common.shape_list(x)) - 2
+    return tf.transpose(
+        split_last_dimension(x, num_heads), [0, num_dimensions + 1] +
+                                            list(range(1, num_dimensions + 1)) + [num_dimensions + 2])
 
 
 def combine_heads(x):
-  """Inverse of split_heads.
-  Args:
-    x: a Tensor with shape [batch, num_heads, length, channels / num_heads]
-  Returns:
-    a Tensor with shape [batch, length, channels]
-  """
-  return combine_last_two_dimensions(tf.transpose(x, [0, 2, 1, 3]))
+    """Inverse of split_heads.
+    Args:
+      x: a Tensor with shape [batch, num_heads, length, channels / num_heads]
+    Returns:
+      a Tensor with shape [batch, length, channels]
+    """
+    return combine_last_two_dimensions(tf.transpose(x, [0, 2, 1, 3]))
 
 
 def combine_heads_2d(x):
-  """Inverse of split_heads_2d.
-  Args:
-    x: a Tensor with shape
-      [batch, num_heads, height, width, channels / num_heads]
-  Returns:
-    a Tensor with shape [batch, height, width, channels]
-  """
-  return combine_last_two_dimensions(tf.transpose(x, [0, 2, 3, 1, 4]))
+    """Inverse of split_heads_2d.
+    Args:
+      x: a Tensor with shape
+        [batch, num_heads, height, width, channels / num_heads]
+    Returns:
+      a Tensor with shape [batch, height, width, channels]
+    """
+    return combine_last_two_dimensions(tf.transpose(x, [0, 2, 3, 1, 4]))
 
 
 def combine_heads_nd(x):
-  """Inverse of split_heads_nd.
-  Args:
-    x: a [batch, num_heads, d1, ..., dn, depth // num_heads] tensor
-  Returns:
-    a [batch, d1, ...., dn, depth] tensor
-  """
-  num_dimensions = len(t2t_common.shape_list(x)) - 3
-  return combine_last_two_dimensions(
-      tf.transpose(x, [0] + list(range(2, num_dimensions + 2)) +
-                   [1, num_dimensions + 2]))
+    """Inverse of split_heads_nd.
+    Args:
+      x: a [batch, num_heads, d1, ..., dn, depth // num_heads] tensor
+    Returns:
+      a [batch, d1, ...., dn, depth] tensor
+    """
+    num_dimensions = len(t2t_common.shape_list(x)) - 3
+    return combine_last_two_dimensions(
+        tf.transpose(x, [0] + list(range(2, num_dimensions + 2)) +
+                     [1, num_dimensions + 2]))
+
 
 def to_int32(x):
     """Cast x to float; created because to_float is deprecated."""
@@ -424,7 +425,8 @@ def matmul_with_relative_keys(x, y, heads_share_relative_embedding):
 
 def dot_product_unmasked_self_attention_relative_v2(
         q, k, v, bias, key_leftright_embeddings, value_leftright_embeddings=None,
-        max_relative_position=None, dropout_rate=0.0, save_weights_to=None, name='dot_product_unmasked_self_attention_relative_v2',
+        max_relative_position=None, dropout_rate=0.0, save_weights_to=None,
+        name='dot_product_unmasked_self_attention_relative_v2',
         dropout_broadcast_dims=None, heads_share_relative_embedding=False,
         add_relative_to_values=False):
     """Calculate relative position-aware dot-product self-attention.
@@ -907,6 +909,7 @@ def dot_product_batched_head(q, k, v, gates_q, gates_k, mask_right=False):
         capacity = tf.minimum(length, capacity)
         capacity = tf.maximum(capacity, 1)
         return t2t_expert_util.TruncatingDispatcher(gates, capacity)
+
     q_dispatcher = get_dispatcher(gates_q)
     k_dispatcher = get_dispatcher(gates_k)
 

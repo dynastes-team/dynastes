@@ -16,7 +16,6 @@ def _test_grads(testCase: tf.test.TestCase, func, input):
         testCase.assertAllInRange(grad, -10., 10)
 
 
-
 to_tensor = tf.convert_to_tensor
 normal = np.random.normal
 
@@ -97,9 +96,11 @@ class T2TAttention1DTest(tf.test.TestCase):
                     {'self': True, 'steps_q': 64, 'steps_kv': 64, 'dim_q': dim, 'dim_k': dim, 'dim_v': dim}),
                 (
                     'Local Multiquery Masked',
-                    Attention1D(num_heads=num_heads, multiquery_attention=True, self_attention=True, local=True, masked=True, block_length=8,
+                    Attention1D(num_heads=num_heads, multiquery_attention=True, self_attention=True, local=True,
+                                masked=True, block_length=8,
                                 filter_width=6),
-                    {'self': True, 'steps_q': 64, 'steps_kv': 64, 'dim_q': dim_mq, 'dim_k': dim_mq // num_heads, 'dim_v': dim_mq // num_heads}),
+                    {'self': True, 'steps_q': 64, 'steps_kv': 64, 'dim_q': dim_mq, 'dim_k': dim_mq // num_heads,
+                     'dim_v': dim_mq // num_heads}),
 
             ]
 
@@ -134,14 +135,12 @@ class T2TAttention1DTest(tf.test.TestCase):
                 rfn = test_fn(q, k=k, v=v)
                 self.assertAllClose(r, rfn)
                 self.assertAllInRange(r, -200., 200)
+
                 def fn():
                     test_fn(q, k=k, v=v)
 
                 time = timeit.timeit(fn, number=4) / (params['steps_q'] * params['steps_kv'] * params['dim_q'])
                 time *= 8192
-                # ex_res_shape = np.zeros((bs, t_steps // s, v_dim))
-
-                # self.assertShapeEqual(ex_res_shape, r)
 
                 _test_grads(self, test_fn, [q, k, v])
                 return time

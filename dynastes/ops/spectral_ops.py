@@ -14,6 +14,7 @@ from dynastes.core.nn import array_ops as d_array_ops
     But supports multi-channel input, ie: [..., time, channels] -> [..., time, mels, channels * 2]
 """
 
+
 def inverse_stft_window_fn(frame_step,
                            forward_window_fn=window_ops.hann_window,
                            name=None):

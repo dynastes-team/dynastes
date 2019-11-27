@@ -9,7 +9,6 @@ from dynastes.ops import spectral_ops
 class SpectralOpsTest(tf.test.TestCase):
     @test_util.use_deterministic_cudnn
     def test_simple(self):
-
         print('### Running spectral ops tests ###')
 
         n_fft = 1024
@@ -46,22 +45,25 @@ class SpectralOpsTest(tf.test.TestCase):
         print('stft_err', stft_err, 'stft_mean_err', stft_mean_err)
         assert (stft_err < 0.005)
         assert (stft_mean_err < 1e-4)
-        l2mel = tf.signal.linear_to_mel_weight_matrix(num_spectrogram_bins=fft_bins, num_mel_bins=(fft_bins * mel_upsampling))
+        l2mel = tf.signal.linear_to_mel_weight_matrix(num_spectrogram_bins=fft_bins,
+                                                      num_mel_bins=(fft_bins * mel_upsampling))
         # Mel transform
         melspecgrams = spectral_ops.stfts_to_melspecgrams(stfts, l2mel=l2mel)
 
         # Using mel-upsampling yields much lower reconstruction error!
         if mel_upsampling > 1:
-            melspecgrams = tf.keras.layers.AveragePooling2D((1, mel_upsampling), strides=(1, mel_upsampling), padding='same', data_format='channels_last')(melspecgrams)
+            melspecgrams = tf.keras.layers.AveragePooling2D((1, mel_upsampling), strides=(1, mel_upsampling),
+                                                            padding='same', data_format='channels_last')(melspecgrams)
             # Simulate output downsampling
-            melspecgrams = tf.keras.layers.UpSampling2D((1, mel_upsampling), data_format='channels_last', interpolation='bilinear')(melspecgrams)
+            melspecgrams = tf.keras.layers.UpSampling2D((1, mel_upsampling), data_format='channels_last',
+                                                        interpolation='bilinear')(melspecgrams)
 
         stfts_mel_recon = spectral_ops.melspecgrams_to_stfts(melspecgrams, mel2l=tf.transpose(l2mel))
-        waves_mel_recon = spectral_ops.stfts_to_waves(stfts_mel_recon, n_fft=n_fft, hop_length=hop_length, discard_dc=True, pad_l=pad, pad_r=pad)
+        waves_mel_recon = spectral_ops.stfts_to_waves(stfts_mel_recon, n_fft=n_fft, hop_length=hop_length,
+                                                      discard_dc=True, pad_l=pad, pad_r=pad)
         melspec_wav_recon_err = tf.abs(tf.reduce_mean(waves - waves_mel_recon)).numpy()
         print('melspec_wav_recon_err', melspec_wav_recon_err)
-        assert(melspec_wav_recon_err < 0.0002)
-
+        assert (melspec_wav_recon_err < 0.0002)
 
         melspecgram_stfts_mel_recon = spectral_ops.stfts_to_melspecgrams(stfts_mel_recon, l2mel=l2mel)
 

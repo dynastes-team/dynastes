@@ -80,7 +80,6 @@ class SpectralNormalization(tfkl.Layer):
             w_normalized = tf.transpose(w_normalized, perm=dims[:-2] + [dims[-1], dims[-2]])
         return w_normalized
 
-
     def get_config(self):
         config = {
             'power_iteration_rounds': self.power_iteration_rounds,

@@ -4,8 +4,6 @@ from __future__ import print_function
 
 import tensorflow as tf
 
-from dynastes.util.precision_util import large_compatible_negative
-
 
 def scaled_dot_product_attention(q, k, v, bias, multiquery_attention=False):
     """Calculate the attention weights.

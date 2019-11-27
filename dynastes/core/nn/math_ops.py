@@ -160,6 +160,7 @@ def lsh_attention_back_fn(q, k, v, t_vectors_q, t_group, bucket_length, threshol
     attention_weights = tf.nn.softmax(tf.cast(logits, tf.float32), axis=-1)
     return tf.matmul(attention_weights, v)
 
+
 ##
 # WARNING: This is slow, really just an experiment, do not use
 ##

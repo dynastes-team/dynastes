@@ -51,7 +51,7 @@ class LshGatingLayer(DynastesBaseLayer):
         x = tf.argmax(x, axis=-1)
         # [length(, replicat)]
         # One-hot for compatibility with the sparse dispatcher
-        x = tf.one_hot(x, self.buckets+1)
+        x = tf.one_hot(x, self.buckets + 1)
         # TODO(epot): Use a loss to force an even distribution
         return x
 

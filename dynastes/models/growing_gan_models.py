@@ -4,6 +4,7 @@ import tensorflow as tf
 import tensorflow.keras as tfk
 import tensorflow.keras.layers as tfkl
 
+
 def _call_masked(layer, inputs, training=None, mask=None, **kwargs):
     if layer.supports_masking:
         out = layer(inputs, training=training, mask=mask, **kwargs)
@@ -118,7 +119,6 @@ class GrowingGanGenerator(GrowingGanModel, abc.ABC):
         Return a layer that scales/transforms input @ input_lod
         to conform exactly to targets
         """
-
 
     def _get_output(self, inputs, lod_in=None, training=None, **kwargs):
 

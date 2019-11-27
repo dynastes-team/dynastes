@@ -1,9 +1,11 @@
+import timeit
+
 import numpy as np
 import tensorflow as tf
+from tensorflow.keras import layers as tfkl
 from tensorflow.keras.utils import custom_object_scope
 from tensorflow.python.framework import test_util
-from tensorflow_core.python.keras.api._v2.keras import layers as tfkl
-import timeit
+
 import dynastes as d
 from dynastes.models.growing_gan_models import GrowingGanGenerator, GrowingGanClassifier
 
@@ -135,7 +137,7 @@ class Complex2DGrowingGanGenerator(GrowingGanGenerator):
             return tfkl.Activation('linear')
         input_idx = max((self.n_lods - 1) - output_lod, 0)
         output_idx = max((self.n_lods - 1) - input_lod, 0)
-        strides = (self.strides)[input_idx : output_idx]
+        strides = (self.strides)[input_idx: output_idx]
         if len(strides) == 0:
             return tfkl.Activation('linear')
         scale = np.cumprod(strides)[-1]
@@ -151,19 +153,22 @@ class GrowingGanGeneratorTestComplex(tf.test.TestCase):
         print('GrowingGanGeneratorTestComplex - test_simple')
         with custom_object_scope(d.object_scope):
             in_z_hw = 1
-            strides = [7,2,3,1,3,5,1]
-            z = np.random.random(size=(1, in_z_hw, in_z_hw, 2**len(strides)+1)).astype(np.float32)
+            strides = [7, 2, 3, 1, 3, 5, 1]
+            z = np.random.random(size=(1, in_z_hw, in_z_hw, 2 ** len(strides) + 1)).astype(np.float32)
             gen = Complex2DGrowingGanGenerator(strides)
-            for i in range(len(strides)*2):
+            for i in range(len(strides) * 2):
                 y = gen(z, lod_in=i / 2)
                 ex_hw = in_z_hw * np.cumprod(strides)[-1]
                 self.assertShapeEqual(np.ones(shape=(1, ex_hw, ex_hw, 3)), y)
-            max_lod = float(len(strides)+1)
-            #Test timing
+            max_lod = float(len(strides) + 1)
+
+            # Test timing
             def lod_0():
                 y = gen(z, lod_in=0.)
+
             def lod_max():
                 y = gen(z, lod_in=max_lod)
+
             time_l0 = timeit.timeit(lod_0, number=2)
             time_l7 = timeit.timeit(lod_max, number=2)
             print('LOD time diff', (time_l7 / time_l0))
@@ -279,8 +284,8 @@ class ComplexGanClassifier(GrowingGanClassifier):
         n_lods = len(strides)
         super(ComplexGanClassifier, self).__init__(n_lods=n_lods, **kwargs)
         self.strides = strides
-        channels = [2**(i+1) for i in range(len(self.strides)+1)]
-        #channels = [3, 4, 4, 8, 16, 32]
+        channels = [2 ** (i + 1) for i in range(len(self.strides) + 1)]
+        # channels = [3, 4, 4, 8, 16, 32]
         self.gan_layers = []
         self.dom_layers = []
         for i, (s, ch) in enumerate(zip(self.strides, channels[1:])):
@@ -318,7 +323,7 @@ class GrowingGanClassifierTestComplex(tf.test.TestCase):
     @test_util.use_deterministic_cudnn
     def test_simple(self):
         with custom_object_scope(d.object_scope):
-            strides = [1,3,7,5,3]
+            strides = [1, 3, 7, 5, 3]
             in_base = 1
             in_hw = in_base * np.cumprod(strides)[-1]
             n_lods = len(strides)
@@ -326,4 +331,4 @@ class GrowingGanClassifierTestComplex(tf.test.TestCase):
             cls = ComplexGanClassifier(strides)
             y = cls(z, lod_in=3.)
             ex_size_hw = in_hw // np.cumprod(strides)[-1]
-            self.assertShapeEqual(np.ones(shape=(1, ex_size_hw, ex_size_hw, 2**(n_lods+1))), y)
+            self.assertShapeEqual(np.ones(shape=(1, ex_size_hw, ex_size_hw, 2 ** (n_lods + 1))), y)

@@ -2,11 +2,11 @@ from __future__ import absolute_import
 from __future__ import division
 from __future__ import print_function
 
+from tensorflow.keras.regularizers import Regularizer
 from tensorflow.keras.utils import custom_object_scope
 from tensorflow.python.keras import regularizers as tf_regularizers
 from tensorflow.python.keras.regularizers import deserialize as _deserialize
 from tensorflow.python.keras.regularizers import serialize as _serialize
-from tensorflow.keras.regularizers import Regularizer
 
 from . import orthogonal
 from .orthogonal import Orthogonal

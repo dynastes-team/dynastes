@@ -66,6 +66,7 @@ class MultiHeadSelfAttentionLayer(DynastesBaseLayer):
             mask = [mask, mask, mask]
         return self.multiheadAttentionLayer(inputs=inputs, mask=mask, training=training)
 
+
 class MultiHeadCrossAttentionLayer(DynastesBaseLayer):
 
     def __init__(self,

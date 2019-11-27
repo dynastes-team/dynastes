@@ -39,7 +39,8 @@ class DynastesBaseLayer(tfkl.Layer):
                  name=None,
                  **kwargs):
         self.weights_dict = {}
-        self.initializers, self.regularizers, self.constraints, self.normalizers = _get_regularizers_from_keywords(kwargs)
+        self.initializers, self.regularizers, self.constraints, self.normalizers = _get_regularizers_from_keywords(
+            kwargs)
 
         super(DynastesBaseLayer, self).__init__(
             trainable=trainable,

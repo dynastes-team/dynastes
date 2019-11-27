@@ -6,6 +6,7 @@ from tensorflow.python.framework import test_util
 import dynastes as d
 from dynastes.layers.attention_layers import LocalizedAttentionLayer1D, LocalizedAttentionLayer2D
 
+
 def _test_grads(testCase: tf.test.TestCase, func, input):
     _, grads = tf.test.compute_gradient(func, input)
     for grad in grads:
@@ -68,11 +69,11 @@ class LocalizedAttentionLayer2DTest(tf.test.TestCase):
                                               num_heads=heads,
                                               dilation_rate=(1, 1))
 
-            q = to_tensor(normal(size=(bs, in_shape[0] // s, in_shape[1] // s, dim*heads))
+            q = to_tensor(normal(size=(bs, in_shape[0] // s, in_shape[1] // s, dim * heads))
                           .astype(np.float32))
-            k = to_tensor(normal(size=(bs, in_shape[0], in_shape[1], dim*heads))
+            k = to_tensor(normal(size=(bs, in_shape[0], in_shape[1], dim * heads))
                           .astype(np.float32))
-            v = to_tensor(normal(size=(bs, in_shape[0], in_shape[1], v_dim*heads))
+            v = to_tensor(normal(size=(bs, in_shape[0], in_shape[1], v_dim * heads))
                           .astype(np.float32))
 
             @tf.function
@@ -81,7 +82,7 @@ class LocalizedAttentionLayer2DTest(tf.test.TestCase):
 
             r = test_func(q, _k=k, _v=v)
 
-            ex_res_shape = np.zeros((bs, in_shape[0] // s, in_shape[1] // s, v_dim*heads))
+            ex_res_shape = np.zeros((bs, in_shape[0] // s, in_shape[1] // s, v_dim * heads))
 
             self.assertShapeEqual(ex_res_shape, r)
 

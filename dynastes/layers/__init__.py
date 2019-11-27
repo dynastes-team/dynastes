@@ -4,8 +4,8 @@ from __future__ import print_function
 
 from .attention_layers import LocalizedAttentionLayer1D
 from .attention_layers import LocalizedAttentionLayer2D
-from .t2t_attention_layers import Attention1D
 from .base_layers import ActivatedKernelBiasBaseLayer
+from .t2t_attention_layers import Attention1D
 from .time_delay_layers import DepthGroupwiseTimeDelayLayer1D
 from .time_delay_layers import DepthGroupwiseTimeDelayLayerFake2D
 from .time_delay_layers import TimeDelayLayer1D
