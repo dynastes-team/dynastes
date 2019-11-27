@@ -56,11 +56,17 @@ This has some caveats, if you call super.get_weight(name) you get the normalized
 - Spectral ops:
   - Wave <-> STFT
   - STFT <-> IF-Mel-spectrogram
+  
+### Models / Architecture Scaffolding
+- Progressive Growing of GANs / StyleGAN scaffolding
+    - Easily implement any kind of growing GAN in tf.keras by inhereting from these models:
+        - SimpleGrowingGanClassifer
+        - SimpleGrowingGanGenerator
 
 ### Roadmap:
-- More attention variants (1D, 2D, Relative, Local, Area) from T2T
+- More attention variants (~~1D~~, 2D, ~~Relative~~, ~~Local~~, Area) from T2T
 - Reimplementations of standard TF-Keras layers to support spectral normalization, etc
-- GAN-scaffoldings (ProGAN, StyleGAN, BiGAN, BiStyleGAN?)
+- GAN-scaffoldings (~~ProGAN~~, ~~StyleGAN~~, BiGAN, BiStyleGAN?)
 - Graph-attention/convolutional embedding layer
   - supply CSR-matrix/ces for node-connections
   - if training=True then it updates, otherwise reads stored value
