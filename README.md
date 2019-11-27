@@ -56,6 +56,7 @@ This has some caveats, if you call super.get_weight(name) you get the normalized
 - Spectral ops:
   - Wave <-> STFT
   - STFT <-> IF-Mel-spectrogram
+  - Modified from GANSynth, now supports multi-channel audio
   
 ### Models / Architecture Scaffolding
 - Progressive Growing of GANs / StyleGAN scaffolding
