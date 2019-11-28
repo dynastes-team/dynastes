@@ -27,6 +27,8 @@ pip install dynastes
   - Dot Product Relative Self-Attention (Masked/Unmasked)*
   - Sparse Attention (Truncated)
   - Local Attention (Masked/Unmasked)*
+- Tensor2Tensor 2D-Attention:
+  - Dot Product Relative Self-Attention (Unmasked)*
 - Localized Attention (1D and 2D)*
   - Perform attention within "kernels", a bit like convolution
 - Time-Delay Neural Network Layers
