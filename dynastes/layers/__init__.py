@@ -5,6 +5,7 @@ from __future__ import print_function
 from .attention_layers import LocalizedAttentionLayer1D
 from .attention_layers import LocalizedAttentionLayer2D
 from .base_layers import ActivatedKernelBiasBaseLayer
+from .random_layers import StatelessRandomNormalLike
 from .t2t_attention_layers import Attention1D
 from .time_delay_layers import DepthGroupwiseTimeDelayLayer1D
 from .time_delay_layers import DepthGroupwiseTimeDelayLayerFake2D
@@ -19,7 +20,8 @@ object_scope = {
     'DepthGroupwiseTimeDelayLayerFake2D': DepthGroupwiseTimeDelayLayerFake2D,
     'TimeDelayLayer1D': TimeDelayLayer1D,
     'TimeDelayLayerFake2D': TimeDelayLayerFake2D,
-    'Attention1D': Attention1D
+    'Attention1D': Attention1D,
+    'StatelessRandomNormalLike': StatelessRandomNormalLike,
 }
 
 # Cleanup symbols to avoid polluting namespace.
