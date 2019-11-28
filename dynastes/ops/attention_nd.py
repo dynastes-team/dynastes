@@ -3,6 +3,7 @@ from __future__ import division
 from __future__ import print_function
 
 import tensorflow as tf
+from dynastes.ops.t2t_common import shape_list
 
 
 def scaled_dot_product_attention(q, k, v, bias, multiquery_attention=False):
@@ -28,7 +29,7 @@ def scaled_dot_product_attention(q, k, v, bias, multiquery_attention=False):
     https://www.tensorflow.org/tutorials/text/transformer
     """
     leading_dims = ['b', 'x', 'y', 'z', 'q', 'a', 'c']
-    shape = q.shape.as_list()
+    shape = shape_list(q)
     ldim = ''.join(leading_dims[:len(shape) - 3])
     ld3 = (ldim, ldim, ldim)
 
@@ -62,7 +63,7 @@ def split_heads(x, num_heads, ignore_dims=0):
     Source (modified):
     https://www.tensorflow.org/tutorials/text/transformer
     """
-    shape = x.shape.as_list()
+    shape = shape_list(x)
     x = tf.reshape(x, tuple(shape[:-1]) + (num_heads, shape[-1] // num_heads))
     dims = list(range(len(shape) + 1))
     perm = dims[:1 + ignore_dims] + [dims[-2]] + dims[1 + ignore_dims:-2] + [dims[-1]]
@@ -75,7 +76,7 @@ def merge_heads(x, ignore_dims=0):
     https://www.tensorflow.org/tutorials/text/transformer
     """
 
-    shape = x.shape.as_list()
+    shape = shape_list(x)
     dims = list(range(len(shape)))
     perm = dims[:1 + ignore_dims] + [dims[-2]] + [dims[-3]] + [dims[-1]]
     x = tf.transpose(x, perm=perm)

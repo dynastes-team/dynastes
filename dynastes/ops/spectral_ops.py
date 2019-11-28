@@ -6,7 +6,7 @@ from tensorflow.python.ops import math_ops
 from tensorflow.python.ops.signal import window_ops
 
 from dynastes.core.nn import array_ops as d_array_ops
-
+from dynastes.ops.t2t_common import shape_list
 """
     STFT, Mel-spectrogram and inverse methods
     Borrows heavily from
@@ -86,7 +86,7 @@ def waves_to_stfts(waves: tf.Tensor, n_fft=512, hop_length=256, discard_dc=True,
        """
     stfts = _waves_to_stfts(waves, n_fft=n_fft, hop_length=hop_length, discard_dc=discard_dc, pad_l=pad_l, pad_r=pad_r)
     stfts = tf.squeeze(stfts, axis=-1)  # [..., channels, time, freq]
-    stfts_shape = stfts.shape.as_list()
+    stfts_shape = shape_list(stfts)
     perm = list(range(len(stfts_shape)))
     perm = perm[:-3] + [perm[-2], perm[-1], perm[-3]]
     return tf.transpose(stfts, perm=perm)
@@ -99,7 +99,7 @@ def stfts_to_waves(stfts: tf.Tensor, n_fft=512, hop_length=256, discard_dc=True,
     Returns:
       waves: Tensor of the waveform, shape [..., time, channels].
     """
-    stfts_shape = stfts.shape.as_list()
+    stfts_shape = shape_list(stfts)
     perm = list(range(len(stfts_shape)))
     perm = perm[:-3] + [perm[-1], perm[-3], perm[-2]]
     stfts = tf.transpose(stfts, perm=perm)  # [..., channels, time, freq]
@@ -119,18 +119,18 @@ def stfts_to_melspecgrams(stfts: tf.Tensor, l2mel, ifreq=True) -> tf.Tensor:
         shape [..., time, freq, 2*channels], mel scaling of frequencies.
     """
     # inp: [..., time, freq, channels]
-    stfts_shape = stfts.shape.as_list()
+    stfts_shape = shape_list(stfts)
     perm = list(range(len(stfts_shape)))
     perm = perm[:-3] + [perm[-1], perm[-3], perm[-2]]
     stfts = tf.transpose(stfts, perm=perm)
     stfts = tf.expand_dims(stfts, axis=-1)  # [..., channels, time, freq, 1]
     melspecgrams = _stfts_to_melspecgrams(stfts, l2mel=l2mel, ifreq=ifreq)  # [..., channels, time, freq, 2]
 
-    melspecgrams_shape = melspecgrams.shape.as_list()
+    melspecgrams_shape = shape_list(melspecgrams)
     perm = list(range(len(melspecgrams_shape)))
     perm = perm[:-4] + [perm[-3], perm[-2], perm[-4], perm[-1]]
     melspecgrams = tf.transpose(melspecgrams, perm=perm)  # [..., time, freq, channels, 2]
-    melspecgrams_shape = melspecgrams.shape.as_list()
+    melspecgrams_shape = shape_list(melspecgrams)
     melspecgrams = tf.reshape(melspecgrams, melspecgrams_shape[:-2] + [
         melspecgrams_shape[-2] * melspecgrams_shape[-1]])  # [..., time, freq, channels * 2]
     return melspecgrams
@@ -148,7 +148,7 @@ def melspecgrams_to_stfts(melspecgrams: tf.Tensor, mel2l, ifreq=True) -> tf.Tens
           specgrams: Tensor of log magnitudes and instantaneous frequencies,
             shape [..., time, freq, channels].
         """
-    melspecgrams_shape = melspecgrams.shape.as_list()  # [..., time, freq, channels*2]
+    melspecgrams_shape = shape_list(melspecgrams)  # [..., time, freq, channels*2]
     melspecgrams = tf.reshape(melspecgrams,
                               melspecgrams_shape[:-1] + [melspecgrams_shape[-1] // 2,
                                                          2])  # [..., time, freq, channels, 2]
@@ -157,7 +157,7 @@ def melspecgrams_to_stfts(melspecgrams: tf.Tensor, mel2l, ifreq=True) -> tf.Tens
     melspecgrams = tf.transpose(melspecgrams, perm=perm)  # [..., channels, time, freq, 2]
     stfts = _melspecgrams_to_stfts(melspecgrams, mel2l=mel2l, ifreq=True)  # [..., channels, time, freq, 1]
     stfts = tf.squeeze(stfts, axis=-1)  # [..., channels, time, freq]
-    stfts_shape = stfts.shape.as_list()
+    stfts_shape = shape_list(stfts)
     perm = list(range(len(stfts_shape)))
     perm = perm[:-3] + [perm[-2], perm[-1], perm[-3]]
     stfts = tf.transpose(stfts, perm=perm)  # [..., time, freq, channels]
@@ -171,7 +171,7 @@ def _waves_to_stfts(waves: tf.Tensor, n_fft=512, hop_length=256, discard_dc=True
     Returns:
       stfts: Complex64 tensor of stft, shape [..., channels, time, freq, 1].
     """
-    waves_shape = waves.shape.as_list()
+    waves_shape = shape_list(waves)
     waves = tf.linalg.matrix_transpose(waves)  # [..., channels, time]
     waves_padded = tf.pad(waves,
                           np.reshape(np.asarray([0, 0] * (len(waves_shape) - 1)), (-1, 2)).tolist() + [[pad_l, pad_r]])
@@ -195,7 +195,7 @@ def _stfts_to_waves(stfts, n_fft=512, hop_length=256, discard_dc=True, pad_l=128
       waves: Tensor of the waveform, shape [..., time, channels].
     """
     stfts = tf.squeeze(stfts, axis=-1)
-    stfts_shape = stfts.shape.as_list()
+    stfts_shape = shape_list(stfts)
     dc = 1 if discard_dc else 0
     nyq = 1 - dc
     stfts = tf.pad(stfts, np.reshape(np.asarray([0, 0] * (len(stfts_shape) - 1)), (-1, 2)).tolist() + [[dc, nyq]])

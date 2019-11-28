@@ -2,10 +2,10 @@ import tensorflow as tf
 
 from dynastes.ops.attention_nd import split_heads, scaled_dot_product_attention, merge_heads
 from dynastes.ops.pad_ops import pad_input_2d
-
+from dynastes.ops.t2t_common import shape_list
 
 def extract_and_split_2d(x, kernel_size=(3, 3), strides=(1, 1), dilation_rate=(1, 1), padding='same'):
-    shape = x.shape.as_list()
+    shape = shape_list(x)
     x, padding = pad_input_2d(x, padding, kernel_size=kernel_size, dilation_rate=dilation_rate)
     x = tf.image.extract_patches(
         x,
@@ -13,7 +13,7 @@ def extract_and_split_2d(x, kernel_size=(3, 3), strides=(1, 1), dilation_rate=(1
         [1, strides[0], strides[1], 1],
         [1, dilation_rate[0], dilation_rate[1], 1],
         padding=padding)
-    shape_p = x.shape.as_list()
+    shape_p = shape_list(x)
     x = tf.reshape(x, shape=shape_p[:-1] + [kernel_size[0] * kernel_size[1], shape[-1]])
     return x
 

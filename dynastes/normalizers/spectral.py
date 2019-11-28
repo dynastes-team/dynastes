@@ -1,6 +1,7 @@
 import tensorflow as tf
 import tensorflow.keras as tfk
 import tensorflow.keras.layers as tfkl
+from dynastes.ops.t2t_common import shape_list
 
 
 class SpectralNormalization(tfkl.Layer):
@@ -68,7 +69,7 @@ class SpectralNormalization(tfkl.Layer):
     @tf.function
     def call(self, w, training=None):
         if self.transposed:
-            w_shape = w.shape.as_list()
+            w_shape = shape_list(w)
             dims = list(range(len(w_shape)))
             w = tf.transpose(w, perm=dims[:-2] + [dims[-1], dims[-2]])
         normalization_factor = self._compute_spectral_norm(w, training=training)

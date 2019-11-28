@@ -1,10 +1,11 @@
 import tensorflow as tf
 
 from dynastes.ops.pad_ops import pad_input_2d
+from dynastes.ops.t2t_common import shape_list
 
 
 def time_delay_nn_1d(x, kernel, kernel_size, strides, dilation_rate, padding='valid'):
-    shape = x.shape.as_list()
+    shape = shape_list(x)
     x = tf.expand_dims(x, -1)
     x, padding = pad_input_2d(x, padding, kernel_size=(kernel_size, shape[-1]), dilation_rate=(dilation_rate, 1))
     x = tf.image.extract_patches(x,
