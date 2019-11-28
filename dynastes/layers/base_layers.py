@@ -6,7 +6,7 @@ from tensorflow.python.keras import constraints
 from tensorflow.python.keras import initializers
 from tensorflow.python.ops import nn
 
-from dynastes import normalizers
+from dynastes import weight_normalizers
 from dynastes import regularizers
 
 
@@ -27,7 +27,7 @@ def _get_regularizers_from_keywords(kwargs):
         elif kwarg.endswith('constraint'):
             _constraints[kwarg.split('_constraint')[0]] = constraints.get(kwargs.pop(kwarg))
         elif kwarg.endswith('normalizer'):
-            _normalizers[kwarg.split('_normalizer')[0]] = normalizers.get(kwargs.pop(kwarg))
+            _normalizers[kwarg.split('_normalizer')[0]] = weight_normalizers.get(kwargs.pop(kwarg))
 
     return _initializers, _regularizers, _constraints, _normalizers
 
@@ -115,7 +115,7 @@ class DynastesBaseLayer(tfkl.Layer):
         for name, constraint in self.constraints.items():
             config[name + '_constraint'] = constraints.serialize(constraint)
         for name, normalizer in self.normalizers.items():
-            config[name + '_normalizer'] = normalizers.serialize(normalizer)
+            config[name + '_normalizer'] = weight_normalizers.serialize(normalizer)
 
         base_config = super(DynastesBaseLayer, self).get_config()
         return {**base_config, **config}

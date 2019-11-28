@@ -7,7 +7,7 @@ from dynastes import core
 from dynastes import helpers
 from dynastes import layers
 from dynastes import models
-from dynastes import normalizers
+from dynastes import weight_normalizers
 from dynastes import ops
 from dynastes import regularizers
 from dynastes import util
@@ -16,7 +16,7 @@ from dynastes.core import backend
 object_scope = {
     **blocks.object_scope,
     **layers.object_scope,
-    **normalizers.object_scope,
+    **weight_normalizers.object_scope,
     **regularizers.object_scope,
 }
 
