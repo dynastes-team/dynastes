@@ -7,6 +7,7 @@ from .attention_layers import LocalizedAttentionLayer2D
 from .base_layers import ActivatedKernelBiasBaseLayer
 from .random_layers import StatelessRandomNormalLike
 from .t2t_attention_layers import Attention1D
+from .t2t_attention_layers import Attention2D
 from .time_delay_layers import DepthGroupwiseTimeDelayLayer1D
 from .time_delay_layers import DepthGroupwiseTimeDelayLayerFake2D
 from .time_delay_layers import TimeDelayLayer1D
@@ -21,6 +22,7 @@ object_scope = {
     'TimeDelayLayer1D': TimeDelayLayer1D,
     'TimeDelayLayerFake2D': TimeDelayLayerFake2D,
     'Attention1D': Attention1D,
+    'Attention2D': Attention2D,
     'StatelessRandomNormalLike': StatelessRandomNormalLike,
 }
 

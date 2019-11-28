@@ -61,7 +61,7 @@ class LshGatingLayer(DynastesBaseLayer):
         return {**base_config, **config}
 
 
-def _get_attention_type(local, masked, relative, self_attention, sparse):
+def _get_attention_type_1D(local, masked, relative, self_attention, sparse):
     if self_attention:
         if sparse:
             if local:
@@ -121,7 +121,7 @@ class Attention1D(DynastesBaseLayer):
                  **kwargs):
         super(Attention1D, self).__init__(**kwargs)
 
-        attention_type = _get_attention_type(local, masked, relative, self_attention, sparse)
+        attention_type = _get_attention_type_1D(local, masked, relative, self_attention, sparse)
 
         assert (attention_type in [
             'attention',
@@ -228,6 +228,8 @@ class Attention1D(DynastesBaseLayer):
                 look_ahead_mask = self._create_look_ahead_mask(mask[0].shape[1])
                 c_mask = tf.maximum(c_mask, look_ahead_mask)
             bias = c_mask * large_compatible_negative(k.dtype)
+        else:
+            bias = None
 
         r = None
         weights = None
@@ -289,4 +291,230 @@ class Attention1D(DynastesBaseLayer):
             'add_relative_to_values': self.add_relative_to_values,
         }
         base_config = super(Attention1D, self).get_config()
+        return {**base_config, **config}
+
+
+def _get_attention_type_2D(local, masked, relative, self_attention, sparse):
+    if self_attention:
+        if sparse:
+            raise NotImplementedError
+        else:
+            if local:
+                # TODO: Add this
+                """
+                if masked:
+                    attention_type = 'masked_local_attention_2d'
+                else:
+                    attention_type = 'unmasked_local_attention_2d'
+                """
+                raise NotImplementedError
+            else:
+                if relative:
+                    if masked:
+                        # attention_type = 'masked_self_attention_relative'
+                        raise NotImplementedError
+                    else:
+                        attention_type = 'unmasked_self_attention_relative'
+                else:
+                    # attention_type = 'attention'
+                    raise NotImplementedError
+    else:
+        raise NotImplementedError
+    # TODO: Add these back?
+    """
+    if sparse:
+        raise NotImplementedError
+    if local:
+        if masked:
+            attention_type = 'masked_local_attention_2d'
+        else:
+            attention_type = 'unmasked_local_attention_2d'
+    else:
+        if relative:
+            raise NotImplementedError
+        else:
+            attention_type = 'attention'
+    """
+    return attention_type
+
+
+class Attention2D(DynastesBaseLayer):
+
+    def __init__(self,
+                 num_heads,
+                 multiquery_attention=False,
+                 self_attention=True,
+                 masked=False,
+                 local=False,
+                 relative=True,
+                 sparse=False,
+                 dropout_rate=0.0,
+                 max_relative_position=None,
+                 block_length=128,
+                 filter_width=100,
+                 mask_right=False,
+                 add_relative_to_values=False,
+                 **kwargs):
+        super(Attention2D, self).__init__(**kwargs)
+
+        attention_type = _get_attention_type_2D(local, masked, relative, self_attention, sparse)
+
+        assert (attention_type in [
+            'attention',
+            'unmasked_self_attention_relative',
+            'masked_self_attention_relative',
+            'unmasked_local_attention_2d',
+            'masked_local_attention_2d'])
+        self.num_heads = num_heads
+        self.multiquery_attention = multiquery_attention
+        if self.multiquery_attention:
+            self.num_heads_kv = 1
+        else:
+            self.num_heads_kv = num_heads
+        self.attention_type = attention_type
+        self.masked = masked
+        self.local = local
+        self.relative = relative
+        self.sparse = sparse
+        self.mask_right = mask_right
+        self.dropout_rate = dropout_rate
+        self.max_relative_position = max_relative_position
+        self.block_length = block_length
+        self.filter_width = filter_width
+        self.add_relative_to_values = add_relative_to_values
+
+    def build(self, input_shape):
+        self.depth_q = int(input_shape[0][-1]) // self.num_heads
+        depth_k = int(input_shape[1][-1]) // self.num_heads_kv
+        depth_v = int(input_shape[2][-1]) // self.num_heads_kv
+        if 'relative' in self.attention_type:
+            if self.attention_type == 'unmasked_self_attention_relative':
+                if self.max_relative_position is None:
+                    raise ValueError('max_relative_position cannot be None')
+                k_embedding_shape = t2t_attention.get_relative_embeddings_left_right_shape(
+                    self.max_relative_position,
+                    depth_k, self.num_heads_kv,
+                    False)
+                self.height_key_embeddings = self.add_weight('height_key_embeddings',
+                                                             initializer=tf.keras.initializers.RandomNormal(
+                                                                 stddev=t2t_attention.get_embedding_initializer_stddev(
+                                                                     depth_k)),
+                                                             shape=k_embedding_shape)
+                self.width_key_embeddings = self.add_weight('width_key_embeddings',
+                                                            initializer=tf.keras.initializers.RandomNormal(
+                                                                stddev=t2t_attention.get_embedding_initializer_stddev(
+                                                                    depth_k)),
+                                                            shape=k_embedding_shape)
+
+                if self.add_relative_to_values:
+                    raise ValueError("Adding relative embeddings to values is not implemented")
+            elif self.attention_type == 'masked_self_attention_relative':
+                # TODO: Maybe add this?
+                """
+                k_embedding_shape = t2t_attention.get_relative_embeddings_left_shape(
+                    self.max_relative_position,
+                    depth_k, self.num_heads_kv, False)
+                self.key_embeddings = self.add_weight('key_embeddings',
+                                                      initializer=tf.keras.initializers.RandomNormal(
+                                                          stddev=t2t_attention.get_embedding_initializer_stddev(
+                                                              depth_k)),
+                                                      shape=k_embedding_shape)
+                if self.add_relative_to_values:
+                    v_embedding_shape = t2t_attention.get_relative_embeddings_left_shape(
+                        self.max_relative_position,
+                        depth_v, self.num_heads_kv,
+                        False)
+                    self.value_embeddings = self.add_weight('value_embeddings',
+                                                            initializer=tf.keras.initializers.RandomNormal(
+                                                                stddev=t2t_attention.get_embedding_initializer_stddev(
+                                                                    depth_v)),
+                                                            shape=v_embedding_shape)
+                else:
+                    self.value_embeddings = None
+                """
+                raise NotImplementedError
+            else:
+                raise ValueError()
+
+    def call(self, inputs, training=None, mask=None):
+        if len(inputs) == 3:
+            q, k, v = inputs
+        else:
+            raise ValueError()
+
+        # TODO: Add mask support
+        # if mask is not None:
+        #    q_mask = (1. - tf.cast(mask[0], tf.float32))[:, tf.newaxis, :, tf.newaxis]
+        #    kv_mask = (1. - tf.cast(mask[1], tf.float32))[:, tf.newaxis, tf.newaxis, :]
+        #    c_mask = tf.maximum(q_mask, kv_mask)
+        #    if self.mask_right:
+        #        look_ahead_mask = self._create_look_ahead_mask(mask[0].shape[1])
+        #        c_mask = tf.maximum(c_mask, look_ahead_mask)
+        #    bias = c_mask * large_compatible_negative(k.dtype)
+        bias = None
+        r = None
+        weights = None
+
+        q = t2t_attention.split_heads_2d(q, self.num_heads)
+        k = t2t_attention.split_heads_2d(k, self.num_heads_kv)
+        v = t2t_attention.split_heads_2d(v, self.num_heads_kv)
+
+        if 'relative' in self.attention_type:
+            height_key_embeddings = self.get_weight('height_key_embeddings', training=training)
+            width_key_embeddings = self.get_weight('width_key_embeddings', training=training)
+            if self.add_relative_to_values:
+                raise ValueError("Adding relative embeddings to values is not implemented")
+            if self.attention_type == 'unmasked_self_attention_relative':
+                r, weights = t2t_attention.dot_product_unmasked_self_attention_relative_2d(q=q, k=k, v=v, bias=bias,
+                                                                                           width_key_relative_embeddings=width_key_embeddings,
+                                                                                           height_key_relative_embeddings=height_key_embeddings,
+                                                                                           dropout_rate=self.dropout_rate,
+                                                                                           max_relative_position=self.max_relative_position)
+            else:
+                raise ValueError("Not implemented")
+
+            # TODO: does this case even make sense?
+
+            # elif self.attention_type == 'masked_self_attention_relative':
+            # r, weights = t2t_attention.dot_product_self_attention_relative_v2(q=q, k=k, v=v, bias=bias,
+            #                                                                  key_left_embedding=key_embeddings,
+            #                                                                  value_left_embedding=value_embeddings,
+            #                                                                  dropout_rate=self.dropout_rate,
+            #                                                                  max_relative_position=self.max_relative_position)
+        else:
+            raise ValueError("Not implemented")
+
+        # TODO: Add these back
+        """
+        if self.attention_type == 'unmasked_local_attention_1d':
+            r, weights = t2t_attention.local_attention_1d(q=q, k=k, v=v, block_length=self.block_length,
+                                                          filter_width=self.filter_width)
+        elif self.attention_type == 'masked_local_attention_1d':
+            r, weights = t2t_attention.masked_local_attention_1d(q=q, k=k, v=v, block_length=self.block_length,
+                                                                 dropout_rate=self.dropout_rate)
+        elif self.attention_type == 'sparse_attention_truncated':
+            raise ValueError("Not implemented")
+        else:
+            r, weights = t2t_attention.dot_product_attention(q=q, k=k, v=v, bias=bias,
+                                                             dropout_rate=self.dropout_rate)
+        """
+
+        r = t2t_attention.combine_heads_2d(r)
+        return r, weights
+
+    def get_config(self):
+        config = {
+            'num_heads_q': self.num_heads_q,
+            'masked': self.masked,
+            'local': self.local,
+            'relative': self.relative,
+            'sparse': self.sparse,
+            'dropout_rate': self.dropout_rate,
+            'max_relative_position': self.max_relative_position,
+            'block_length': self.block_length,
+            'filter_width': self.filter_width,
+            'mask_right': self.mask_right,
+            'add_relative_to_values': self.add_relative_to_values,
+        }
+        base_config = super(Attention2D, self).get_config()
         return {**base_config, **config}
