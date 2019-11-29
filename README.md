@@ -32,6 +32,10 @@ pip install dynastes
 - Localized Attention (1D and 2D)*
   - Perform attention within "kernels", a bit like convolution
 - Time-Delay Neural Network Layers
+- Adaptive Normalization Layers
+  - Adaptive Instance Normalization (StyleGAN etc)
+  - Adaptive Layer-Instance Normalization (U-GAT-IT)
+  - Adaptive Group Normalization (?)
 
 *Supports multiquery attention
 
