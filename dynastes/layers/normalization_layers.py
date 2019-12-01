@@ -43,12 +43,12 @@ class _AdaptiveNormalization(DynastesBaseLayer, abc.ABC):
             var = tf.reshape(mean_var[1], [-1] + [1] * (len(x.shape) - 2) + [x.shape[-1]])
             return (x * var) + mean
         elif self.mode == 'provided_meanvar_fused':
-            mean_var = tf.reshape(mean_var, [-1, ] + ([1] * (len(x.shape) - 2)) + [2, x.shape[1]])
+            mean_var = tf.reshape(mean_var, [-1, ] + ([1] * (len(x.shape) - 2)) + [2, x.shape[-1]])
             mean, var = tf.unstack(mean_var, axis=-2)
             return (x * var) + mean
         elif self.mode == 'mapped':
             mean_var = tf.matmul(mean_var, self.get_weight('map_kernel', training=training))
-            mean_var = tf.reshape(mean_var, [-1, ] + ([1] * (len(x.shape) - 2)) + [2, x.shape[1]])
+            mean_var = tf.reshape(mean_var, [-1, ] + ([1] * (len(x.shape) - 2)) + [2, x.shape[-1]])
             mean, var = tf.unstack(mean_var, axis=-2)
             return (x * var) + mean
         else:
@@ -87,26 +87,33 @@ class AdaptiveLayerNormalization(AdaptiveGroupNormalization):
         super(AdaptiveLayerNormalization, self).__init__(**kwargs)
 
 
-class AdaptiveLayerInstanceNormalization(_AdaptiveNormalization):
+class AdaptiveMultiNormalization(_AdaptiveNormalization):
+
+    def __init__(self,
+                 layers=[],
+                 **kwargs):
+        super(AdaptiveMultiNormalization, self).__init__(**kwargs)
+        self.norm_layers = layers
+
+    def build(self, input_shape):
+        for layer in self.norm_layers:
+            layer.build(input_shape[0])
+        self.add_weight('balance', [input_shape[0][-1], len(self.norm_layers)], trainable=True,
+                        constraint=lambda x: tf.math.softmax(x, axis=-1))
+        super(AdaptiveMultiNormalization, self).build(input_shape)
+
+    def call(self, inputs, training=None):
+
+        x = tf.stack([layer(inputs[0], training=training) for layer in self.norm_layers], axis=-1)
+        x *= self.get_weight('balance', training=training)
+        x = tf.reduce_sum(x, axis=-1)
+        return self.call_mod(x, mean_var=inputs[1:], training=training)
+
+
+class AdaptiveLayerInstanceNormalization(AdaptiveMultiNormalization):
 
     def __init__(self,
                  **kwargs):
+        kwargs["layers"] = [tfal.normalizations.GroupNormalization(groups=1, center=False, scale=False),
+                            tfal.normalizations.GroupNormalization(groups=-1, center=False, scale=False)]
         super(AdaptiveLayerInstanceNormalization, self).__init__(**kwargs)
-        self.instance_norm = tfal.normalizations.GroupNormalization(groups=1, center=False, scale=False)
-        self.layer_norm = tfal.normalizations.GroupNormalization(groups=-1, center=False, scale=False)
-
-    def build(self, input_shape):
-        self.instance_norm.build(input_shape[0])
-        self.layer_norm.build(input_shape[0])
-        self.add_weight('balance', [input_shape[-1]], trainable=True,
-                        initializer=tf.keras.initializers.constant(0.5),
-                        constraint=lambda x: tf.clip_by_value(x, clip_value_min=0.0, clip_value_max=1.0))
-        super(AdaptiveLayerInstanceNormalization, self).build(input_shape)
-
-    def call(self, inputs, training=None):
-        instance_normalized = self.instance_norm(inputs[0], training=training)
-        layer_normalized = self.layer_norm(inputs[0], training=training)
-        balance_weight = self.get_weight('balance', training=training)
-        balance_weight = tf.clip_by_value(balance_weight - tf.constant(0.1), 0.0, 1.0)
-        normalized = balance_weight * instance_normalized + (1 - balance_weight) * layer_normalized
-        return self.call_mod(normalized, mean_var=inputs[1:], training=training)

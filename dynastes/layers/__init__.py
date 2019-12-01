@@ -12,6 +12,12 @@ from .time_delay_layers import DepthGroupwiseTimeDelayLayer1D
 from .time_delay_layers import DepthGroupwiseTimeDelayLayerFake2D
 from .time_delay_layers import TimeDelayLayer1D
 from .time_delay_layers import TimeDelayLayerFake2D
+from .normalization_layers import AdaptiveMultiNormalization
+from .normalization_layers import AdaptiveLayerInstanceNormalization
+from .normalization_layers import AdaptiveInstanceNormalization
+from .normalization_layers import AdaptiveGroupNormalization
+from .normalization_layers import AdaptiveLayerNormalization
+
 
 object_scope = {
     'LocalizedAttentionLayer1D': LocalizedAttentionLayer1D,
@@ -24,6 +30,11 @@ object_scope = {
     'Attention1D': Attention1D,
     'Attention2D': Attention2D,
     'StatelessRandomNormalLike': StatelessRandomNormalLike,
+    'AdaptiveMultiNormalization': AdaptiveMultiNormalization,
+    'AdaptiveLayerInstanceNormalization': AdaptiveLayerInstanceNormalization,
+    'AdaptiveInstanceNormalization': AdaptiveInstanceNormalization,
+    'AdaptiveGroupNormalization': AdaptiveGroupNormalization,
+    'AdaptiveLayerNormalization': AdaptiveLayerNormalization,
 }
 
 # Cleanup symbols to avoid polluting namespace.
