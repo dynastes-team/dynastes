@@ -139,7 +139,7 @@ class T2TAttention1DTest(tf.test.TestCase):
                 def fn():
                     test_fn(q, k=k, v=v)
 
-                time = timeit.timeit(fn, number=4) / (params['steps_q'] * params['steps_kv'] * params['dim_q'])
+                time = timeit.timeit(fn, number=2) / (params['steps_q'] * params['steps_kv'] * params['dim_q'])
                 time *= 8192
 
                 _test_grads(self, test_fn, [q, k, v])
@@ -240,7 +240,7 @@ class T2TAttention2DTest(tf.test.TestCase):
             def fn():
                 test_fn(q, k=k, v=v)
 
-            time = timeit.timeit(fn, number=4) / (
+            time = timeit.timeit(fn, number=2) / (
                         params['steps_q'] * params['steps_q'] * params['steps_kv'] * params['steps_kv'] * params[
                     'dim_q'])
             time *= 8192
