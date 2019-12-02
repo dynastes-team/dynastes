@@ -25,7 +25,7 @@ class AdaptiveMultiNormalizationTest(tf.test.TestCase):
             normalizers = [
                 GroupNormalization(groups=1, center=False, scale=False),
                 GroupNormalization(groups=-1, center=False, scale=False),
-                PoolNormalization2D(pool_size=(3, 3))
+                PoolNormalization2D(pool_size=(-1, 3))
             ]
             layer = AdaptiveMultiNormalization(layers=normalizers)
             x = tf.convert_to_tensor(normal(size=(1, 8, 8, 8)).astype(np.float16))
