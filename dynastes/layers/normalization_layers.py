@@ -1,11 +1,51 @@
 import abc
 
+import numpy as np
 import tensorflow as tf
 import tensorflow_addons.layers as tfal
-import numpy as np
 
 from dynastes.layers.base_layers import DynastesBaseLayer
 from dynastes.ops.t2t_common import shape_list
+
+
+class PoolNormalization2D(DynastesBaseLayer):
+    def __init__(self,
+                 pool_size=(2, 2),
+                 method=tf.image.ResizeMethod.BILINEAR, antialias=True,
+                 **kwargs):
+        super(PoolNormalization2D, self).__init__(**kwargs)
+        self.pool_size = pool_size
+        self.method = method
+        self.antialias = antialias
+
+    def call(self, x, training=None):
+        orig_dtype = x.dtype
+        x = tf.cast(x, tf.float32)
+        x_size = shape_list(x)[1:-1]
+        pooled_size = [x_size[0] // self.pool_size[0], x_size[1] // self.pool_size[1]]
+
+        def pool_reduce(x, dtype=tf.float32):
+            return tf.cast(tf.image.resize(tf.image.resize(x,
+                                                   pooled_size,
+                                                   method=self.method,
+                                                   antialias=self.antialias),
+                                   x_size,
+                                   method=self.method,
+                                   antialias=self.antialias), dtype)
+
+        x -= pool_reduce(x, tf.float32)
+        x *= tf.math.rsqrt(pool_reduce(tf.square(x), tf.float32) + 1e-8)
+        x = tf.cast(x, orig_dtype)
+        return x
+
+    def get_config(self):
+        config = {
+            'pool_size': self.pool_size,
+            'method': self.method,
+            'antialias': self.antialias,
+        }
+        base_config = super(PoolNormalization2D, self).get_config()
+        return {**base_config, **config}
 
 
 class MultiNormalization(DynastesBaseLayer):
@@ -31,10 +71,11 @@ class MultiNormalization(DynastesBaseLayer):
 
 class _AdaptiveNormalization(DynastesBaseLayer, abc.ABC):
 
-    def __init__(self, method=tf.image.ResizeMethod.BILINEAR, **kwargs):
+    def __init__(self, method=tf.image.ResizeMethod.BILINEAR, antialias=True, mode=None, **kwargs):
         super(_AdaptiveNormalization, self).__init__(**kwargs)
         self.method = method
-        self.mode = None
+        self.antialias = antialias
+        self.mode = mode
 
     def build(self, input_shape):
         assert isinstance(input_shape, list)
@@ -81,14 +122,25 @@ class _AdaptiveNormalization(DynastesBaseLayer, abc.ABC):
                 if len(mean_var_shape) == 4:
                     mean_var = tf.image.resize(mean_var, size, method=self.method)
                 elif len(mean_var_shape) == 3:
-                    mean_var = tf.squeeze(tf.image.resize(tf.expand_dims(mean_var, 1), [1] + size, method=self.method), axis=1)
+                    mean_var = tf.squeeze(tf.image.resize(tf.expand_dims(mean_var, 1), [1] + size, method=self.method,
+                                                          antialias=self.antialias), axis=1)
                 else:
                     raise ValueError('Only works for 1D or 2D tensors')
-            shape = [mean_var_shape[0]] + np.where(mean_var_shape_npa == 1, mean_var_shape_npa, x_shape_npa).tolist() + [2, x.shape[-1]]
+            shape = [mean_var_shape[0]] + np.where(mean_var_shape_npa == 1, mean_var_shape_npa,
+                                                   x_shape_npa).tolist() + [2, x.shape[-1]]
             mean_var = tf.reshape(mean_var, shape)
         mean, var = tf.unstack(mean_var, axis=-2)
 
         return (x * var) + mean
+
+    def get_config(self):
+        config = {
+            'method': self.method,
+            'antialias': self.antialias,
+            'mode': self.mode,
+        }
+        base_config = super(_AdaptiveNormalization, self).get_config()
+        return {**base_config, **config}
 
 
 class AdaptiveNormalization(_AdaptiveNormalization):
@@ -104,8 +156,9 @@ class AdaptiveNormalization(_AdaptiveNormalization):
         super(AdaptiveNormalization, self).build(input_shape)
 
     def call(self, inputs, training=None):
+        orig_dtype = inputs[0].dtype
         normalized = self.norm_layer(inputs[0], training=training)
-        return self.call_mod(normalized, mean_var=inputs[1:], training=training)
+        return tf.cast(self.call_mod(normalized, mean_var=inputs[1:], training=training), orig_dtype)
 
 
 class AdaptiveGroupNormalization(AdaptiveNormalization):
@@ -114,6 +167,14 @@ class AdaptiveGroupNormalization(AdaptiveNormalization):
                  **kwargs):
         super(AdaptiveGroupNormalization, self).__init__(
             tfal.normalizations.GroupNormalization(groups=n_groups, center=False, scale=False), **kwargs)
+        self.n_groups = n_groups
+
+    def get_config(self):
+        config = {
+            'n_groups': self.n_groups,
+        }
+        base_config = super(AdaptiveGroupNormalization, self).get_config()
+        return {**base_config, **config}
 
 
 class AdaptiveInstanceNormalization(AdaptiveGroupNormalization):
