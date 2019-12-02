@@ -7,11 +7,13 @@ from dynastes import core
 from dynastes import helpers
 from dynastes import layers
 from dynastes import models
-from dynastes import weight_normalizers
 from dynastes import ops
 from dynastes import regularizers
 from dynastes import util
+from dynastes import weight_normalizers
 from dynastes.core import backend
+from dynastes import probability
+from dynastes.probability import bijectors, bijector_partials
 
 object_scope = {
     **blocks.object_scope,
@@ -20,7 +22,7 @@ object_scope = {
     **regularizers.object_scope,
 }
 
-__version__ = "0.2.7"
+__version__ = "0.2.8"
 # Cleanup symbols to avoid polluting namespace.
 del absolute_import
 del division
