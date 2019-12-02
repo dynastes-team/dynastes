@@ -4,8 +4,7 @@ from tensorflow.keras.utils import custom_object_scope
 from tensorflow.python.framework import test_util
 
 import dynastes as d
-from dynastes.layers.normalization_layers import AdaptiveMultiNormalization, AdaptiveLayerInstanceNormalization
-from tensorflow_addons.layers.normalizations import GroupNormalization, InstanceNormalization
+from dynastes.layers.normalization_layers import AdaptiveLayerInstanceNormalization
 
 
 def _test_grads(testCase: tf.test.TestCase, func, input):
@@ -24,8 +23,7 @@ class AdaptiveMultiNormalizationTest(tf.test.TestCase):
         with custom_object_scope(d.object_scope):
             layer = AdaptiveLayerInstanceNormalization()
             x = tf.convert_to_tensor(normal(size=(1, 4, 4, 8)))
+            y = tf.convert_to_tensor(normal(size=(1, 2, 3, 4)))
+            res = layer([x, y])
             y = tf.convert_to_tensor(normal(size=(1, 4)))
-
-            res = layer([x,y])
-            print(res)
-
+            res = layer([x, y])
