@@ -262,6 +262,7 @@ class Attention1D(DynastesBaseLayer):
                                                               filter_width=self.filter_width)
             elif self.attention_type == 'masked_local_attention_1d':
                 r, weights = t2t_attention.masked_local_attention_1d(q=q, k=k, v=v, block_length=self.block_length,
+                                                                     mask_right=self.mask_right,
                                                                      mask=tf.cast(mask[1], k.dtype),
                                                                      dropout_rate=self.dropout_rate)
             elif self.attention_type == 'sparse_attention_truncated':

@@ -111,7 +111,7 @@ class T2TAttention1DTest(tf.test.TestCase):
                               .astype(np.float32))
                 v = to_tensor(normal(size=(bs, params['steps_kv'], params['dim_v']))
                               .astype(np.float32))
-                mask_len = params['steps_q'] // 4
+                mask_len = params['steps_q'] // 6
                 mask_q = to_tensor(([True] * (params['steps_q'] - mask_len)) + ([False] * (mask_len)))
                 mask_q = tf.expand_dims(mask_q, axis=0)
                 mask_q = tf.tile(mask_q, [bs, 1])

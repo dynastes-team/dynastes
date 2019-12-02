@@ -782,7 +782,8 @@ def masked_local_attention_1d(q,
       k: a Tensor with shape [batch, heads, length, depth_k]
       v: a Tensor with shape [batch, heads, length, depth_v]
       mask: optional mask of shape [batch, length] where 1 = attendable
-      causality_tensor: optional tensor of shape [batch, length] enumerating position
+      causality_tensor: optional tensor of shape [1/batch, length] enumerating position
+      mask_right: creates right-masking if mask is not None if set to True (default: True)
       block_length: an integer
       dropout_rate: Dropout rate for attention dropout
       name: an optional string
@@ -807,10 +808,13 @@ def masked_local_attention_1d(q,
     else:
         block_length = tf.where(
             tf.less(length, block_length * 2), length, block_length)
-
+    ct_batch = -1
+    if causality_tensor is not None:
+        ct_batch, _ = t2t_common.shape_list(causality_tensor)
     if causality_tensor is None and mask_right and mask is not None:
         causality_tensor = tf.range(0, length)
         causality_tensor = tf.reshape(causality_tensor, [1, length])
+        ct_batch = 1
     # Pad query, key, value to ensure multiple of block length.
     original_length = length
     padding_size = tf.math.mod(-length, block_length)
@@ -824,8 +828,8 @@ def masked_local_attention_1d(q,
         mask = tf.reshape(mask, [batch, 1, length, 1])
         mask = tf.pad(mask, padding)
         if mask_right or causality_tensor is not None:
-            causality_tensor = tf.reshape(causality_tensor, [1, 1, length, 1])
-            causality_tensor = tf.pad(causality_tensor, padding, constant_values=-1)
+            causality_tensor = tf.reshape(causality_tensor, [ct_batch, 1, length, 1])
+            causality_tensor = tf.pad(causality_tensor, padding, constant_values=length+1)
     if isinstance(length, int) and isinstance(block_length, int):
         num_blocks = length // block_length
     else:
@@ -866,11 +870,11 @@ def masked_local_attention_1d(q,
                         [batch, 1, num_blocks - 1, block_length, 1])
         local_mask = tf.minimum(tf.linalg.matrix_transpose(local_mask), tail_mask)
         if causality_tensor is not None:
-            ct = tf.reshape(causality_tensor, [1, 1, num_blocks, block_length, 1])
-            local_ct = _make_local_block(ct, 1, 1, 1, num_blocks,
+            ct = tf.reshape(causality_tensor, [ct_batch, 1, num_blocks, block_length, 1])
+            local_ct = _make_local_block(ct, 1, ct_batch, 1, num_blocks,
                                     block_length)
             tail_ct = tf.slice(ct, [0, 0, 1, 0, 0], [-1, -1, -1, -1, -1])
-            tail_ct = tf.reshape(tail_ct, [1, 1, num_blocks - 1, block_length, 1])
+            tail_ct = tf.reshape(tail_ct, [ct_batch, 1, num_blocks - 1, block_length, 1])
             ct_mask = tf.cast(tf.linalg.matrix_transpose(local_ct) <= tail_ct, local_mask.dtype)
             local_mask = tf.minimum(local_mask, ct_mask)
 
