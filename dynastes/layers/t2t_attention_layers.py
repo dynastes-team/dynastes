@@ -220,7 +220,7 @@ class Attention1D(DynastesBaseLayer):
         else:
             raise ValueError()
 
-        if mask is not None:
+        if mask is not None and self.attention_type != 'masked_local_attention_1d':
             q_mask = (1. - tf.cast(mask[0], tf.float32))[:, tf.newaxis, :, tf.newaxis]
             kv_mask = (1. - tf.cast(mask[1], tf.float32))[:, tf.newaxis, tf.newaxis, :]
             c_mask = tf.maximum(q_mask, kv_mask)
@@ -262,6 +262,7 @@ class Attention1D(DynastesBaseLayer):
                                                               filter_width=self.filter_width)
             elif self.attention_type == 'masked_local_attention_1d':
                 r, weights = t2t_attention.masked_local_attention_1d(q=q, k=k, v=v, block_length=self.block_length,
+                                                                     mask=tf.cast(mask[1], k.dtype),
                                                                      dropout_rate=self.dropout_rate)
             elif self.attention_type == 'sparse_attention_truncated':
                 r, loss, weights = t2t_attention.sparse_dot_product_attention_truncated(q=q, k=k, v=v,

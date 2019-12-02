@@ -13,7 +13,7 @@ def _test_grads(testCase: tf.test.TestCase, func, input):
     _, grads = tf.test.compute_gradient(func, input)
     for grad in grads:
         testCase.assertNotAllClose(grad, np.zeros_like(grad))
-        testCase.assertAllInRange(grad, -10., 10)
+        testCase.assertAllInRange(grad, -400., 400)
 
 
 to_tensor = tf.convert_to_tensor
@@ -32,7 +32,18 @@ class T2TAttention1DTest(tf.test.TestCase):
             s = 2
 
             layers = [
-
+                (
+                    'Local Masked',
+                    Attention1D(num_heads=num_heads, self_attention=True, local=True, masked=True, block_length=8,
+                                filter_width=6),
+                    {'self': True, 'steps_q': 64, 'steps_kv': 64, 'dim_q': dim, 'dim_k': dim, 'dim_v': dim}),
+                (
+                    'Local Multiquery Masked',
+                    Attention1D(num_heads=num_heads, multiquery_attention=True, self_attention=True, local=True,
+                                masked=True, block_length=8,
+                                filter_width=6),
+                    {'self': True, 'steps_q': 64, 'steps_kv': 64, 'dim_q': dim_mq, 'dim_k': dim_mq // num_heads,
+                     'dim_v': dim_mq // num_heads}),
                 (
                     'Sparse Unmasked',
                     Attention1D(num_heads=num_heads, self_attention=True, sparse=True, lsh_bucket_length=3,
@@ -89,18 +100,7 @@ class T2TAttention1DTest(tf.test.TestCase):
                                 block_length=8, filter_width=6),
                     {'self': True, 'steps_q': 64, 'steps_kv': 64, 'dim_q': dim_mq, 'dim_k': dim_mq // num_heads,
                      'dim_v': dim_mq // num_heads}),
-                (
-                    'Local Masked',
-                    Attention1D(num_heads=num_heads, self_attention=True, local=True, masked=True, block_length=8,
-                                filter_width=6),
-                    {'self': True, 'steps_q': 64, 'steps_kv': 64, 'dim_q': dim, 'dim_k': dim, 'dim_v': dim}),
-                (
-                    'Local Multiquery Masked',
-                    Attention1D(num_heads=num_heads, multiquery_attention=True, self_attention=True, local=True,
-                                masked=True, block_length=8,
-                                filter_width=6),
-                    {'self': True, 'steps_q': 64, 'steps_kv': 64, 'dim_q': dim_mq, 'dim_k': dim_mq // num_heads,
-                     'dim_v': dim_mq // num_heads}),
+
 
             ]
 
@@ -111,12 +111,12 @@ class T2TAttention1DTest(tf.test.TestCase):
                               .astype(np.float32))
                 v = to_tensor(normal(size=(bs, params['steps_kv'], params['dim_v']))
                               .astype(np.float32))
-
-                mask_q = to_tensor(([True] * (params['steps_q'] - 3)) + ([False] * (3)))
+                mask_len = params['steps_q'] // 4
+                mask_q = to_tensor(([True] * (params['steps_q'] - mask_len)) + ([False] * (mask_len)))
                 mask_q = tf.expand_dims(mask_q, axis=0)
                 mask_q = tf.tile(mask_q, [bs, 1])
 
-                mask_kv = to_tensor(([True] * (params['steps_kv'] - 3)) + ([False] * (3)))
+                mask_kv = to_tensor(([True] * (params['steps_kv'] - mask_len)) + ([False] * (mask_len)))
                 mask_kv = tf.expand_dims(mask_kv, axis=0)
                 mask_kv = tf.tile(mask_kv, [bs, 1])
 
