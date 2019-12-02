@@ -27,7 +27,7 @@ class PoolNormalization2D(DynastesBaseLayer):
         reduce_axes = np.where(np.array(self.pool_size) == -1)[0].tolist()
         if len(reduce_axes) == 2:
             x -= tf.reduce_mean(x, axis=reduce_axes, keepdims=True)
-            x *= tf.rsqrt(tf.reduce_mean(tf.square(x), axis=reduce_axes, keepdims=True) + 1e-8)
+            x *= tf.math.rsqrt(tf.reduce_mean(tf.square(x), axis=reduce_axes, keepdims=True) + 1e-8)
             x = tf.cast(x, orig_dtype)
             return x
         pool_size_t = tf.convert_to_tensor(self.pool_size)
