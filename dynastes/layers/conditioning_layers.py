@@ -15,7 +15,36 @@ class ModulationLayer(DynastesBaseLayer, abc.ABC):
 
 
 class FeaturewiseLinearModulation(ModulationLayer):
+    """
+        Call accepts list of:
+            * [input, modulation]
+            * [input, modulation bias, modulation scale]
+            * [input, modulation bias + modulation scale]
+
+        Modulation can have smaller dimensions than input,
+        as long as '''rank(modulation) in [rank(input), 2]'''
+            input: [b, H, W, CH]
+                modulation:
+                    [b, H, W, N] - Valid
+                    [b, N] - Valid
+                    [b, other H, other W, N] - Valid
+                    [b, any, N] - NOT VALID
+
+        More information
+        https://distill.pub/2018/feature-wise-transformations/
+    """
+
     def __init__(self, method=tf.image.ResizeMethod.BILINEAR, antialias=True, mode=None, **kwargs):
+
+        """
+        @param method: Method used for scaling conditioning in case rank(input) == rank(modulation)
+        @type method: tensorflow.image.ResizeMethod
+        @param antialias: Use antialiasing if downscaling conditioning
+        @type antialias:
+        @param mode: one of 'provided_mean_var', 'mapped' or 'provided_meanvar_fused',
+                     leave blank to infer on build
+        @type mode: str
+        """
         super(FeaturewiseLinearModulation, self).__init__(**kwargs)
         self.method = method
         self.antialias = antialias
