@@ -139,6 +139,20 @@ class AdaptiveGroupNormalization(AdaptiveNormalization):
 
 class AdaptiveInstanceNormalization(AdaptiveGroupNormalization):
 
+    """
+    Introduced in:
+    Arbitrary Style Transfer in Real-time with Adaptive Instance Normalization
+    https://arxiv.org/abs/1703.06868
+
+    Used in (notable):
+    A Style-Based Generator Architecture for Generative Adversarial Networks ("StyleGAN")
+    https://arxiv.org/abs/1812.04948
+
+    Can also perform "Spatially-Adaptive Normalization":
+    Semantic Image Synthesis with Spatially-Adaptive Normalization
+    https://arxiv.org/abs/1903.07291
+    """
+
     def __init__(self,
                  **kwargs):
         kwargs["groups"] = -1
@@ -162,6 +176,12 @@ class AdaptiveMultiNormalization(AdaptiveNormalization):
 
 
 class AdaptiveLayerInstanceNormalization(AdaptiveMultiNormalization):
+
+    """
+    Introduced in:
+    U-GAT-IT: Unsupervised Generative Attentional Networks with Adaptive Layer-Instance Normalization for Image-to-Image Translation
+    https://arxiv.org/abs/1907.10830
+    """
 
     def __init__(self,
                  **kwargs):
