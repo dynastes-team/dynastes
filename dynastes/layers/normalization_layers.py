@@ -5,6 +5,7 @@ import tensorflow as tf
 import tensorflow_addons.layers as tfal
 
 from dynastes.layers.base_layers import DynastesBaseLayer
+from dynastes.layers.conditioning_layers import FeaturewiseLinearModulation, ModulationLayer
 from dynastes.ops.t2t_common import shape_list
 
 
@@ -82,69 +83,33 @@ class MultiNormalization(DynastesBaseLayer):
         return x
 
 
-class _AdaptiveNormalization(DynastesBaseLayer, abc.ABC):
+class ModulatedNormalization(DynastesBaseLayer, abc.ABC):
 
-    def __init__(self, method=tf.image.ResizeMethod.BILINEAR, antialias=True, mode=None, **kwargs):
-        super(_AdaptiveNormalization, self).__init__(**kwargs)
-        self.method = method
-        self.antialias = antialias
-        self.mode = mode
+    def __init__(self, modulation_layer: ModulationLayer,
+                 norm_layer, **kwargs):
+        super(ModulatedNormalization, self).__init__(**kwargs)
+        self.modulation_layer = modulation_layer
+        self.norm_layer = norm_layer
 
     def build(self, input_shape):
         assert isinstance(input_shape, list)
-        if len(input_shape) == 3:
-            assert (input_shape[1][-1] + input_shape[2][-1]) // 2 == input_shape[0][-1]
-            if self.mode is not None:
-                assert self.mode == 'provided_mean_var'
-            else:
-                self.mode = 'provided_mean_var'
-        elif len(input_shape) == 2:
-            if (input_shape[1][-1] // 2) != input_shape[0][-1]:
-                if self.mode is not None:
-                    assert self.mode == 'mapped'
-                else:
-                    self.mode = 'mapped'
-                self.add_weight('map_kernel', shape=[input_shape[1][-1], input_shape[0][-1] * 2])
-            else:
-                if self.mode is not None:
-                    assert self.mode == 'provided_meanvar_fused'
-                else:
-                    self.mode = 'provided_meanvar_fused'
-        else:
-            raise ValueError('Incorrect input shapes')
-        super(_AdaptiveNormalization, self).build(input_shape)
+        self.modulation_layer.build(input_shape)
+        self.norm_layer.build(input_shape[0])
+        super(ModulatedNormalization, self).build(input_shape)
 
-    def call_mod(self, x, mean_var, training=None, mask=None):
-        mean_var_shape = shape_list(mean_var)
-        if self.mode == 'provided_mean_var':
-            mean_var = tf.concat([mean_var], axis=-1)
-        elif self.mode == 'mapped':
-            mean_var = tf.matmul(mean_var[0], self.get_weight('map_kernel', training=training))
-        elif self.mode != 'provided_meanvar_fused':
-            raise ValueError('Something is wrong')
-        mean_var_shape = shape_list(mean_var)
-        x_shape = shape_list(x)
-        if len(mean_var_shape) != len(x_shape):
-            mean_var = tf.reshape(mean_var, [-1, ] + ([1] * (len(x.shape) - 2)) + [2, x.shape[-1]])
-        else:
-            mean_var_shape_npa = np.asarray(mean_var_shape[1:-1])
-            x_shape_npa = np.asarray(x_shape[1:-1])
-            compatible = np.all(np.logical_or(mean_var_shape_npa == 1, mean_var_shape_npa == x_shape_npa))
-            if not compatible:
-                size = np.where(mean_var_shape_npa == 1, mean_var_shape_npa, x_shape_npa).tolist()
-                if len(mean_var_shape) == 4:
-                    mean_var = tf.image.resize(mean_var, size, method=self.method)
-                elif len(mean_var_shape) == 3:
-                    mean_var = tf.squeeze(tf.image.resize(tf.expand_dims(mean_var, 1), [1] + size, method=self.method,
-                                                          antialias=self.antialias), axis=1)
-                else:
-                    raise ValueError('Only works for 1D or 2D tensors')
-            shape = [mean_var_shape[0]] + np.where(mean_var_shape_npa == 1, mean_var_shape_npa,
-                                                   x_shape_npa).tolist() + [2, x.shape[-1]]
-            mean_var = tf.reshape(mean_var, shape)
-        mean, var = tf.unstack(mean_var, axis=-2)
+    def call(self, inputs, training=None):
+        orig_dtype = inputs[0].dtype
+        normalized = self.norm_layer(inputs[0], training=training)
+        return tf.cast(self.modulation_layer([normalized] + inputs[1:], training=training), orig_dtype)
 
-        return (x * var) + mean
+
+class AdaptiveNormalization(ModulatedNormalization, abc.ABC):
+
+    def __init__(self, norm_layer, method=tf.image.ResizeMethod.BILINEAR, antialias=True, **kwargs):
+        super(AdaptiveNormalization, self).__init__(
+            modulation_layer=FeaturewiseLinearModulation(method=method, antialias=antialias),
+            norm_layer=norm_layer,
+            **kwargs)
 
     def get_config(self):
         config = {
@@ -152,26 +117,8 @@ class _AdaptiveNormalization(DynastesBaseLayer, abc.ABC):
             'antialias': self.antialias,
             'mode': self.mode,
         }
-        base_config = super(_AdaptiveNormalization, self).get_config()
+        base_config = super(AdaptiveNormalization, self).get_config()
         return {**base_config, **config}
-
-
-class AdaptiveNormalization(_AdaptiveNormalization):
-    def __init__(self,
-                 norm_layer,
-                 **kwargs):
-        super(AdaptiveNormalization, self).__init__(**kwargs)
-        self.norm_layer = norm_layer
-
-    def build(self, input_shape):
-        assert isinstance(input_shape, list)
-        self.norm_layer.build(input_shape[0])
-        super(AdaptiveNormalization, self).build(input_shape)
-
-    def call(self, inputs, training=None):
-        orig_dtype = inputs[0].dtype
-        normalized = self.norm_layer(inputs[0], training=training)
-        return tf.cast(self.call_mod(normalized, mean_var=inputs[1:], training=training), orig_dtype)
 
 
 class AdaptiveGroupNormalization(AdaptiveNormalization):

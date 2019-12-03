@@ -5,6 +5,7 @@ from __future__ import print_function
 from .attention_layers import LocalizedAttentionLayer1D
 from .attention_layers import LocalizedAttentionLayer2D
 from .base_layers import ActivatedKernelBiasBaseLayer
+from .conditioning_layers import FeaturewiseLinearModulation
 from .normalization_layers import AdaptiveGroupNormalization
 from .normalization_layers import AdaptiveInstanceNormalization
 from .normalization_layers import AdaptiveLayerInstanceNormalization
@@ -40,6 +41,7 @@ object_scope = {
     'AdaptiveInstanceNormalization': AdaptiveInstanceNormalization,
     'AdaptiveGroupNormalization': AdaptiveGroupNormalization,
     'AdaptiveLayerNormalization': AdaptiveLayerNormalization,
+    'FeaturewiseLinearModulation': FeaturewiseLinearModulation
 }
 
 # Cleanup symbols to avoid polluting namespace.
