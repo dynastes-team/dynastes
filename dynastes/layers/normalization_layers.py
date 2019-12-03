@@ -10,6 +10,11 @@ from dynastes.ops.t2t_common import shape_list
 
 
 class PoolNormalization2D(DynastesBaseLayer):
+    """
+    My (Göran Sandström) own invention, performs smooth local response normalization
+    using downsampling and upsampling
+    """
+
     def __init__(self,
                  pool_size=(2, 2),
                  method=tf.image.ResizeMethod.BILINEAR, antialias=True,
@@ -138,7 +143,6 @@ class AdaptiveGroupNormalization(AdaptiveNormalization):
 
 
 class AdaptiveInstanceNormalization(AdaptiveGroupNormalization):
-
     """
     Introduced in:
     Arbitrary Style Transfer in Real-time with Adaptive Instance Normalization
@@ -176,7 +180,6 @@ class AdaptiveMultiNormalization(AdaptiveNormalization):
 
 
 class AdaptiveLayerInstanceNormalization(AdaptiveMultiNormalization):
-
     """
     Introduced in:
     U-GAT-IT: Unsupervised Generative Attentional Networks with Adaptive Layer-Instance Normalization for Image-to-Image Translation
