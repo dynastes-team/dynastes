@@ -8,12 +8,12 @@ from dynastes import helpers
 from dynastes import layers
 from dynastes import models
 from dynastes import ops
+from dynastes import probability
 from dynastes import regularizers
 from dynastes import util
 from dynastes import weight_normalizers
 from dynastes.core import backend
-from dynastes import probability
-from dynastes.probability import bijectors, bijector_partials
+from dynastes.probability import bijectors, bijector_partials, pseudoblocksparse_bijectors
 
 object_scope = {
     **blocks.object_scope,
@@ -22,7 +22,7 @@ object_scope = {
     **regularizers.object_scope,
 }
 
-__version__ = "0.3.0"
+__version__ = "0.3.1"
 # Cleanup symbols to avoid polluting namespace.
 del absolute_import
 del division

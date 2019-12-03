@@ -19,7 +19,7 @@ class PseudoBlockSparseBijector(DynastesBaseLayer, abc.ABC):
         pass
 
 
-class PsuedoBlockSparseBijector1D(PseudoBlockSparseBijector, abc.ABC):
+class PseudoBlockSparseBijector1D(PseudoBlockSparseBijector, abc.ABC):
 
     def get_causality_matrix(self, x):
         _, length, _ = shape_list(x)
@@ -27,7 +27,7 @@ class PsuedoBlockSparseBijector1D(PseudoBlockSparseBijector, abc.ABC):
         return tf.reshape(lrange, [1, length, 1])
 
 
-class ChainedPsuedoBlockSparseBijector1D(PsuedoBlockSparseBijector1D):
+class ChainedPseudoBlockSparseBijector1D(PseudoBlockSparseBijector1D):
 
     def __init__(self, partial_bijectors, **kwargs):
         super().__init__(**kwargs)
@@ -39,11 +39,11 @@ class ChainedPsuedoBlockSparseBijector1D(PsuedoBlockSparseBijector1D):
         return chain
 
     def get_causality_matrix(self, x):
-        lrange = super(ChainedPsuedoBlockSparseBijector1D, self).get_causality_matrix(x)
+        lrange = super(ChainedPseudoBlockSparseBijector1D, self).get_causality_matrix(x)
         return self.get_bijector(lrange).forward(lrange)
 
 
-class BlockSparseStridedRoll1D(ChainedPsuedoBlockSparseBijector1D):
+class BlockSparseStridedRoll1D(ChainedPseudoBlockSparseBijector1D):
 
     def __init__(self,
                  block_size,
@@ -59,7 +59,7 @@ class BlockSparseStridedRoll1D(ChainedPsuedoBlockSparseBijector1D):
         ]
         super(BlockSparseStridedRoll1D, self).__init__(partial_bijectors=partial_bijectors, **kwargs)
 
-class BlockSparsePrimedStridedRoll1D(ChainedPsuedoBlockSparseBijector1D):
+class BlockSparsePrimedStridedRoll1D(ChainedPseudoBlockSparseBijector1D):
 
     def __init__(self,
                  block_size,
@@ -96,7 +96,7 @@ class BlockSparsePrimedStridedRoll1D(ChainedPsuedoBlockSparseBijector1D):
                 bijector_partials.RollIncremental(axis=1+i, steps=-(primes[i] + stride), constant=0)
             )
         partial_bijectors.append(
-            bijector_partials.Transpose(perm=[0] + list(reversed(range(1, n_primes))) + [n_primes+1])
+            bijector_partials.Transpose(perm=[0] + list(reversed(range(1, n_primes))) + [n_primes])
         )
         partial_bijectors.append(
             bijector_partials.Reshape([-1, -1])
