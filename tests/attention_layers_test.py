@@ -124,4 +124,5 @@ class LocalizedAttentionLayer2DTest(tf.test.TestCase):
 
 
 if __name__ == '__main__':
+    tf.config.optimizer.set_jit(True)
     tf.test.main()

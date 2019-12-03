@@ -1,3 +1,4 @@
+import copy
 from abc import ABCMeta
 from functools import partial
 from typing import List
@@ -34,22 +35,60 @@ class RollIncremental(tfpb.Bijector, metaclass=ABCMeta):
         setattr(self, 'inverse_event_shape', lambda x: x)
 
 
-def _process_event_shapes(event_shape_in, event_shape_out):
+def _fix_unknown_dimension(input_shape, output_shape):
+    """Find and replace a missing dimension in an output shape.
+    This is a near direct port of the internal Numpy function
+    `_fix_unknown_dimension` in `numpy/core/src/multiarray/shape.c`
+    Arguments:
+      input_shape: Shape of array being reshaped
+      output_shape: Desired shape of the array with at most
+        a single -1 which indicates a dimension that should be
+        derived from the input shape.
+    Returns:
+      The new output shape with a -1 replaced with its computed value.
+    Raises:
+      ValueError: If the total array size of the output_shape is
+      different than the input_shape, or more than one unknown dimension
+      is specified.
+    """
+    output_shape = list(output_shape)
+    msg = 'total size of new array must be unchanged'
+
+    known, unknown = 1, None
+    for index, dim in enumerate(output_shape):
+        if dim < 0:
+            if unknown is None:
+                unknown = index
+            else:
+                raise ValueError('Can only specify one unknown dimension.')
+        else:
+            known *= dim
+
+    original = np.prod(input_shape, dtype=int)
+    if unknown is not None:
+        if known == 0 or original % known != 0:
+            raise ValueError(msg)
+        output_shape[unknown] = original // known
+    elif original != known:
+        raise ValueError(msg)
+    return output_shape
+
+
+def _process_event_shapes(event_shape_in, event_shape_out, ch):
     event_shape_out = np.array(event_shape_out)
     event_shape_in = np.array(event_shape_in)
     infer_indices = np.where(event_shape_out == -1)[0]
     if len(infer_indices) == 0:
         return event_shape_out.tolist()
     elif len(infer_indices) == 1:
-        non_infer_size = np.cumprod(np.where(event_shape_out != -1, event_shape_out, 1))[-1]
-        input_size = np.cumprod(event_shape_in)[-1]
-        assert (input_size / non_infer_size) == (input_size // non_infer_size)
-        event_shape_out[infer_indices[0]] = input_size // non_infer_size
-        return event_shape_out.tolist()
+        if event_shape_out[-1] == -1:
+            event_shape_out[-1] = ch
+            return event_shape_out
+        return _fix_unknown_dimension(event_shape_in.tolist(), event_shape_out.tolist())
     else:
-        if event_shape_out[-1] in [-1, 'ch']:
-            event_shape_out[-1] = event_shape_in[-1]
-        return _process_event_shapes(event_shape_in.tolist(), event_shape_out.tolist())
+        if event_shape_out[-1] == -1:
+            event_shape_out[-1] = ch
+        return _process_event_shapes(event_shape_in.tolist(), event_shape_out.tolist(), ch)
 
 
 class EventShapeAwareChain(tfpb.Chain):
@@ -60,9 +99,14 @@ class EventShapeAwareChain(tfpb.Chain):
                  **kwargs):
 
         bijectors = []
+        ch = event_shape_in[-1]
         for partial_bijector in partial_bijectors:
             if partial_bijector.func == tfpb.Reshape:
-                partial_bijector.keywords['event_shape_out'] = _process_event_shapes(event_shape_in, partial_bijector.keywords['event_shape_out'])
+                partial_bijector = partial(partial_bijector.func,
+                                           **{k: copy.copy(v) for k, v in partial_bijector.keywords.items()})
+                partial_bijector.keywords['event_shape_out'] = _process_event_shapes(event_shape_in,
+                                                                                     partial_bijector.keywords[
+                                                                                         'event_shape_out'], ch)
                 bijector = partial_bijector(event_shape_in=event_shape_in)
             else:
                 bijector = partial_bijector()

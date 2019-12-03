@@ -5,21 +5,21 @@ from __future__ import print_function
 from .attention_layers import LocalizedAttentionLayer1D
 from .attention_layers import LocalizedAttentionLayer2D
 from .base_layers import ActivatedKernelBiasBaseLayer
+from .normalization_layers import AdaptiveGroupNormalization
+from .normalization_layers import AdaptiveInstanceNormalization
+from .normalization_layers import AdaptiveLayerInstanceNormalization
+from .normalization_layers import AdaptiveLayerNormalization
+from .normalization_layers import AdaptiveMultiNormalization
+from .normalization_layers import MultiNormalization
+from .normalization_layers import PoolNormalization2D
 from .random_layers import StatelessRandomNormalLike
 from .t2t_attention_layers import Attention1D
 from .t2t_attention_layers import Attention2D
+from .t2t_attention_layers import PseudoBlockSparseAttention1D
 from .time_delay_layers import DepthGroupwiseTimeDelayLayer1D
 from .time_delay_layers import DepthGroupwiseTimeDelayLayerFake2D
 from .time_delay_layers import TimeDelayLayer1D
 from .time_delay_layers import TimeDelayLayerFake2D
-from .normalization_layers import PoolNormalization2D
-from .normalization_layers import MultiNormalization
-from .normalization_layers import AdaptiveMultiNormalization
-from .normalization_layers import AdaptiveLayerInstanceNormalization
-from .normalization_layers import AdaptiveInstanceNormalization
-from .normalization_layers import AdaptiveGroupNormalization
-from .normalization_layers import AdaptiveLayerNormalization
-
 
 object_scope = {
     'LocalizedAttentionLayer1D': LocalizedAttentionLayer1D,
@@ -31,6 +31,7 @@ object_scope = {
     'TimeDelayLayerFake2D': TimeDelayLayerFake2D,
     'Attention1D': Attention1D,
     'Attention2D': Attention2D,
+    'PseudoBlockSparseAttention1D': PseudoBlockSparseAttention1D,
     'StatelessRandomNormalLike': StatelessRandomNormalLike,
     'PoolNormalization2D': PoolNormalization2D,
     'MultiNormalization': MultiNormalization,

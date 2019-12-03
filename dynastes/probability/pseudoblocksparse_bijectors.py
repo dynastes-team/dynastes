@@ -1,21 +1,25 @@
 import abc
+import copy
 
 import tensorflow as tf
+import tensorflow_probability as tfp
 
 from dynastes.layers.base_layers import DynastesBaseLayer
 from dynastes.ops.t2t_common import shape_list
 from dynastes.probability import bijector_partials
 from dynastes.probability.bijectors import EventShapeAwareChain
 
+tfpb = tfp.bijectors
+
 
 class PseudoBlockSparseBijector(DynastesBaseLayer, abc.ABC):
 
     @abc.abstractmethod
-    def get_bijector(self, x):
+    def get_bijector(self, x) -> tfpb.Bijector:
         pass
 
     @abc.abstractmethod
-    def get_causality_matrix(self, x):
+    def get_causality_matrix(self, x) -> tf.Tensor:
         pass
 
 
@@ -35,7 +39,7 @@ class ChainedPseudoBlockSparseBijector1D(PseudoBlockSparseBijector1D):
 
     def get_bijector(self, x):
         event_shape_in = shape_list(x)[1:]
-        chain = EventShapeAwareChain(event_shape_in, self.partial_bijectors)
+        chain = EventShapeAwareChain(event_shape_in, copy.copy(self.partial_bijectors))
         return chain
 
     def get_causality_matrix(self, x):
@@ -50,14 +54,24 @@ class BlockSparseStridedRoll1D(ChainedPseudoBlockSparseBijector1D):
                  stride=1,
                  partial_bijectors=None,
                  **kwargs):
+        self.block_size = block_size
+        self.stride = stride
         partial_bijectors = [
             bijector_partials.Reshape([-1, block_size, -1]),
             bijector_partials.RollIncremental(axis=1, steps=-(block_size + stride), constant=0),
             bijector_partials.Transpose(perm=[1, 0, 2]),
-            # bijector_partials.RollIncremental(axis=1, steps=-2, constant=0),
             bijector_partials.Reshape([-1, -1])
         ]
         super(BlockSparseStridedRoll1D, self).__init__(partial_bijectors=partial_bijectors, **kwargs)
+
+    def get_config(self):
+        config = {
+            'block_size': self.block_size,
+            'stride': self.stride,
+        }
+        base_config = super(BlockSparseStridedRoll1D, self).get_config()
+        return {**base_config, **config}
+
 
 class BlockSparsePrimedStridedRoll1D(ChainedPseudoBlockSparseBijector1D):
 
@@ -67,6 +81,10 @@ class BlockSparsePrimedStridedRoll1D(ChainedPseudoBlockSparseBijector1D):
                  stride=1,
                  partial_bijectors=None,
                  **kwargs):
+
+        self.block_size = block_size
+        self.n_primes = n_primes
+        self.stride = stride
 
         def prime_factors(n):
             i = 2
@@ -83,17 +101,16 @@ class BlockSparsePrimedStridedRoll1D(ChainedPseudoBlockSparseBijector1D):
 
         primes = prime_factors(block_size)
         if n_primes != -1:
-            primes = primes[:n_primes-1] + [sum(primes[n_primes-1:])]
+            primes = primes[:n_primes - 1] + [sum(primes[n_primes - 1:])]
         else:
             n_primes = len(primes)
-
 
         partial_bijectors = [
             bijector_partials.Reshape([-1] + primes + [-1])
         ]
         for i in range(n_primes):
             partial_bijectors.append(
-                bijector_partials.RollIncremental(axis=1+i, steps=-(primes[i] + stride), constant=0)
+                bijector_partials.RollIncremental(axis=1 + i, steps=-(primes[i] + stride), constant=0)
             )
         partial_bijectors.append(
             bijector_partials.Transpose(perm=[0] + list(reversed(range(1, n_primes))) + [n_primes])
@@ -103,3 +120,11 @@ class BlockSparsePrimedStridedRoll1D(ChainedPseudoBlockSparseBijector1D):
         )
         super(BlockSparsePrimedStridedRoll1D, self).__init__(partial_bijectors=partial_bijectors, **kwargs)
 
+    def get_config(self):
+        config = {
+            'block_size': self.block_size,
+            'stride': self.stride,
+            'n_primes': self.n_primes,
+        }
+        base_config = super(BlockSparsePrimedStridedRoll1D, self).get_config()
+        return {**base_config, **config}

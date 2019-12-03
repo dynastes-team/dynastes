@@ -5,6 +5,7 @@ from __future__ import print_function
 import tensorflow as tf
 
 from dynastes.ops import t2t_attention
+from dynastes.probability.pseudoblocksparse_bijectors import PseudoBlockSparseBijector1D
 from dynastes.util.precision_util import large_compatible_negative
 from .base_layers import DynastesBaseLayer
 
@@ -279,7 +280,8 @@ class Attention1D(DynastesBaseLayer):
 
     def get_config(self):
         config = {
-            'num_heads_q': self.num_heads_q,
+            'num_heads': self.num_heads,
+            'multiquery_attention': self.multiquery_attention,
             'masked': self.masked,
             'local': self.local,
             'relative': self.relative,
@@ -294,6 +296,71 @@ class Attention1D(DynastesBaseLayer):
         }
         base_config = super(Attention1D, self).get_config()
         return {**base_config, **config}
+
+
+class PseudoBlockSparseAttention1D(DynastesBaseLayer):
+
+    def __init__(self,
+                 num_heads,
+                 block_size,
+                 blocksparse_bijector: PseudoBlockSparseBijector1D,
+                 multiquery_attention=False,
+                 dropout_rate=0.,
+                 mask_right=False,
+                 **kwargs):
+        super(PseudoBlockSparseAttention1D, self).__init__(**kwargs)
+        self.num_heads = num_heads
+        self.block_size = block_size
+        self.multiquery_attention = multiquery_attention
+        if self.multiquery_attention:
+            self.num_heads_kv = 1
+        else:
+            self.num_heads_kv = num_heads
+        self.blocksparse_bijector = blocksparse_bijector
+        self.mask_right = mask_right
+        self.dropout_rate = dropout_rate
+
+    def call(self, inputs, training=None, mask=None):
+        if len(inputs) == 3:
+            q, k, v = inputs
+        else:
+            raise ValueError()
+
+        if mask is not None:
+            mask = mask[1]
+            mask = tf.cast(mask, k.dtype)
+            mask = tf.expand_dims(mask, axis=-1)
+            mask_chain = self.blocksparse_bijector.get_bijector(mask)
+            mask = mask_chain.forward(mask)
+        causality_mat = None
+        if self.mask_right:
+            causality_mat = self.blocksparse_bijector.get_causality_matrix(k)
+            causality_mat = tf.squeeze(causality_mat, axis=-1)
+
+
+        q_chain = self.blocksparse_bijector.get_bijector(q)
+        k_chain = self.blocksparse_bijector.get_bijector(k)
+        v_chain = self.blocksparse_bijector.get_bijector(v)
+
+        q = q_chain.forward(q)
+        k = k_chain.forward(k)
+        v = v_chain.forward(v)
+
+
+
+        q = t2t_attention.split_heads(q, self.num_heads)
+        k = t2t_attention.split_heads(k, self.num_heads_kv)
+        v = t2t_attention.split_heads(v, self.num_heads_kv)
+
+        r, weights = t2t_attention.masked_local_attention_1d(q=q, k=k, v=v, block_length=self.block_size,
+                                                             mask_right=self.mask_right,
+                                                             causality_tensor=causality_mat,
+                                                             mask=tf.cast(mask, k.dtype),
+                                                             dropout_rate=self.dropout_rate)
+
+        r = t2t_attention.combine_heads(r)
+        r_chain = self.blocksparse_bijector.get_bijector(r)
+        return r_chain.inverse(r), None
 
 
 def _get_attention_type_2D(local, masked, relative, self_attention, sparse):
