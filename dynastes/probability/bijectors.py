@@ -34,6 +34,24 @@ class RollIncremental(tfpb.Bijector, metaclass=ABCMeta):
         setattr(self, 'inverse_event_shape', lambda x: x)
 
 
+def _process_event_shapes(event_shape_in, event_shape_out):
+    event_shape_out = np.array(event_shape_out)
+    event_shape_in = np.array(event_shape_in)
+    infer_indices = np.where(event_shape_out == -1)[0]
+    if len(infer_indices) == 0:
+        return event_shape_out.tolist()
+    elif len(infer_indices) == 1:
+        non_infer_size = np.cumprod(np.where(event_shape_out != -1, event_shape_out, 1))[-1]
+        input_size = np.cumprod(event_shape_in)[-1]
+        assert (input_size / non_infer_size) == (input_size // non_infer_size)
+        event_shape_out[infer_indices[0]] = input_size // non_infer_size
+        return event_shape_out.tolist()
+    else:
+        if event_shape_out[-1] in [-1, 'ch']:
+            event_shape_out[-1] = event_shape_in[-1]
+        return _process_event_shapes(event_shape_in.tolist(), event_shape_out.tolist())
+
+
 class EventShapeAwareChain(tfpb.Chain):
 
     def __init__(self,
@@ -44,10 +62,7 @@ class EventShapeAwareChain(tfpb.Chain):
         bijectors = []
         for partial_bijector in partial_bijectors:
             if partial_bijector.func == tfpb.Reshape:
-                if partial_bijector.keywords['event_shape_out'][-1] == -1:
-                    if np.cumprod(np.array(partial_bijector.keywords['event_shape_out'][:-1]))[-1] == \
-                            np.cumprod(np.array(event_shape_in[:-1]))[-1]:
-                        partial_bijector.keywords['event_shape_out'][-1] = event_shape_in[-1]
+                partial_bijector.keywords['event_shape_out'] = _process_event_shapes(event_shape_in, partial_bijector.keywords['event_shape_out'])
                 bijector = partial_bijector(event_shape_in=event_shape_in)
             else:
                 bijector = partial_bijector()
