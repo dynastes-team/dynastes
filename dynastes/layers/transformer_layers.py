@@ -1,32 +1,30 @@
+import tensorflow.keras.layers as tfkl
+
 from .base_layers import DynastesBaseLayer
 
 
 class MultiHeadAttentionLayer(DynastesBaseLayer):
 
     def __init__(self,
-                 q_layer,
-                 k_layer,
-                 v_layer,
-                 attention_layer, **kwargs):
+                 q_layer: tfkl.Layer,
+                 k_layer: tfkl.Layer,
+                 v_layer: tfkl.Layer,
+                 attention_layer: tfkl.Layer, **kwargs):
         super(MultiHeadAttentionLayer, self).__init__(**kwargs)
         self.q_layer = q_layer
         self.k_layer = k_layer
         self.v_layer = v_layer
         self.attention_layer = attention_layer
 
-    def call(self, inputs, k, v, training, mask=None, **kwargs):
+    def call(self, inputs, training=None, mask=None):
 
         if type(inputs) == list:
             if len(inputs) == 3:
                 q, k, v = inputs
             else:
-                raise SyntaxError
-        elif type(inputs) == dict:
-            q = inputs['q']
-            k = inputs['k']
-            v = inputs['v']
+                raise ValueError('Incorrect inputs')
         else:
-            q = inputs
+            raise ValueError('Incorrect inputs')
 
         if mask is not None:
             assert type(mask) == type(inputs)
@@ -42,6 +40,15 @@ class MultiHeadAttentionLayer(DynastesBaseLayer):
         v = self.v_layer(v, training=training)
 
         return self.attention_layer([q, k, v], mask=mask, training=training)
+
+    def compute_output_shape(self, input_shape):
+        assert type(input_shape) == list
+        assert len(input_shape) == 3
+        qs, ks, vs = input_shape
+        qs = self.q_layer.compute_output_shape(qs)
+        ks = self.k_layer.compute_output_shape(ks)
+        vs = self.v_layer.compute_output_shape(vs)
+        return self.attention_layer.compute_output_shape([qs, ks, vs])
 
 
 class MultiHeadSelfAttentionLayer(DynastesBaseLayer):
@@ -66,6 +73,9 @@ class MultiHeadSelfAttentionLayer(DynastesBaseLayer):
             mask = [mask, mask, mask]
         return self.multiheadAttentionLayer(inputs=inputs, mask=mask, training=training)
 
+    def compute_output_shape(self, input_shape):
+        return self.multiheadAttentionLayer.compute_output_shape([input_shape, input_shape, input_shape])
+
 
 class MultiHeadCrossAttentionLayer(DynastesBaseLayer):
 
@@ -87,3 +97,6 @@ class MultiHeadCrossAttentionLayer(DynastesBaseLayer):
         if mask is not None:
             mask = [mask[0], mask[1], mask[1]]
         return self.multiheadAttentionLayer(inputs=inputs, mask=mask, training=training)
+
+    def compute_output_shape(self, input_shape):
+        return self.multiheadAttentionLayer.compute_output_shape([input_shape[0], input_shape[1], input_shape[1]])

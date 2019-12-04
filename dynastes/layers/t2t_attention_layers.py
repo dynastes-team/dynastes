@@ -278,6 +278,10 @@ class Attention1D(DynastesBaseLayer):
         r = t2t_attention.combine_heads(r)
         return r, weights
 
+    def compute_output_shape(self, input_shape):
+        depth_v = int(input_shape[2][-1]) // self.num_heads_kv
+        return tuple(input_shape[:-1]) + (depth_v * self.num_heads,)
+
     def get_config(self):
         config = {
             'num_heads': self.num_heads,
@@ -337,7 +341,6 @@ class PseudoBlockSparseAttention1D(DynastesBaseLayer):
             causality_mat = self.blocksparse_bijector.get_causality_matrix(k)
             causality_mat = tf.squeeze(causality_mat, axis=-1)
 
-
         q_chain = self.blocksparse_bijector.get_bijector(q)
         k_chain = self.blocksparse_bijector.get_bijector(k)
         v_chain = self.blocksparse_bijector.get_bijector(v)
@@ -345,8 +348,6 @@ class PseudoBlockSparseAttention1D(DynastesBaseLayer):
         q = q_chain.forward(q)
         k = k_chain.forward(k)
         v = v_chain.forward(v)
-
-
 
         q = t2t_attention.split_heads(q, self.num_heads)
         k = t2t_attention.split_heads(k, self.num_heads_kv)
@@ -570,6 +571,10 @@ class Attention2D(DynastesBaseLayer):
 
         r = t2t_attention.combine_heads_2d(r)
         return r, weights
+
+    def compute_output_shape(self, input_shape):
+        depth_v = int(input_shape[2][-1]) // self.num_heads_kv
+        return tuple(input_shape[:-1]) + (depth_v * self.num_heads,)
 
     def get_config(self):
         config = {

@@ -4,6 +4,7 @@ import numpy as np
 import tensorflow as tf
 from tensorflow.keras.utils import custom_object_scope
 from tensorflow.python.framework import test_util
+from tensorflow.python.keras.testing_utils import layer_test
 
 import dynastes as d
 from dynastes.layers.t2t_attention_layers import Attention1D, Attention2D, PseudoBlockSparseAttention1D
@@ -146,6 +147,8 @@ class T2TAttention1DTest(tf.test.TestCase):
 
                 mask = [mask_q, mask_kv, mask_kv]
                 r, _ = layer([q, k, v], mask=mask)
+
+
                 test_fn = get_test_fn(layer, mask)
                 # Warmup
                 rfn = test_fn(q, k=k, v=v)

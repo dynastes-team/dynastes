@@ -66,6 +66,9 @@ class PoolNormalization2D(DynastesBaseLayer):
         base_config = super(PoolNormalization2D, self).get_config()
         return {**base_config, **config}
 
+    def compute_output_shape(self, input_shape):
+        return input_shape
+
 
 class MultiNormalization(DynastesBaseLayer):
     def __init__(self,
@@ -106,6 +109,10 @@ class ModulatedNormalization(DynastesBaseLayer, abc.ABC):
         orig_dtype = inputs[0].dtype
         normalized = self.norm_layer(inputs[0], training=training)
         return tf.cast(self.modulation_layer([normalized] + inputs[1:], training=training), orig_dtype)
+
+    def compute_output_shape(self, input_shape):
+        assert isinstance(input_shape, list)
+        return input_shape[0]
 
 
 class AdaptiveNormalization(ModulatedNormalization, abc.ABC):
