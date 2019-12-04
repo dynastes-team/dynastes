@@ -5,6 +5,31 @@ from setuptools import setup, find_packages
 
 current_path = os.path.abspath(os.path.dirname(__file__))
 
+def parse_ver_as_float(ver):
+    return float('.'.join(ver.split('.')[:2]))
+
+def get_requirements_dynamic():
+    requires = []
+    try:
+        import tensorflow
+        if parse_ver_as_float(tensorflow.__version__) < 2.:
+            raise ImportError
+    except:
+        requires.append('tensorflow>=2.0.0')
+    try:
+        import tensorflow_probability
+        if parse_ver_as_float(tensorflow_probability.__version__) < 0.8:
+            raise ImportError
+    except:
+        requires.append('tensorflow_probability>=0.8')
+    try:
+        import tensorflow_addons
+        if parse_ver_as_float(tensorflow_addons.__version__) < 0.6:
+            raise ImportError
+    except:
+        requires.append('tensorflow-addons>=0.6')
+    requires.append('numpy')
+    requires.append('six >= 1.10.0')
 
 def read_file(*parts):
     with codecs.open(os.path.join(current_path, *parts), 'r', 'utf8') as reader:
@@ -31,7 +56,7 @@ setup(
     long_description=read_file('README.md'),
     long_description_content_type="text/markdown",
     url="https://github.com/veqtor/dynastes",
-    install_requires=get_requirements('requirements.txt'),
+    install_requires=get_requirements_dynamic(),
     packages=find_packages(),
     classifiers=[
         "Development Status :: 3 - Alpha",
