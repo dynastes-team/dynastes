@@ -468,10 +468,10 @@ def dot_product_unmasked_self_attention_relative_v2(
     # [batch, num_heads, query_length, memory_length]
     logits = tf.matmul(q, k, transpose_b=True)
 
-    length = t2t_common.shape_list(q)[2]
-    k_shape = t2t_common.shape_list(k)
-    num_heads = k_shape[1]
-    depth_k = k_shape[-1]
+    # Use separate embeddings suitable for keys and values.
+    _, q_heads, length, _ = t2t_common.shape_list(q)
+    _, k_heads, _, depth_k = t2t_common.shape_list(k)
+    mqa = k_heads == 1 and q_heads > k_heads
 
     key_relative_embeddings = get_relative_embeddings_left_right(
         key_leftright_embeddings,
@@ -559,7 +559,9 @@ def dot_product_self_attention_relative_v2(q,
     q.get_shape()[2:-1].assert_is_compatible_with(v.get_shape()[2:-1])
 
     # Use separate embeddings suitable for keys and values.
-    _, _, length, _ = t2t_common.shape_list(q)
+    _, q_heads, length, _ = t2t_common.shape_list(q)
+    _, k_heads, _, _ = t2t_common.shape_list(k)
+    mqa = k_heads == 1 and q_heads > k_heads
 
     # [batch, num_heads, query_length, memory_length]
     logits = tf.matmul(q, k, transpose_b=True)
@@ -1150,6 +1152,7 @@ def dot_product_unmasked_self_attention_relative_2d(
     k_shape = t2t_common.shape_list(k)
     num_heads_q = q_shape[1]
     num_heads_k = k_shape[1]
+    mqa = num_heads_q > num_heads_k
     depth_k = k_shape[-1]
     depth_v = t2t_common.shape_list(v)[-1]
     # flatten height width

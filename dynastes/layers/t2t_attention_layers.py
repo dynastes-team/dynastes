@@ -119,6 +119,7 @@ class Attention1D(DynastesBaseLayer):
                  filter_width=100,
                  mask_right=False,
                  add_relative_to_values=False,
+                 heads_share_relative_embeddings=False,
                  **kwargs):
         super(Attention1D, self).__init__(**kwargs)
 
@@ -151,6 +152,7 @@ class Attention1D(DynastesBaseLayer):
         self.lsh_gates = None
         self.add_relative_to_values = add_relative_to_values
         self.maybe_build_lsh_gates()
+        self.heads_share_relative_embeddings = heads_share_relative_embeddings
 
     def maybe_build_lsh_gates(self):
         if self.attention_type == 'sparse_attention_truncated' and self.num_heads is not None and self.lsh_gates is None:
@@ -164,8 +166,8 @@ class Attention1D(DynastesBaseLayer):
             if self.attention_type == 'unmasked_self_attention_relative':
                 k_embedding_shape = t2t_attention.get_relative_embeddings_left_right_shape(
                     self.max_relative_position,
-                    depth_k, self.num_heads_kv,
-                    False)
+                    depth_k, self.num_heads,
+                    self.heads_share_relative_embeddings)
                 self.key_embeddings = self.add_weight('key_embeddings',
                                                       initializer=tf.keras.initializers.RandomNormal(
                                                           stddev=t2t_attention.get_embedding_initializer_stddev(
@@ -175,7 +177,7 @@ class Attention1D(DynastesBaseLayer):
                 if self.add_relative_to_values:
                     v_embedding_shape = t2t_attention.get_relative_embeddings_left_right_shape(
                         self.max_relative_position,
-                        depth_v, self.num_heads_kv,
+                        depth_v, self.num_heads,
                         False)
                     self.value_embeddings = self.add_weight('value_embeddings',
                                                             initializer=tf.keras.initializers.RandomNormal(
@@ -187,7 +189,7 @@ class Attention1D(DynastesBaseLayer):
             elif self.attention_type == 'masked_self_attention_relative':
                 k_embedding_shape = t2t_attention.get_relative_embeddings_left_shape(
                     self.max_relative_position,
-                    depth_k, self.num_heads_kv, False)
+                    depth_k, self.num_heads, False)
                 self.key_embeddings = self.add_weight('key_embeddings',
                                                       initializer=tf.keras.initializers.RandomNormal(
                                                           stddev=t2t_attention.get_embedding_initializer_stddev(
@@ -196,7 +198,7 @@ class Attention1D(DynastesBaseLayer):
                 if self.add_relative_to_values:
                     v_embedding_shape = t2t_attention.get_relative_embeddings_left_shape(
                         self.max_relative_position,
-                        depth_v, self.num_heads_kv,
+                        depth_v, self.num_heads,
                         False)
                     self.value_embeddings = self.add_weight('value_embeddings',
                                                             initializer=tf.keras.initializers.RandomNormal(
@@ -250,13 +252,15 @@ class Attention1D(DynastesBaseLayer):
                                                                                            key_leftright_embeddings=key_embeddings,
                                                                                            value_leftright_embeddings=value_embeddings,
                                                                                            dropout_rate=self.dropout_rate,
-                                                                                           max_relative_position=self.max_relative_position)
+                                                                                           max_relative_position=self.max_relative_position,
+                                                                                           heads_share_relative_embedding=self.heads_share_relative_embeddings)
             elif self.attention_type == 'masked_self_attention_relative':
                 r, weights = t2t_attention.dot_product_self_attention_relative_v2(q=q, k=k, v=v, bias=bias,
                                                                                   key_left_embedding=key_embeddings,
                                                                                   value_left_embedding=value_embeddings,
                                                                                   dropout_rate=self.dropout_rate,
-                                                                                  max_relative_position=self.max_relative_position)
+                                                                                  max_relative_position=self.max_relative_position,
+                                                                                  heads_share_relative_embedding=self.heads_share_relative_embeddings)
         else:
             if self.attention_type == 'unmasked_local_attention_1d':
                 r, weights = t2t_attention.local_attention_1d(q=q, k=k, v=v, block_length=self.block_length,
@@ -297,6 +301,7 @@ class Attention1D(DynastesBaseLayer):
             'filter_width': self.filter_width,
             'mask_right': self.mask_right,
             'add_relative_to_values': self.add_relative_to_values,
+            'heads_share_relative_embeddings': self.heads_share_relative_embeddings
         }
         base_config = super(Attention1D, self).get_config()
         return {**base_config, **config}
@@ -424,6 +429,7 @@ class Attention2D(DynastesBaseLayer):
                  filter_width=100,
                  mask_right=False,
                  add_relative_to_values=False,
+                 heads_share_relative_embeddings=False,
                  **kwargs):
         super(Attention2D, self).__init__(**kwargs)
 
@@ -452,6 +458,7 @@ class Attention2D(DynastesBaseLayer):
         self.block_length = block_length
         self.filter_width = filter_width
         self.add_relative_to_values = add_relative_to_values
+        self.heads_share_relative_embeddings = heads_share_relative_embeddings
 
     def build(self, input_shape):
         self.depth_q = int(input_shape[0][-1]) // self.num_heads
@@ -463,8 +470,8 @@ class Attention2D(DynastesBaseLayer):
                     raise ValueError('max_relative_position cannot be None')
                 k_embedding_shape = t2t_attention.get_relative_embeddings_left_right_shape(
                     self.max_relative_position,
-                    depth_k, self.num_heads_kv,
-                    False)
+                    depth_k, self.num_heads,
+                    self.heads_share_relative_embeddings)
                 self.height_key_embeddings = self.add_weight('height_key_embeddings',
                                                              initializer=tf.keras.initializers.RandomNormal(
                                                                  stddev=t2t_attention.get_embedding_initializer_stddev(
@@ -539,7 +546,8 @@ class Attention2D(DynastesBaseLayer):
                                                                                            width_key_relative_embeddings=width_key_embeddings,
                                                                                            height_key_relative_embeddings=height_key_embeddings,
                                                                                            dropout_rate=self.dropout_rate,
-                                                                                           max_relative_position=self.max_relative_position)
+                                                                                           max_relative_position=self.max_relative_position,
+                                                                                           heads_share_relative_embedding=self.heads_share_relative_embeddings)
             else:
                 raise ValueError("Not implemented")
 
@@ -589,6 +597,7 @@ class Attention2D(DynastesBaseLayer):
             'filter_width': self.filter_width,
             'mask_right': self.mask_right,
             'add_relative_to_values': self.add_relative_to_values,
+            'heads_share_relative_embeddings': self.heads_share_relative_embeddings
         }
         base_config = super(Attention2D, self).get_config()
         return {**base_config, **config}
