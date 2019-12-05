@@ -21,13 +21,13 @@ def get_requirements_dynamic():
         if parse_ver_as_float(tensorflow_probability.__version__) < 0.8:
             raise ImportError
     except:
-        requires.append('tensorflow_probability>=0.8')
+        print('Warning! TensorFlow probability is missing!')
     try:
         import tensorflow_addons
         if parse_ver_as_float(tensorflow_addons.__version__) < 0.6:
             raise ImportError
     except:
-        requires.append('tensorflow-addons>=0.6')
+        print('Warning! TensorFlow addons are missing!')
     requires.append('numpy')
     requires.append('six >= 1.10.0')
 

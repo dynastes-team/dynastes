@@ -2,7 +2,12 @@ import abc
 
 import numpy as np
 import tensorflow as tf
-import tensorflow_addons.layers as tfal
+tfal = None
+try:
+    import tensorflow_addons.layers as tfal
+except:
+    print('WARNING! TensorFlow Addons are missing!')
+    tfal = None
 
 from dynastes.layers.base_layers import DynastesBaseLayer
 from dynastes.layers.conditioning_layers import FeaturewiseLinearModulation, ModulationLayer
