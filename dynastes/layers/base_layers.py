@@ -134,7 +134,7 @@ class ActivatedKernelBiasBaseLayer(DynastesBaseLayer):
         self.use_bias = use_bias
 
     def build_kernel(self, shape):
-        self.add_weight(
+        return self.add_weight(
             name='kernel',
             shape=shape,
             trainable=True,
@@ -142,18 +142,22 @@ class ActivatedKernelBiasBaseLayer(DynastesBaseLayer):
 
     def build_bias(self, output_dim):
         if self.use_bias:
-            self.add_weight(
+            return self.add_weight(
                 name='bias',
                 shape=(output_dim,),
                 trainable=True,
                 dtype=self.dtype)
+        return None
 
-    def call(self, x, training=None):
+    def post_process_call(self, x, training=None):
         if self.use_bias:
             x = nn.bias_add(x, self.get_weight('bias', training=training), data_format='NHWC')
         if self.activation is not None:
             return self.activation(x)
         return x
+
+    def call(self, x, training=None):
+        return self.post_process_call(x, training=training)
 
     def get_config(self):
         config = {

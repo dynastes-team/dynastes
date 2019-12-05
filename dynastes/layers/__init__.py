@@ -6,6 +6,13 @@ from .attention_layers import LocalizedAttentionLayer1D
 from .attention_layers import LocalizedAttentionLayer2D
 from .base_layers import ActivatedKernelBiasBaseLayer
 from .conditioning_layers import FeaturewiseLinearModulation
+from .convolutional_layers import DynastesConv1D
+from .convolutional_layers import DynastesConv2D
+from .convolutional_layers import DynastesConv1DTranspose
+from .convolutional_layers import DynastesConv2DTranspose
+from .convolutional_layers import DynastesConv3D
+from .convolutional_layers import DynastesDepthwiseConv1D
+from .convolutional_layers import DynastesDepthwiseConv2D
 from .normalization_layers import AdaptiveGroupNormalization
 from .normalization_layers import AdaptiveInstanceNormalization
 from .normalization_layers import AdaptiveLayerInstanceNormalization
@@ -41,7 +48,14 @@ object_scope = {
     'AdaptiveInstanceNormalization': AdaptiveInstanceNormalization,
     'AdaptiveGroupNormalization': AdaptiveGroupNormalization,
     'AdaptiveLayerNormalization': AdaptiveLayerNormalization,
-    'FeaturewiseLinearModulation': FeaturewiseLinearModulation
+    'FeaturewiseLinearModulation': FeaturewiseLinearModulation,
+    'DynastesConv1D': DynastesConv1D,
+    'DynastesConv2D': DynastesConv2D,
+    'DynastesConv3D': DynastesConv3D,
+    'DynastesConv1DTranspose': DynastesConv1DTranspose,
+    'DynastesConv2DTranspose': DynastesConv2DTranspose,
+    'DynastesDepthwiseConv1D': DynastesDepthwiseConv1D,
+    'DynastesDepthwiseConv2D': DynastesDepthwiseConv2D,
 }
 
 # Cleanup symbols to avoid polluting namespace.

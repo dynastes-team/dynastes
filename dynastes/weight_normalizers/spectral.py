@@ -2,7 +2,7 @@ import tensorflow as tf
 import tensorflow.keras as tfk
 import tensorflow.keras.layers as tfkl
 from dynastes.ops.t2t_common import shape_list
-
+import numpy as np
 
 class SpectralNormalization(tfkl.Layer):
     def __init__(self,
@@ -19,7 +19,7 @@ class SpectralNormalization(tfkl.Layer):
     def build(self, input_shape):
         if self.transposed:
             input_shape = input_shape[:-2] + [input_shape[-1], input_shape[-2]]
-        u_shape = (sum(input_shape[:-1]), 1)
+        u_shape = (np.cumprod(np.array(input_shape[:-1]))[-1], 1)
 
         replica_context = tf.distribute.get_replica_context()
         if replica_context is None:  # cross repica strategy.
