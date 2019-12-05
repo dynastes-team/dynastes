@@ -1091,3 +1091,12 @@ class DynastesConv1DTranspose(DynastesConv2DTranspose):
         }
         base_config = super(DynastesConv1DTranspose, self).get_config()
         return {**base_config, **config}
+
+#Export aliases
+Conv1D = DynastesConv1D
+Conv2D = DynastesConv2D
+Conv3D = DynastesConv3D
+Conv1DTranspose = DynastesConv1DTranspose
+Conv2DTranspose = DynastesConv2DTranspose
+DepthwiseConv1D = DynastesDepthwiseConv1D
+DepthwiseConv2D = DynastesDepthwiseConv2D

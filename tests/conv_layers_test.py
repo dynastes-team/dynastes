@@ -1,8 +1,10 @@
+import tensorflow as tf
 from tensorflow.keras.utils import custom_object_scope
 from tensorflow.python.keras.testing_utils import layer_test
 
 from dynastes import object_scope
-from dynastes.layers.convolutional_layers import *
+from dynastes.layers.convolutional_layers import DynastesConv1DTranspose, DynastesDepthwiseConv1D, \
+    DynastesConv2DTranspose, DynastesConv2D, DynastesDepthwiseConv2D, DynastesConv1D
 
 
 class DynastesConv1DTest(tf.test.TestCase):
@@ -32,6 +34,7 @@ class DynastesConv2DTest(tf.test.TestCase):
                                         'kernel_normalizer': 'spectral',
                                         'kernel_regularizer': 'orthogonal'}, input_shape=(4, 16, 16, 5))
 
+
 class DynastesConv1DTransposeTest(tf.test.TestCase):
     def test_simple(self):
         with custom_object_scope(object_scope):
@@ -52,6 +55,7 @@ class DynastesConv1DTransposeTest(tf.test.TestCase):
                 input_shape=(None, 16, 5),
                 expected_output_shape=(None, 32, 7)
             )
+
 
 class DynastesConv2DTransposeTest(tf.test.TestCase):
     def test_simple(self):
@@ -74,6 +78,7 @@ class DynastesConv2DTransposeTest(tf.test.TestCase):
                 expected_output_shape=(None, 32, 32, 7)
             )
 
+
 class DynastesDepthwiseConv1DTest(tf.test.TestCase):
     def test_simple(self):
         with custom_object_scope(object_scope):
@@ -84,8 +89,9 @@ class DynastesDepthwiseConv1DTest(tf.test.TestCase):
         with custom_object_scope(object_scope):
             layer_test(
                 DynastesDepthwiseConv1D, kwargs={'kernel_size': 3,
-                                        'kernel_normalizer': 'spectral',
-                                        'kernel_regularizer': 'orthogonal'}, input_shape=(5, 32, 3))
+                                                 'kernel_normalizer': 'spectral',
+                                                 'kernel_regularizer': 'orthogonal'}, input_shape=(5, 32, 3))
+
 
 class DynastesDepthwiseConv2DTest(tf.test.TestCase):
     def test_simple(self):
