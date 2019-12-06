@@ -4,7 +4,7 @@ from __future__ import print_function
 
 from .attention_layers import LocalizedAttentionLayer1D
 from .attention_layers import LocalizedAttentionLayer2D
-from .base_layers import ActivatedKernelBiasBaseLayer, _WscaleInitializer
+from .base_layers import ActivatedKernelBiasBaseLayer, _WscaleInitializer, DynastesDense
 from .conditioning_layers import FeaturewiseLinearModulation
 from .convolutional_layers import DynastesConv1D
 from .convolutional_layers import DynastesConv1DTranspose
@@ -31,6 +31,7 @@ from .time_delay_layers import TimeDelayLayerFake2D
 
 object_scope = {
     '_WscaleInitializer': _WscaleInitializer,
+    'DynastesDense': DynastesDense,
     'LocalizedAttentionLayer1D': LocalizedAttentionLayer1D,
     'LocalizedAttentionLayer2D': LocalizedAttentionLayer2D,
     'ActivatedKernelBiasBaseLayer': ActivatedKernelBiasBaseLayer,

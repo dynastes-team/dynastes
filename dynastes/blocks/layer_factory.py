@@ -91,6 +91,18 @@ def get_1d_layer(type,
                                             activity_regularizer=activity_regularizer,
                                             kernel_constraint=kernel_constraint,
                                             bias_constraint=bias_constraint, **kwargs)
+    elif type.lower() in ['Dense'.lower()]:
+        return tfdl.DynastesDense(units=filters,
+                                  activation=activation,
+                                  use_bias=use_bias,
+                                  kernel_initializer=kernel_initializer,
+                                  kernel_normalizer=kernel_normalizer,
+                                  bias_initializer=bias_initializer,
+                                  kernel_regularizer=kernel_regularizer,
+                                  bias_regularizer=bias_regularizer,
+                                  activity_regularizer=activity_regularizer,
+                                  kernel_constraint=kernel_constraint,
+                                  bias_constraint=bias_constraint, **kwargs)
 
 
 def get_1D_attention_layer(type,

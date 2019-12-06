@@ -4,15 +4,7 @@ import tensorflow as tf
 import tensorflow.keras as tfk
 import tensorflow.keras.layers as tfkl
 
-
-def _call_masked(layer, inputs, training=None, mask=None, **kwargs):
-    if layer.supports_masking:
-        out = layer(inputs, training=training, mask=mask, **kwargs)
-        out_mask = layer.compute_mask(inputs, mask, **kwargs)
-    else:
-        out = layer(inputs, training=training, **kwargs)
-        out_mask = mask
-    return out, out_mask
+from dynastes.util.layer_util import call_masked
 
 
 class GrowingGanModel(tfk.Model, abc.ABC):
@@ -162,22 +154,22 @@ class GrowingGanGenerator(GrowingGanModel, abc.ABC):
         def grow(gen: GrowingGanGenerator, x, current_lod, mask=None):
 
             y_layer = gen.get_gan_layer_by_lod(current_lod)
-            y, y_mask = _call_masked(y_layer, x, training=training, mask=mask, **kwargs)
+            y, y_mask = call_masked(y_layer, x, training=training, mask=mask, **kwargs)
 
             lods_left = gen.n_lods - (current_lod + 1)
 
             def get_lod_output(x, y, y_mask=None, x_mask=None):
                 y_domain_layer = gen.get_to_domain_layer_by_lod(current_lod)
-                y_domain, y_domain_mask = _call_masked(y_domain_layer, y, training=training, mask=y_mask, **kwargs)
+                y_domain, y_domain_mask = call_masked(y_domain_layer, y, training=training, mask=y_mask, **kwargs)
 
                 if lod_in > lods_left:
 
                     x_domain_layer = gen.get_to_domain_layer_by_lod(current_lod - 1)
-                    x_domain, x_domain_mask = _call_masked(x_domain_layer, x, training=training, mask=x_mask, **kwargs)
+                    x_domain, x_domain_mask = call_masked(x_domain_layer, x, training=training, mask=x_mask, **kwargs)
 
                     x_to_y_layer = gen.get_upscale_domain_layer_by_lod(current_lod - 1, current_lod)
-                    x_as_y_domain, x_as_y_mask = _call_masked(x_to_y_layer, x_domain, training=training,
-                                                              mask=x_domain_mask, **kwargs)
+                    x_as_y_domain, x_as_y_mask = call_masked(x_to_y_layer, x_domain, training=training,
+                                                             mask=x_domain_mask, **kwargs)
 
                     z = gen.interpolate_domain(y_domain, x_as_y_domain, lod_in - lods_left)
                     z_mask = gen.interpolate_mask(y_domain_mask, x_as_y_mask, lod_in - lods_left)
@@ -185,8 +177,8 @@ class GrowingGanGenerator(GrowingGanModel, abc.ABC):
                     z = y_domain
                     z_mask = y_domain_mask
 
-                r, r_mask = _call_masked(gen.get_conform_to_output_layer_by_lod(current_lod), z, training=training,
-                                         mask=z_mask, **kwargs)
+                r, r_mask = call_masked(gen.get_conform_to_output_layer_by_lod(current_lod), z, training=training,
+                                        mask=z_mask, **kwargs)
                 return r
 
             if lods_left > 0:

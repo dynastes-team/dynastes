@@ -3,10 +3,18 @@ import copy
 import numpy as np
 import tensorflow.keras as tfk
 import tensorflow.keras.layers as tfkl
+from tensorflow.python.eager import context
+from tensorflow.python.framework import dtypes
+from tensorflow.python.framework import tensor_shape
 from tensorflow.python.keras import activations
 from tensorflow.python.keras import constraints
 from tensorflow.python.keras import initializers
+from tensorflow.python.keras.engine.input_spec import InputSpec
+from tensorflow.python.ops import gen_math_ops
+from tensorflow.python.ops import math_ops
 from tensorflow.python.ops import nn
+from tensorflow.python.ops import sparse_ops
+from tensorflow.python.ops import standard_ops
 
 from dynastes import regularizers
 from dynastes import weight_normalizers
@@ -120,8 +128,9 @@ class DynastesBaseLayer(tfkl.Layer):
             _initializer = _WscaleInitializer(_initializer, lrmul=self.lrmul)
             self.initializers[name] = _initializer
             if name in self.normalizers and self.normalizers[name] is not None:
-                self.normalizers[name] = weight_normalizers.WscaleNormalizer(next_layer=self.normalizers[name], lrmul=self.lrmul,
-                                                          gain=self.gain)
+                self.normalizers[name] = weight_normalizers.WscaleNormalizer(next_layer=self.normalizers[name],
+                                                                             lrmul=self.lrmul,
+                                                                             gain=self.gain)
             else:
                 self.normalizers[name] = weight_normalizers.WscaleNormalizer(lrmul=self.lrmul, gain=self.gain)
 
@@ -149,6 +158,9 @@ class DynastesBaseLayer(tfkl.Layer):
     def get_config(self):
         config = {
             'activity_regularizer': regularizers.serialize(self.activity_regularizer),
+            'use_wscale': self.use_wscale,
+            'wlrmul': self.lrmul,
+            'wgain': self.gain,
         }
         for name, initializer in self.initializers.items():
             config[name + '_initializer'] = initializers.serialize(initializer)
@@ -207,4 +219,116 @@ class ActivatedKernelBiasBaseLayer(DynastesBaseLayer):
             'use_bias': self.use_bias,
         }
         base_config = super(ActivatedKernelBiasBaseLayer, self).get_config()
+        return {**base_config, **config}
+
+
+class DynastesDense(ActivatedKernelBiasBaseLayer):
+    """Just your regular densely-connected NN layer.
+    `Dense` implements the operation:
+    `output = activation(dot(input, kernel) + bias)`
+    where `activation` is the element-wise activation function
+    passed as the `activation` argument, `kernel` is a weights matrix
+    created by the layer, and `bias` is a bias vector created by the layer
+    (only applicable if `use_bias` is `True`).
+    Note: If the input to the layer has a rank greater than 2, then
+    it is flattened prior to the initial dot product with `kernel`.
+    Example:
+    ```python
+    # as first layer in a sequential model:
+    model = Sequential()
+    model.add(Dense(32, input_shape=(16,)))
+    # now the model will take as input arrays of shape (*, 16)
+    # and output arrays of shape (*, 32)
+    # after the first layer, you don't need to specify
+    # the size of the input anymore:
+    model.add(Dense(32))
+    ```
+    Arguments:
+      units: Positive integer, dimensionality of the output space.
+      activation: Activation function to use.
+        If you don't specify anything, no activation is applied
+        (ie. "linear" activation: `a(x) = x`).
+      use_bias: Boolean, whether the layer uses a bias vector.
+      kernel_initializer: Initializer for the `kernel` weights matrix.
+      bias_initializer: Initializer for the bias vector.
+      kernel_regularizer: Regularizer function applied to
+        the `kernel` weights matrix.
+      bias_regularizer: Regularizer function applied to the bias vector.
+      activity_regularizer: Regularizer function applied to
+        the output of the layer (its "activation")..
+      kernel_constraint: Constraint function applied to
+        the `kernel` weights matrix.
+      bias_constraint: Constraint function applied to the bias vector.
+    Input shape:
+      N-D tensor with shape: `(batch_size, ..., input_dim)`.
+      The most common situation would be
+      a 2D input with shape `(batch_size, input_dim)`.
+    Output shape:
+      N-D tensor with shape: `(batch_size, ..., units)`.
+      For instance, for a 2D input with shape `(batch_size, input_dim)`,
+      the output would have shape `(batch_size, units)`.
+    """
+
+    def __init__(self,
+                 units,
+                 **kwargs):
+        if 'input_shape' not in kwargs and 'input_dim' in kwargs:
+            kwargs['input_shape'] = (kwargs.pop('input_dim'),)
+
+        super(DynastesDense, self).__init__(**kwargs)
+        self.units = int(units)
+
+        self.supports_masking = True
+        self.input_spec = InputSpec(min_ndim=2)
+
+    def build(self, input_shape):
+        dtype = dtypes.as_dtype(self.dtype or tfk.backend.floatx())
+        if not (dtype.is_floating or dtype.is_complex):
+            raise TypeError('Unable to build `Dense` layer with non-floating point '
+                            'dtype %s' % (dtype,))
+        input_shape = tensor_shape.TensorShape(input_shape)
+        if tensor_shape.dimension_value(input_shape[-1]) is None:
+            raise ValueError('The last dimension of the inputs to `Dense` '
+                             'should be defined. Found `None`.')
+        last_dim = tensor_shape.dimension_value(input_shape[-1])
+        self.input_spec = InputSpec(min_ndim=2,
+                                    axes={-1: last_dim})
+        self.kernel = self.build_kernel(
+            shape=[last_dim, self.units])
+        self.build_bias(self.units)
+        self.built = True
+
+    def call(self, inputs, training=None):
+        rank = len(inputs.shape)
+        kernel = self.get_weight('kernel', training=training)
+        if rank > 2:
+            # Broadcasting is required for the inputs.
+            outputs = standard_ops.tensordot(inputs, kernel, [[rank - 1], [0]])
+            # Reshape the output back to the original ndim of the input.
+            if not context.executing_eagerly():
+                shape = inputs.shape.as_list()
+                output_shape = shape[:-1] + [self.units]
+                outputs.set_shape(output_shape)
+        else:
+            inputs = math_ops.cast(inputs, self._compute_dtype)
+            if tfk.backend.is_sparse(inputs):
+                outputs = sparse_ops.sparse_tensor_dense_matmul(inputs, kernel)
+            else:
+                outputs = gen_math_ops.mat_mul(inputs, kernel)
+        return super(DynastesDense, self).call(outputs, training=training)
+
+    def compute_output_shape(self, input_shape):
+        input_shape = tensor_shape.TensorShape(input_shape)
+        input_shape = input_shape.with_rank_at_least(2)
+        if tensor_shape.dimension_value(input_shape[-1]) is None:
+            raise ValueError(
+                'The innermost dimension of input_shape must be defined, but saw: %s'
+                % input_shape)
+        return input_shape[:-1].concatenate(self.units)
+
+    def get_config(self):
+        config = {
+            'units': self.units,
+        }
+        base_config = super(DynastesDense, self).get_config()
         return {**base_config, **config}

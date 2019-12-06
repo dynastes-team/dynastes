@@ -120,7 +120,6 @@ class _Conv(ActivatedKernelBiasBaseLayer, abc.ABC):
             op_padding = self.padding
         if not isinstance(op_padding, (list, tuple)):
             op_padding = op_padding.upper()
-
         self._convolution_op = nn_ops.Convolution(
             input_shape,
             filter_shape=self.kernel.shape,
