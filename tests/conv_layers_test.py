@@ -1,10 +1,10 @@
 import tensorflow as tf
 from tensorflow.keras.utils import custom_object_scope
-from tensorflow.python.keras.testing_utils import layer_test
 
 from dynastes import object_scope
 from dynastes.layers.convolutional_layers import DynastesConv1DTranspose, DynastesDepthwiseConv1D, \
     DynastesConv2DTranspose, DynastesConv2D, DynastesDepthwiseConv2D, DynastesConv1D
+from dynastes.util.test_utils import layer_test
 
 
 class DynastesConv1DTest(tf.test.TestCase):
@@ -18,6 +18,7 @@ class DynastesConv1DTest(tf.test.TestCase):
             layer_test(
                 DynastesConv1D, kwargs={'filters': 3, 'kernel_size': 3,
                                         'kernel_normalizer': 'spectral',
+                                        'use_wscale': True,
                                         'kernel_regularizer': 'orthogonal'}, input_shape=(5, 32, 3))
 
 

@@ -1,13 +1,37 @@
 import copy
 
+import numpy as np
+import tensorflow.keras as tfk
 import tensorflow.keras.layers as tfkl
 from tensorflow.python.keras import activations
 from tensorflow.python.keras import constraints
 from tensorflow.python.keras import initializers
 from tensorflow.python.ops import nn
 
-from dynastes import weight_normalizers
 from dynastes import regularizers
+from dynastes import weight_normalizers
+
+
+class _WscaleInitializer(tfk.initializers.Initializer):
+
+    def __init__(self,
+                 initializer,
+                 lrmul=1.,
+                 **kwargs):
+        super(_WscaleInitializer, self).__init__(**kwargs)
+        self.initializer = tfk.initializers.get(initializer)
+        self.lrmul = lrmul
+
+    def __call__(self, shape, dtype=None):
+        return self.initializer(shape, dtype=dtype) / self.lrmul
+
+    def get_config(self):
+        config = {
+            'initializer': tfk.initializers.serialize(self.initializer),
+            'lrmul': self.lrmul,
+        }
+        base_config = super(_WscaleInitializer, self).get_config()
+        return {**base_config, **config}
 
 
 def _get_regularizers_from_keywords(kwargs):
@@ -23,11 +47,11 @@ def _get_regularizers_from_keywords(kwargs):
             _initializers[kwarg.split('_initializer')[0]] = initializers.get(kwargs.pop(kwarg, None))
         elif kwarg.endswith('regularizer'):
             if kwarg != 'activity_regularizer':
-                _regularizers[kwarg.split('_regularizer')[0]] = regularizers.get(kwargs.pop(kwarg))
+                _regularizers[kwarg.split('_regularizer')[0]] = regularizers.get(kwargs.pop(kwarg, None))
         elif kwarg.endswith('constraint'):
-            _constraints[kwarg.split('_constraint')[0]] = constraints.get(kwargs.pop(kwarg))
+            _constraints[kwarg.split('_constraint')[0]] = constraints.get(kwargs.pop(kwarg, None))
         elif kwarg.endswith('normalizer'):
-            _normalizers[kwarg.split('_normalizer')[0]] = weight_normalizers.get(kwargs.pop(kwarg))
+            _normalizers[kwarg.split('_normalizer')[0]] = weight_normalizers.get(kwargs.pop(kwarg, None))
 
     return _initializers, _regularizers, _constraints, _normalizers
 
@@ -37,11 +61,16 @@ class DynastesBaseLayer(tfkl.Layer):
                  activity_regularizer=None,
                  trainable=True,
                  name=None,
+                 use_wscale=False,
+                 wlrmul=1.,
+                 wgain=np.sqrt(2),
                  **kwargs):
         self.weights_dict = {}
         self.initializers, self.regularizers, self.constraints, self.normalizers = _get_regularizers_from_keywords(
             kwargs)
-
+        self.use_wscale = use_wscale
+        self.lrmul = wlrmul
+        self.gain = wgain
         super(DynastesBaseLayer, self).__init__(
             trainable=trainable,
             name=name,
@@ -86,15 +115,27 @@ class DynastesBaseLayer(tfkl.Layer):
             self.regularizers[name] = regularizers.get(regularizer)
         if constraint is not None:
             self.constraints[name] = constraints.get(constraint)
+        _initializer = self.get_initializer(name)
+        if self.use_wscale:
+            _initializer = _WscaleInitializer(_initializer, lrmul=self.lrmul)
+            self.initializers[name] = _initializer
+            if name in self.normalizers and self.normalizers[name] is not None:
+                self.normalizers[name] = weight_normalizers.WscaleNormalizer(next_layer=self.normalizers[name], lrmul=self.lrmul,
+                                                          gain=self.gain)
+            else:
+                self.normalizers[name] = weight_normalizers.WscaleNormalizer(lrmul=self.lrmul, gain=self.gain)
+
         weight = super(DynastesBaseLayer, self).add_weight(name=name,
                                                            shape=shape,
-                                                           initializer=self.get_initializer(name),
+                                                           initializer=_initializer,
                                                            regularizer=self.get_regularizer(name),
                                                            trainable=trainable,
                                                            constraint=self.get_constraint(name),
                                                            partitioner=partitioner,
                                                            use_resource=use_resource,
                                                            **kwargs)
+        if self.normalizers[name] is not None:
+            self.normalizers[name].build(shape)
         self.weights_dict[name] = weight
         return weight
 

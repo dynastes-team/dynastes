@@ -41,9 +41,13 @@ def _add(self, other):
 def _sub(self, other):
     return ModifyingRegularizer(self, other, lambda x, y: x - y)
 
+def _mul(self, other):
+    return ModifyingRegularizer(self, other, lambda x, y: x * y)
+
 
 setattr(Regularizer, '__add__', _add)
 setattr(Regularizer, '__sub__', _sub)
+setattr(Regularizer, '__mul__', _mul)
 
 
 def serialize(regularizer):

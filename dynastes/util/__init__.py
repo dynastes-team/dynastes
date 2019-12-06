@@ -4,6 +4,7 @@ from __future__ import print_function
 
 from . import precision_util
 from . import t2t_expert_util
+from . import test_utils
 
 # Cleanup symbols to avoid polluting namespace.
 del absolute_import
