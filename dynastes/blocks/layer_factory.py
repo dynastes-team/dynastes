@@ -121,8 +121,8 @@ def get_1D_attention_layer(type,
                            max_relative_position=None,
                            blocksparse_bijector=BlockSparseStridedRoll1D,
                            lsh_bucket_length=4,
-                           block_length=128,
-                           filter_width=100,
+                           block_length=None,
+                           filter_width=None,
                            mask_right=False,
                            add_relative_to_values=False,
                            heads_share_relative_embeddings=False):
@@ -150,8 +150,8 @@ def get_1D_attention_layer(type,
                                 heads_share_relative_embeddings=heads_share_relative_embeddings)
     elif type.lower() == 'PseudoBlockSparseAttention1D'.lower():
         return tfdl.PseudoBlockSparseAttention1D(num_heads=num_heads,
-                                                 blocksparse_bijector=blocksparse_bijector,
+                                                 blocksparse_bijector=blocksparse_bijector(block_size=block_length),
                                                  multiquery_attention=multiquery_attention,
                                                  dropout_rate=dropout_rate,
-                                                 block_length=block_length,
+                                                 block_size=block_length,
                                                  mask_right=mask_right)

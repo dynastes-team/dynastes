@@ -34,7 +34,7 @@ class PseudoBlockSparseBijector1D(PseudoBlockSparseBijector, abc.ABC):
 class ChainedPseudoBlockSparseBijector1D(PseudoBlockSparseBijector1D):
 
     def __init__(self, partial_bijectors, **kwargs):
-        super().__init__(**kwargs)
+        super(ChainedPseudoBlockSparseBijector1D, self).__init__(**kwargs)
         self.partial_bijectors = partial_bijectors
 
     def get_bijector(self, x):

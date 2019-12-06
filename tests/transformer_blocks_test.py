@@ -25,15 +25,19 @@ class EncoderBlockTest(tf.test.TestCase):
             d_model = 16
             num_heads = 4
             dff = 32
-
-            sablock = SelfAttentionBlock1D(d_model, d_model)
+            length = 4096
+            mask_len = 32
+            sablock = SelfAttentionBlock1D(d_model, d_model, num_heads=num_heads,
+                                           attention_type='PseudoBlockSparseAttention1D',
+                                           block_length=1024,
+                                           multiquery_attention=True,)
             norm = tfkl.LayerNormalization(epsilon=1e-6)
             df_net = PointWiseFeedForwardBlock(dff=dff, d_model=d_model)
             enc_block = EncoderBlock(sa_layer=sablock, norm0=norm, ffn=df_net, norm1=norm)
             stack = EncoderBlockStack([enc_block] * 3)
 
-            test_input = tf.convert_to_tensor(normal(size=(1, 16, d_model)).astype(np.float32))
-            mask = to_tensor(([True] * (16 - 3)) + ([False] * (3)))
+            test_input = tf.convert_to_tensor(normal(size=(1, length, d_model)).astype(np.float32))
+            mask = to_tensor(([True] * (length - mask_len)) + ([False] * (mask_len)))
             mask = tf.expand_dims(mask, axis=0)
             out = stack(test_input, training=None, mask=mask)
 
