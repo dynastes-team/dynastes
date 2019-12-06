@@ -134,8 +134,9 @@ class DynastesBaseLayer(tfkl.Layer):
                                                            partitioner=partitioner,
                                                            use_resource=use_resource,
                                                            **kwargs)
-        if self.normalizers[name] is not None:
-            self.normalizers[name].build(shape)
+        if name in self.normalizers:
+            if self.normalizers[name] is not None:
+                self.normalizers[name].build(shape)
         self.weights_dict[name] = weight
         return weight
 
