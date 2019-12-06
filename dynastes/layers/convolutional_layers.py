@@ -110,7 +110,6 @@ class _Conv(ActivatedKernelBiasBaseLayer, abc.ABC):
                              'should be defined. Found `None`.')
         input_dim = int(input_shape[channel_axis])
         kernel_shape = self.kernel_size + (input_dim, self.filters)
-
         self.kernel = self.build_kernel(kernel_shape)
         self.bias = self.build_bias(self.filters)
         self.input_spec = InputSpec(ndim=self.rank + 2,
@@ -1092,7 +1091,8 @@ class DynastesConv1DTranspose(DynastesConv2DTranspose):
         base_config = super(DynastesConv1DTranspose, self).get_config()
         return {**base_config, **config}
 
-#Export aliases
+
+# Export aliases
 Conv1D = DynastesConv1D
 Conv2D = DynastesConv2D
 Conv3D = DynastesConv3D

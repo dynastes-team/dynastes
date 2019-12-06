@@ -133,9 +133,9 @@ def layer_test(layer_cls, kwargs=None, input_shape=None, input_dtype=None,
 
     # check shape inference
     model = keras.models.Model(x, y)
-    computed_output_shape = tuple(
-        layer.compute_output_shape(
-            tensor_shape.TensorShape(input_shape)).as_list())
+    _comp_output_shape = layer.compute_output_shape(
+            tensor_shape.TensorShape(input_shape))
+    computed_output_shape = tuple(_comp_output_shape.as_list())
     computed_output_signature = layer.compute_output_signature(
         tensor_spec.TensorSpec(shape=input_shape, dtype=input_dtype))
     actual_output = model.predict(input_data)

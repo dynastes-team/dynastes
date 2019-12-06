@@ -284,7 +284,9 @@ class Attention1D(DynastesBaseLayer):
 
     def compute_output_shape(self, input_shape):
         depth_v = int(input_shape[2][-1]) // self.num_heads_kv
-        return tuple(input_shape[:-1]) + (depth_v * self.num_heads,)
+        output_shape = input_shape[0][:-1] + [depth_v * self.num_heads]
+        attn_w_shape = [input_shape[0][0], input_shape[0][1], input_shape[1][1]]
+        return output_shape, attn_w_shape
 
     def get_config(self):
         config = {

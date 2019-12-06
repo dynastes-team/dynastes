@@ -142,7 +142,7 @@ class DynastesBaseLayer(tfkl.Layer):
 
     def get_weight(self, name, training=None):
         w = self.weights_dict[name]
-        if name in self.normalizers:
+        if name in self.normalizers and self.normalizers[name] is not None:
             w = self.normalizers[name](w, training=training)
         return w
 
