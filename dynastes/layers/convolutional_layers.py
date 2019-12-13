@@ -699,7 +699,7 @@ class DynastesConv2DTranspose(DynastesConv2D):
 
                 if not context.executing_eagerly():
                     # Infer the static output shape:
-                    out_shape = self.compute_output_shape(inputs.shape)
+                    out_shape = self.compute_output_shape(mask.shape)
                     outputs.set_shape(out_shape)
                 mask = (1. - outputs) < self.mask_threshold
                 mask = tf.squeeze(mask, axis=-1)
