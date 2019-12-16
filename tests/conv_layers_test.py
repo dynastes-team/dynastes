@@ -11,6 +11,30 @@ to_tensor = tf.convert_to_tensor
 normal = np.random.normal
 
 class DynastesConv1DTest(tf.test.TestCase):
+
+    def test_masking(self):
+        with custom_object_scope(object_scope):
+
+            layer = DynastesConv1D(32, kernel_size=3, strides=2, padding='same')
+
+            ts = to_tensor(normal(size=(8, 16, 32))
+                          .astype(np.float32))
+
+            mask_len = 16 // 6
+            mask = to_tensor(([True] * (16 - mask_len)) + ([False] * (mask_len)))
+            mask = tf.expand_dims(mask, axis=0)
+            mask = tf.tile(mask, [8, 1])
+            layer(ts, mask=mask)
+            layer.compute_mask(ts, mask=mask)
+
+            @tf.function
+            def graph_test_fn(x, mask):
+                layer(x, mask=mask)
+                layer.compute_mask(x, mask=mask)
+
+            graph_test_fn(x=ts, mask=mask)
+
+
     def test_simple(self):
         with custom_object_scope(object_scope):
             layer_test(
@@ -30,6 +54,30 @@ class DynastesConv2DTest(tf.test.TestCase):
         with custom_object_scope(object_scope):
             layer_test(
                 DynastesConv2D, kwargs={'filters': 3, 'kernel_size': (3, 3)}, input_shape=(4, 16, 16, 3))
+
+    def test_masking(self):
+        with custom_object_scope(object_scope):
+
+            layer = DynastesConv2D(32, kernel_size=3, strides=2, padding='same')
+
+            ts = to_tensor(normal(size=(8, 16, 16, 32))
+                          .astype(np.float32))
+
+            mask_len = 16 // 8
+            mask = to_tensor(([True] * (16 - mask_len)) + ([False] * (mask_len)))
+            mask = tf.expand_dims(mask, axis=0)
+            mask = tf.tile(mask, [8, 1])
+            mask = tf.expand_dims(mask, axis=1)
+            mask = tf.tile(mask, [1, 16, 1])
+            layer(ts, mask=mask)
+            layer.compute_mask(ts, mask=mask)
+
+            @tf.function
+            def graph_test_fn(x, mask):
+                layer(x, mask=mask)
+                layer.compute_mask(x, mask=mask)
+
+            graph_test_fn(x=ts, mask=mask)
 
     def test_specnorm(self):
         with custom_object_scope(object_scope):
@@ -92,6 +140,30 @@ class DynastesConv2DTransposeTest(tf.test.TestCase):
                 expected_output_shape=(None, 32, 32, 3)
             )
 
+    def test_masking(self):
+        with custom_object_scope(object_scope):
+
+            layer = DynastesConv2DTranspose(32, kernel_size=3, strides=2, padding='same')
+
+            ts = to_tensor(normal(size=(8, 16, 16, 32))
+                          .astype(np.float32))
+
+            mask_len = 16 // 8
+            mask = to_tensor(([True] * (16 - mask_len)) + ([False] * (mask_len)))
+            mask = tf.expand_dims(mask, axis=0)
+            mask = tf.tile(mask, [8, 1])
+            mask = tf.expand_dims(mask, axis=1)
+            mask = tf.tile(mask, [1, 16, 1])
+            layer(ts, mask=mask)
+            layer.compute_mask(ts, mask=mask)
+
+            @tf.function
+            def graph_test_fn(x, mask):
+                layer(x, mask=mask)
+                layer.compute_mask(x, mask=mask)
+
+            graph_test_fn(x=ts, mask=mask)
+
     def test_specnorm(self):
         with custom_object_scope(object_scope):
             layer_test(
@@ -110,6 +182,28 @@ class DynastesDepthwiseConv1DTest(tf.test.TestCase):
             layer_test(
                 DynastesDepthwiseConv1D, kwargs={'kernel_size': 3}, input_shape=(5, 32, 3))
 
+    def test_masking(self):
+        with custom_object_scope(object_scope):
+
+            layer = DynastesDepthwiseConv1D(kernel_size=3, strides=2, padding='same')
+
+            ts = to_tensor(normal(size=(8, 16, 32))
+                          .astype(np.float32))
+
+            mask_len = 16 // 6
+            mask = to_tensor(([True] * (16 - mask_len)) + ([False] * (mask_len)))
+            mask = tf.expand_dims(mask, axis=0)
+            mask = tf.tile(mask, [8, 1])
+            layer(ts, mask=mask)
+            layer.compute_mask(ts, mask=mask)
+
+            @tf.function
+            def graph_test_fn(x, mask):
+                layer(x, mask=mask)
+                layer.compute_mask(x, mask=mask)
+
+            graph_test_fn(x=ts, mask=mask)
+
     def test_specnorm(self):
         with custom_object_scope(object_scope):
             layer_test(
@@ -123,6 +217,31 @@ class DynastesDepthwiseConv2DTest(tf.test.TestCase):
         with custom_object_scope(object_scope):
             layer_test(
                 DynastesDepthwiseConv2D, kwargs={'kernel_size': (3, 3)}, input_shape=(4, 16, 16, 3))
+
+    def test_masking(self):
+        with custom_object_scope(object_scope):
+
+            layer = DynastesDepthwiseConv2D(kernel_size=3, strides=2, padding='same')
+
+            ts = to_tensor(normal(size=(8, 16, 16, 32))
+                          .astype(np.float32))
+
+            mask_len = 16 // 6
+            mask = to_tensor(([True] * (16 - mask_len)) + ([False] * (mask_len)))
+            mask = tf.expand_dims(mask, axis=0)
+            mask = tf.tile(mask, [8, 1])
+            mask = tf.expand_dims(mask, axis=1)
+            mask = tf.tile(mask, [1, 16, 1])
+            layer(ts, mask=mask)
+            layer.compute_mask(ts, mask=mask)
+
+            @tf.function
+            def graph_test_fn(x, mask):
+                layer(x, mask=mask)
+                layer.compute_mask(x, mask=mask)
+
+            graph_test_fn(x=ts, mask=mask)
+
 
     def test_specnorm(self):
         with custom_object_scope(object_scope):

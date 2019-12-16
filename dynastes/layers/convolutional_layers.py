@@ -74,7 +74,7 @@ class _Conv(ActivatedKernelBiasBaseLayer, abc.ABC):
                  strides: object = 1,
                  padding: object = 'valid',
                  dilation_rate: object = 1,
-                 mask_threshold: float = 0.1,
+                 mask_threshold: float = 0.51,
                  activity_regularizer: object = None,
                  input_spec=None,
                  trainable: object = True,
@@ -149,7 +149,7 @@ class _Conv(ActivatedKernelBiasBaseLayer, abc.ABC):
                 mask_kernel = tf.reduce_max(tf.abs(mask_kernel), axis=-2, keepdims=True)
                 mask_kernel = tf.cast(mask_kernel, tf.float16)
                 mask = self._mask_convolution_op(mask, mask_kernel)
-                mask = (1. - mask) < self.mask_threshold
+                mask = mask > self.mask_threshold
                 mask = tf.squeeze(mask, axis=-1)
             return mask
         return None
@@ -396,7 +396,7 @@ class DynastesConv2D(_Conv):
                 mask = 1 - tf.expand_dims(mask, axis=-1)
                 inputs = array_ops.pad(inputs, self._compute_causal_padding())
                 mask = array_ops.pad(mask, self._compute_causal_padding())
-                mask = (1. - mask) < self.mask_threshold
+                mask = mask > self.mask_threshold
                 mask = tf.squeeze(mask, axis=-1)
         return super(DynastesConv2D, self).compute_mask(inputs, mask)
 
@@ -497,7 +497,7 @@ class DynastesConv3D(_Conv):
                 mask = 1 - tf.expand_dims(mask, axis=-1)
                 inputs = array_ops.pad(inputs, self._compute_causal_padding())
                 mask = array_ops.pad(mask, self._compute_causal_padding())
-                mask = (1. - mask) < self.mask_threshold
+                mask = mask > self.mask_threshold
                 mask = tf.squeeze(mask, axis=-1)
         return super(DynastesConv3D, self).compute_mask(inputs, mask)
 
@@ -594,7 +594,7 @@ class DynastesConv2DTranspose(DynastesConv2D):
                  kernel_size: object,
                  strides: object = (1, 1),
                  padding: object = 'valid',
-                 mask_threshold: object = 0.1,
+                 mask_threshold: object = 0.51,
                  output_padding: object = None,
                  dilation_rate: object = (1, 1),
                  **kwargs):
@@ -688,7 +688,6 @@ class DynastesConv2DTranspose(DynastesConv2D):
                     output_shape = (batch_size, out_height, out_width, 1)
 
                 output_shape_tensor = array_ops.stack(output_shape)
-                mask = tf.stop_gradient(mask)
                 outputs = backend.conv2d_transpose(
                     mask,
                     mask_kernel,
@@ -702,7 +701,7 @@ class DynastesConv2DTranspose(DynastesConv2D):
                     # Infer the static output shape:
                     out_shape = self._compute_output_shape(mask.shape, mask=True)
                     outputs.set_shape(out_shape)
-                mask = (1. - outputs) < self.mask_threshold
+                mask = outputs > self.mask_threshold
                 mask = tf.squeeze(mask, axis=-1)
 
         return mask
@@ -919,9 +918,15 @@ class DynastesDepthwiseConv2D(DynastesConv2D):
             mask_shapes = max(shape_list(mask_kernel[:-2]))
             if mask_shapes > 1:
                 mask_kernel = tf.reduce_max(tf.abs(mask_kernel), axis=-2, keepdims=True)
-                mask_kernel = tf.cast(mask_kernel, tf.float16)
-                mask = self._mask_convolution_op(mask, mask_kernel)
-                mask = (1. - mask) < self.mask_threshold
+                mask_kernel = tf.cast(mask_kernel, inputs.dtype)
+                mask = backend.depthwise_conv2d(
+                            mask,
+                            mask_kernel,
+                            strides=self.strides,
+                            padding=self.padding,
+                            dilation_rate=self.dilation_rate,
+                            data_format=self.data_format)
+                mask = mask > self.mask_threshold
                 mask = tf.squeeze(mask, axis=-1)
                 mask = tf.cast(mask, tf.bool)
             return mask
@@ -978,7 +983,7 @@ class DynastesDepthwiseConv1D(DynastesDepthwiseConv2D):
         super(DynastesDepthwiseConv1D, self).__init__(
             filters=None,
             kernel_size=(kernel_size, 1),
-            strides=(strides, 1),
+            strides=(strides, strides),
             padding=padding,
             depth_multiplier=depth_multiplier,
             dilation_rate=(dilation_rate, 1),
@@ -1002,7 +1007,7 @@ class DynastesDepthwiseConv1D(DynastesDepthwiseConv2D):
     def compute_mask(self, inputs, mask=None):
         if mask is not None:
             inputs = tf.expand_dims(inputs, axis=-2)
-            #mask = tf.expand_dims(inputs, axis=-1)
+            mask = tf.expand_dims(mask, axis=-1)
             mask = super().compute_mask(inputs, mask)
             if mask is not None:
                 mask = tf.squeeze(mask, axis=-1)
