@@ -61,10 +61,15 @@ class DynastesConv1DTransposeTest(tf.test.TestCase):
             mask = to_tensor(([True] * (16 - mask_len)) + ([False] * (mask_len)))
             mask = tf.expand_dims(mask, axis=0)
             mask = tf.tile(mask, [8, 1])
-            print(mask.shape)
             layer(ts, mask=mask)
             layer.compute_mask(ts, mask=mask)
 
+            @tf.function
+            def graph_test_fn(x, mask):
+                layer(x, mask=mask)
+                layer.compute_mask(x, mask=mask)
+
+            graph_test_fn(x=ts, mask=mask)
 
     def test_specnorm(self):
         with custom_object_scope(object_scope):

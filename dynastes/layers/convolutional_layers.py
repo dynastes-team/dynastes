@@ -700,7 +700,7 @@ class DynastesConv2DTranspose(DynastesConv2D):
 
                 if not context.executing_eagerly():
                     # Infer the static output shape:
-                    out_shape = self._compute_output_shape(mask.shape)
+                    out_shape = self._compute_output_shape(mask.shape, mask=True)
                     outputs.set_shape(out_shape)
                 mask = (1. - outputs) < self.mask_threshold
                 mask = tf.squeeze(mask, axis=-1)
@@ -759,7 +759,7 @@ class DynastesConv2DTranspose(DynastesConv2D):
 
         return super(DynastesConv2DTranspose, self).post_process_call(outputs, training=training)
 
-    def _compute_output_shape(self, input_shape):
+    def _compute_output_shape(self, input_shape, mask=False):
         input_shape = tensor_shape.TensorShape(input_shape).as_list()
         output_shape = list(input_shape)
         if self.data_format == 'channels_first':
@@ -775,7 +775,10 @@ class DynastesConv2DTranspose(DynastesConv2D):
         else:
             out_pad_h, out_pad_w = self.output_padding
 
-        output_shape[c_axis] = self.filters
+        c_axis_shape = self.filters
+        if mask:
+            c_axis_shape = 1
+        output_shape[c_axis] = c_axis_shape
         output_shape[h_axis] = conv_utils.deconv_output_length(
             output_shape[h_axis],
             kernel_h,
