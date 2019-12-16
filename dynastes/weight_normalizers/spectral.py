@@ -66,19 +66,16 @@ class SpectralNormalization(tfkl.Layer):
 
         return spectral_norm[0][0]
 
-    @tf.function
     def call(self, w, training=None):
         if self.transposed:
-            w_shape = shape_list(w)
-            dims = list(range(len(w_shape)))
-            w = tf.transpose(w, perm=dims[:-2] + [dims[-1], dims[-2]])
+            w = tf.linalg.matrix_transpose(w)
         normalization_factor = self._compute_spectral_norm(w, training=training)
         if not self.equality_constrained:
             normalization_factor = tf.maximum(1., normalization_factor)
         w_normalized = w / normalization_factor
         w_normalized = tf.reshape(w_normalized, w.get_shape())
         if self.transposed:
-            w_normalized = tf.transpose(w_normalized, perm=dims[:-2] + [dims[-1], dims[-2]])
+            w_normalized = tf.linalg.matrix_transpose(w_normalized)
         return w_normalized
 
     def get_config(self):

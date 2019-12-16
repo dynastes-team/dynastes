@@ -124,7 +124,6 @@ class EncoderBlock(tfkl.Layer):
         self.mha_skip_adapt = mha_skip_adapt
         self.ffn_skip_adapt = ffn_skip_adapt
 
-    @tf.function
     def call_masked(self, inputs, training=None, mask=None):
         x = inputs
         x, x_mask = cm(self.sa_layer, x, training=training, mask=mask)
@@ -169,7 +168,6 @@ class EncoderBlockStack(tfkl.Layer):
         super(EncoderBlockStack, self).__init__(**kwargs)
         self.blocks = blocks
 
-    @tf.function
     def call_masked(self, inputs, training=None, mask=None, **kwargs):
         x = inputs
         for block in self.blocks:

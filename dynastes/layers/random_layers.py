@@ -27,7 +27,6 @@ class StatelessRandomNormalLike(tfkl.Layer):
     def build(self, input_shape):
         super(StatelessRandomNormalLike, self).build(input_shape)
 
-    @tf.function
     def _compute_shape(self, inputs, seed):
         inputs_shape = shape_list(inputs)
         if self.channels > 0:

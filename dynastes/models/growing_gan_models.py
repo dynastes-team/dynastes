@@ -17,7 +17,6 @@ class GrowingGanModel(tfk.Model, abc.ABC):
     @staticmethod
     def interpolate_mask(x_mask, y_mask, interp):
 
-        @tf.function
         def interp_masks(_x_mask, _y_mask, _interp):
 
             if _interp <= 0.:
