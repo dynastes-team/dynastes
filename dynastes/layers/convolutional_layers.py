@@ -687,7 +687,7 @@ class DynastesConv2DTranspose(DynastesConv2D):
                 else:
                     output_shape = (batch_size, out_height, out_width, 1)
 
-                output_shape_tensor = array_ops.stack(output_shape)
+                output_shape_tensor = array_ops.stack(output_shape, name=self.name + '_stack_mask_shape_op')
                 outputs = backend.conv2d_transpose(
                     mask,
                     mask_kernel,
