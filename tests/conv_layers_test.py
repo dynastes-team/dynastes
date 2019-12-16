@@ -6,6 +6,9 @@ from dynastes.layers.convolutional_layers import DynastesConv1DTranspose, Dynast
     DynastesConv2DTranspose, DynastesConv2D, DynastesDepthwiseConv2D, DynastesConv1D
 from dynastes.util.test_utils import layer_test
 
+import numpy as np
+to_tensor = tf.convert_to_tensor
+normal = np.random.normal
 
 class DynastesConv1DTest(tf.test.TestCase):
     def test_simple(self):
@@ -46,6 +49,23 @@ class DynastesConv1DTransposeTest(tf.test.TestCase):
                 expected_output_shape=(None, 32, 3)
             )
 
+    def test_masking(self):
+        with custom_object_scope(object_scope):
+
+            layer = DynastesConv1DTranspose(32, kernel_size=3, strides=2, padding='same')
+
+            ts = to_tensor(normal(size=(8, 16, 32))
+                          .astype(np.float32))
+
+            mask_len = 16 // 6
+            mask = to_tensor(([True] * (16 - mask_len)) + ([False] * (mask_len)))
+            mask = tf.expand_dims(mask, axis=0)
+            mask = tf.tile(mask, [8, 1])
+            print(mask.shape)
+            layer(ts, mask=mask)
+            layer.compute_mask(ts, mask=mask)
+
+
     def test_specnorm(self):
         with custom_object_scope(object_scope):
             layer_test(
@@ -56,7 +76,6 @@ class DynastesConv1DTransposeTest(tf.test.TestCase):
                 input_shape=(None, 16, 5),
                 expected_output_shape=(None, 32, 7)
             )
-
 
 class DynastesConv2DTransposeTest(tf.test.TestCase):
     def test_simple(self):

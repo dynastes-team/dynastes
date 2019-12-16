@@ -688,6 +688,7 @@ class DynastesConv2DTranspose(DynastesConv2D):
                     output_shape = (batch_size, out_height, out_width, 1)
 
                 output_shape_tensor = array_ops.stack(output_shape)
+                mask = tf.stop_gradient(mask)
                 outputs = backend.conv2d_transpose(
                     mask,
                     mask_kernel,
@@ -998,7 +999,7 @@ class DynastesDepthwiseConv1D(DynastesDepthwiseConv2D):
     def compute_mask(self, inputs, mask=None):
         if mask is not None:
             inputs = tf.expand_dims(inputs, axis=-2)
-            mask = tf.expand_dims(inputs, axis=-1)
+            #mask = tf.expand_dims(inputs, axis=-1)
             mask = super().compute_mask(inputs, mask)
             if mask is not None:
                 mask = tf.squeeze(mask, axis=-1)
@@ -1061,8 +1062,8 @@ class DynastesConv1DTranspose(DynastesConv2DTranspose):
     def compute_mask(self, inputs, mask=None):
         if mask is not None:
             inputs = tf.expand_dims(inputs, axis=-2)
-            mask = tf.expand_dims(inputs, axis=-1)
-            mask = super().compute_mask(inputs, mask)
+            mask = tf.expand_dims(mask, axis=-1)
+            mask = super().compute_mask(inputs, mask=mask)
             if mask is not None:
                 mask = tf.squeeze(mask, axis=-1)
             return mask
