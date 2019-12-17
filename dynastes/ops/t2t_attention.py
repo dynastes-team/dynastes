@@ -835,7 +835,7 @@ def masked_local_attention_1d(q,
     if isinstance(length, int) and isinstance(block_length, int):
         num_blocks = length // block_length
     else:
-        num_blocks = tf.math.divide(length, block_length)
+        num_blocks = tf.cast(tf.math.divide(length, block_length), tf.int32)
 
     # Compute attention for the first query block.
     first_q = tf.slice(q, [0, 0, 0, 0], [-1, -1, block_length, -1])

@@ -1,6 +1,6 @@
 def call_masked(layer, inputs, training=None, mask=None, **kwargs):
     try:
-        return layer.call_masked(inputs, training, mask=mask, **kwargs)
+        return layer.call_masked(inputs, training=training, mask=mask, **kwargs)
     except AttributeError:
         try:
             out = layer(inputs, training=training, mask=mask, **kwargs)
