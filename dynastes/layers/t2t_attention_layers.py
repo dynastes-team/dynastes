@@ -10,6 +10,27 @@ from dynastes.util.precision_util import large_compatible_negative
 from .base_layers import DynastesBaseLayer
 
 
+class AddTimingSignalLayer1D(DynastesBaseLayer):
+
+    def __init__(self,
+                 min_timescale=1.0,
+                 max_timescale=1.0e4,
+                 **kwargs):
+        super(AddTimingSignalLayer1D, self).__init__(**kwargs)
+        self.min_timescale = min_timescale
+        self.max_timescale = max_timescale
+
+    def call(self, inputs, **kwargs):
+        return t2t_attention.add_timing_signal_1d(inputs, min_timescale=self.min_timescale,
+                                                  max_timescale=self.max_timescale)
+
+    def get_config(self):
+        config = {'min_timescale': self.min_timescale,
+                  'max_timescale': self.max_timescale, }
+        base_config = super(AddTimingSignalLayer1D, self).get_config()
+        return {**base_config, **config}
+
+
 class LshGatingLayer(DynastesBaseLayer):
 
     def __init__(self,

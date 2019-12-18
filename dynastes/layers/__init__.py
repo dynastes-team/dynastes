@@ -21,8 +21,10 @@ from .normalization_layers import AdaptiveMultiNormalization
 from .normalization_layers import MultiNormalization
 from .normalization_layers import PoolNormalization2D
 from .random_layers import StatelessRandomNormalLike
+from .t2t_attention_layers import AddTimingSignalLayer1D
 from .t2t_attention_layers import Attention1D
 from .t2t_attention_layers import Attention2D
+from .t2t_attention_layers import LshGatingLayer
 from .t2t_attention_layers import PseudoBlockSparseAttention1D
 from .time_delay_layers import DepthGroupwiseTimeDelayLayer1D
 from .time_delay_layers import DepthGroupwiseTimeDelayLayerFake2D
@@ -39,6 +41,8 @@ object_scope = {
     'DepthGroupwiseTimeDelayLayerFake2D': DepthGroupwiseTimeDelayLayerFake2D,
     'TimeDelayLayer1D': TimeDelayLayer1D,
     'TimeDelayLayerFake2D': TimeDelayLayerFake2D,
+    'AddTimingSignalLayer1D': AddTimingSignalLayer1D,
+    'LshGatingLayer': LshGatingLayer,
     'Attention1D': Attention1D,
     'Attention2D': Attention2D,
     'PseudoBlockSparseAttention1D': PseudoBlockSparseAttention1D,

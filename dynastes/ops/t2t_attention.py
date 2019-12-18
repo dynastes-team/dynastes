@@ -1,3 +1,5 @@
+import math
+
 import tensorflow as tf
 
 from dynastes.util import t2t_expert_util
@@ -796,7 +798,6 @@ def masked_local_attention_1d(q,
         USE OF MASK and CAUSALITY TENSOR IS EXPERIMENTAL!
     """
 
-
     batch, heads, length, depth_k = t2t_common.shape_list(q)
     _, heads_kv, _, _ = t2t_common.shape_list(k)
     depth_v = t2t_common.shape_list(v)[-1]
@@ -826,12 +827,12 @@ def masked_local_attention_1d(q,
     k = tf.pad(k, padding)
     v = tf.pad(v, padding)
     if mask is not None:
-        #tf.get_logger().warning('Use of mask and/or causality tensor in masked_local_attention_1d is experimental')
+        # tf.get_logger().warning('Use of mask and/or causality tensor in masked_local_attention_1d is experimental')
         mask = tf.reshape(mask, [batch, 1, length, 1])
         mask = tf.pad(mask, padding)
         if mask_right or causality_tensor is not None:
             causality_tensor = tf.reshape(causality_tensor, [ct_batch, 1, length, 1])
-            causality_tensor = tf.pad(causality_tensor, padding, constant_values=length+1)
+            causality_tensor = tf.pad(causality_tensor, padding, constant_values=length + 1)
     if isinstance(length, int) and isinstance(block_length, int):
         num_blocks = length // block_length
     else:
@@ -866,15 +867,15 @@ def masked_local_attention_1d(q,
     if mask is not None:
         mask = tf.reshape(mask, [batch, 1, num_blocks, block_length, 1])
         local_mask = _make_local_block(mask, 1, batch, 1, num_blocks,
-                                block_length)
+                                       block_length)
         tail_mask = tf.slice(mask, [0, 0, 1, 0, 0], [-1, -1, -1, -1, -1])
         tail_mask = tf.reshape(tail_mask,
-                        [batch, 1, num_blocks - 1, block_length, 1])
+                               [batch, 1, num_blocks - 1, block_length, 1])
         local_mask = tf.minimum(tf.linalg.matrix_transpose(local_mask), tail_mask)
         if causality_tensor is not None:
             ct = tf.reshape(causality_tensor, [ct_batch, 1, num_blocks, block_length, 1])
             local_ct = _make_local_block(ct, 1, ct_batch, 1, num_blocks,
-                                    block_length)
+                                         block_length)
             tail_ct = tf.slice(ct, [0, 0, 1, 0, 0], [-1, -1, -1, -1, -1])
             tail_ct = tf.reshape(tail_ct, [ct_batch, 1, num_blocks - 1, block_length, 1])
             ct_mask = tf.cast(tf.linalg.matrix_transpose(local_ct) <= tail_ct, local_mask.dtype)
@@ -1225,3 +1226,81 @@ def dot_product_unmasked_self_attention_relative_2d(
     ret = tf.matmul(weights, flatten_hw(v, depth_v, num_heads_k))
     # reshape back the same spatial dimensions as q
     return tf.reshape(ret, [-1, num_heads_q, height, width, depth_v]), weights
+
+
+def get_timing_signal_1d(length,
+                         channels,
+                         min_timescale=1.0,
+                         max_timescale=1.0e4,
+                         start_index=0):
+    """Gets a bunch of sinusoids of different frequencies.
+    Each channel of the input Tensor is incremented by a sinusoid of a different
+    frequency and phase.
+    This allows attention to learn to use absolute and relative positions.
+    Timing signals should be added to some precursors of both the query and the
+    memory inputs to attention.
+    The use of relative position is possible because sin(x+y) and cos(x+y) can be
+    expressed in terms of y, sin(x) and cos(x).
+    In particular, we use a geometric sequence of timescales starting with
+    min_timescale and ending with max_timescale.  The number of different
+    timescales is equal to channels / 2. For each timescale, we
+    generate the two sinusoidal signals sin(timestep/timescale) and
+    cos(timestep/timescale).  All of these sinusoids are concatenated in
+    the channels dimension.
+    Args:
+      length: scalar, length of timing signal sequence.
+      channels: scalar, size of timing embeddings to create. The number of
+          different timescales is equal to channels / 2.
+      min_timescale: a float
+      max_timescale: a float
+      start_index: index of first position
+    Returns:
+      a Tensor of timing signals [1, length, channels]
+    """
+    position = t2t_common.to_float(tf.range(1, 1 + length) + start_index)
+    num_timescales = channels // 2
+    log_timescale_increment = (
+            math.log(float(max_timescale) / float(min_timescale)) /
+            tf.maximum(t2t_common.to_float(num_timescales) - 1, 1))
+    inv_timescales = min_timescale * tf.exp(
+        tf.to_float(tf.range(num_timescales)) * -log_timescale_increment)
+    scaled_time = tf.expand_dims(position, 1) * tf.expand_dims(inv_timescales, 0)
+    # Please note that this slightly differs from the published paper.
+    # See a discussion here: https://github.com/tensorflow/tensor2tensor/pull/177
+    signal = tf.concat([tf.sin(scaled_time), tf.cos(scaled_time)], axis=1)
+    signal = tf.pad(signal, [[0, 0], [0, tf.math.mod(channels, 2)]])
+    signal = tf.reshape(signal, [1, length, channels])
+    return signal
+
+
+def add_timing_signal_1d(x,
+                         min_timescale=1.0,
+                         max_timescale=1.0e4,
+                         start_index=0):
+    """Adds a bunch of sinusoids of different frequencies to a Tensor.
+    Each channel of the input Tensor is incremented by a sinusoid of a different
+    frequency and phase.
+    This allows attention to learn to use absolute and relative positions.
+    Timing signals should be added to some precursors of both the query and the
+    memory inputs to attention.
+    The use of relative position is possible because sin(x+y) and cos(x+y) can be
+    expressed in terms of y, sin(x) and cos(x).
+    In particular, we use a geometric sequence of timescales starting with
+    min_timescale and ending with max_timescale.  The number of different
+    timescales is equal to channels / 2. For each timescale, we
+    generate the two sinusoidal signals sin(timestep/timescale) and
+    cos(timestep/timescale).  All of these sinusoids are concatenated in
+    the channels dimension.
+    Args:
+      x: a Tensor with shape [batch, length, channels]
+      min_timescale: a float
+      max_timescale: a float
+      start_index: index of first position
+    Returns:
+      a Tensor the same shape as x.
+    """
+    length = t2t_common.shape_list(x)[1]
+    channels = t2t_common.shape_list(x)[2]
+    signal = get_timing_signal_1d(length, channels, min_timescale, max_timescale,
+                                  start_index)
+    return x + t2t_common.cast_like(signal, x)
