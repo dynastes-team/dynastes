@@ -1263,7 +1263,7 @@ def get_timing_signal_1d(length,
             math.log(float(max_timescale) / float(min_timescale)) /
             tf.maximum(t2t_common.to_float(num_timescales) - 1, 1))
     inv_timescales = min_timescale * tf.exp(
-        tf.to_float(tf.range(num_timescales)) * -log_timescale_increment)
+        t2t_common.to_float(tf.range(num_timescales)) * -log_timescale_increment)
     scaled_time = tf.expand_dims(position, 1) * tf.expand_dims(inv_timescales, 0)
     # Please note that this slightly differs from the published paper.
     # See a discussion here: https://github.com/tensorflow/tensor2tensor/pull/177
