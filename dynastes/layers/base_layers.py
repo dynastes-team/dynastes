@@ -84,6 +84,7 @@ class DynastesBaseLayer(tfkl.Layer):
             name=name,
             activity_regularizer=regularizers.get(activity_regularizer),
             **kwargs)
+        self.supports_masking = True
 
     def get_initializer(self, name):
         if name not in self.initializers:
