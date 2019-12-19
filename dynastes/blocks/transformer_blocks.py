@@ -68,11 +68,11 @@ class PointWiseFeedForwardBlock(DynastesBaseLayer):
         self.dff_layer = conv_partial(
             type=ff_type,
             filters=dff,
-            activation=None)
+            activation=self.activation)
         self.out_layer = conv_partial(
             type=d_type,
             filters=d_model,
-            activation=self.activation)
+            activation=None)
 
     def call_masked(self, inputs, training=None, mask=None):
         x, x_mask = cm(self.dff_layer, inputs, training=training, mask=mask)
