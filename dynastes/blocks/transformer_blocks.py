@@ -80,10 +80,22 @@ class PointWiseFeedForwardBlock(DynastesBaseLayer):
         return x, x_mask
 
     def call(self, inputs, training=None, mask=None):
-        return self.call_masked(inputs, training=training, mask=mask)[0]
+        x, x_mask = cm(self.dff_layer, inputs, training=training, mask=mask)
+        x = self.out_layer(x, training=training, mask=x_mask)
+        return x
 
     def compute_mask(self, inputs, mask=None):
-        return self.call_masked(inputs, training=None, mask=mask)[1]
+        if mask is not None:
+            if self.dff_layer.supports_masking:
+                mask = self.dff_layer.compute_mask(inputs, mask=mask)
+            if self.out_layer.supports_masking:
+                mask = self.out_layer(inputs, mask=mask)
+        return mask
+
+    def compute_output_shape(self, input_shape):
+        shape = self.dff_layer.compute_output_shape(input_shape)
+        shape = self.out_layer.compute_output_shape(shape)
+        return shape
 
     def get_config(self):
         config = {
@@ -148,16 +160,74 @@ class EncoderBlock(tfkl.Layer):
         return x, mask
 
     def call(self, inputs, training=None, mask=None):
-        return self.call_masked(inputs, training=training, mask=mask)[0]
+        x = inputs
+        x, x_mask = cm(self.sa_layer, x, training=training, mask=mask)
+        res, res_mask = cm(self.mha_skip_adapt, inputs, training=training, mask=mask)
+        if x_mask is None:
+            n_mask = res_mask
+        elif res_mask is None:
+            n_mask = x_mask
+        else:
+            n_mask = tf.math.logical_and(x_mask, res_mask)
+        x, x_mask = cm(self.norm0, x + res, training=training, mask=n_mask)
+
+        f, f_mask = cm(self.ffn, x, training=training, mask=x_mask)
+        res, res_mask = cm(self.ffn_skip_adapt, x, training=training, mask=x_mask)
+        if f_mask is None:
+            n_mask = f_mask
+        elif res_mask is None:
+            n_mask = x_mask
+        else:
+            n_mask = tf.math.logical_and(f_mask, res_mask)
+        x = self.norm0(f + res, training=training, mask=n_mask)
+        return x
 
     def compute_mask(self, inputs, mask=None):
-        return self.call_masked(inputs, mask=mask)[1]
+        x = inputs
+        if self.sa_layer.supports_masking:
+            x_mask = self.sa_layer.compute_mask(x, mask=mask)
+        else:
+            x_mask = mask
+        if self.mha_skip_adapt.supports_masking:
+            res_mask = self.mha_skip_adapt.compute_mask(inputs, mask=mask)
+        else:
+            res_mask = mask
+        if x_mask is None:
+            n_mask = res_mask
+        elif res_mask is None:
+            n_mask = x_mask
+        else:
+            n_mask = tf.math.logical_and(x_mask, res_mask)
+        if self.norm0.supports_masking:
+            x_mask = self.norm0.compute_mask(x, mask=n_mask)
+        else:
+            x_mask = n_mask
+        if self.ffn.supports_masking:
+            f_mask = self.ffn.compute_mask(x, mask=x_mask)
+        else:
+            f_mask = x_mask
+        if self.ffn_skip_adapt.supports_masking:
+            res_mask = self.ffn_skip_adapt.compute_mask(x, mask=x_mask)
+        else:
+            res_mask = x_mask
+        if f_mask is None:
+            n_mask = f_mask
+        elif res_mask is None:
+            n_mask = x_mask
+        else:
+            n_mask = tf.math.logical_and(f_mask, res_mask)
+        if self.norm0.supports_masking:
+            mask = self.norm0.compute_mask(x, mask=n_mask)
+        else:
+            mask = n_mask
+        return mask
+
 
     def compute_output_shape(self, input_shape):
-        s = input_shape
-        s = self.mha_skip_adapt.compute_output_shape(s)
-        s = self.ffn_skip_adapt.compute_output_shape(s)
-        return s
+            s = input_shape
+            s = self.mha_skip_adapt.compute_output_shape(s)
+            s = self.ffn_skip_adapt.compute_output_shape(s)
+            return s
 
 
 class EncoderBlockStack(tfkl.Layer):
@@ -174,11 +244,18 @@ class EncoderBlockStack(tfkl.Layer):
             x, mask = cm(block, x, training=training, mask=mask, **kwargs)
         return x, mask
 
-    def call(self, inputs, training=None, mask=None):
-        return self.call_masked(inputs, training=training, mask=mask)[0]
+    def call(self, inputs, training=None, mask=None, **kwargs):
+        x = inputs
+        for block in self.blocks:
+            x, mask = cm(block, x, training=training, mask=mask, **kwargs)
+        return x
 
     def compute_mask(self, inputs, mask=None):
-        return self.call_masked(inputs, mask=mask)[1]
+        x = inputs
+        for block in self.blocks:
+            if block.supports_masking:
+                mask = block.compute_mask(x, mask=mask)
+        return mask
 
     def compute_output_shape(self, input_shape):
         s = input_shape
