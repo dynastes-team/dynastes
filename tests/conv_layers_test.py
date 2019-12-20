@@ -38,7 +38,7 @@ class DynastesConv1DTest(tf.test.TestCase):
     def test_simple(self):
         with custom_object_scope(object_scope):
             layer_test(
-                DynastesConv1D, kwargs={'filters': 3, 'kernel_size': 3}, input_shape=(5, 32, 3))
+                DynastesConv1D, kwargs={'filters': 3, 'kernel_size': 3, 'activation': 'swish'}, input_shape=(5, 32, 3))
 
     def test_specnorm(self):
         with custom_object_scope(object_scope):
@@ -53,7 +53,7 @@ class DynastesConv2DTest(tf.test.TestCase):
     def test_simple(self):
         with custom_object_scope(object_scope):
             layer_test(
-                DynastesConv2D, kwargs={'filters': 3, 'kernel_size': (3, 3)}, input_shape=(4, 16, 16, 3))
+                DynastesConv2D, kwargs={'filters': 3, 'kernel_size': (3, 3), 'activation': 'swish'}, input_shape=(4, 16, 16, 3))
 
     def test_masking(self):
         with custom_object_scope(object_scope):

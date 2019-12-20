@@ -6,7 +6,6 @@ import tensorflow.keras.layers as tfkl
 from tensorflow.python.eager import context
 from tensorflow.python.framework import dtypes
 from tensorflow.python.framework import tensor_shape
-from tensorflow.python.keras import activations
 from tensorflow.python.keras import constraints
 from tensorflow.python.keras import initializers
 from tensorflow.python.keras.engine.input_spec import InputSpec
@@ -16,6 +15,7 @@ from tensorflow.python.ops import nn
 from tensorflow.python.ops import sparse_ops
 from tensorflow.python.ops import standard_ops
 
+from dynastes import activations
 from dynastes import regularizers
 from dynastes import weight_normalizers
 

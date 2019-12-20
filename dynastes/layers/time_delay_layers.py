@@ -3,8 +3,8 @@ from __future__ import division
 from __future__ import print_function
 
 import tensorflow as tf
-from tensorflow.python.keras import activations
 
+from dynastes import activations
 from dynastes.layers import ActivatedKernelBiasBaseLayer
 from dynastes.ops.time_delay_ops import time_delay_nn_1d
 
