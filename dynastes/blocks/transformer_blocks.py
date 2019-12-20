@@ -156,7 +156,7 @@ class EncoderBlock(tfkl.Layer):
             n_mask = x_mask
         else:
             n_mask = tf.math.logical_and(f_mask, res_mask)
-        x, mask = cm(self.norm0, f + res, training=training, mask=n_mask)
+        x, mask = cm(self.norm1, f + res, training=training, mask=n_mask)
         return x, mask
 
     def call(self, inputs, training=None, mask=None):
@@ -179,7 +179,10 @@ class EncoderBlock(tfkl.Layer):
             n_mask = x_mask
         else:
             n_mask = tf.math.logical_and(f_mask, res_mask)
-        x = self.norm0(f + res, training=training, mask=n_mask)
+        if self.norm1.supports_masking:
+            x = self.norm1(f + res, training=training, mask=n_mask)
+        else:
+            x = self.norm1(f+res, training=training)
         return x
 
     def compute_mask(self, inputs, mask=None):
@@ -216,8 +219,8 @@ class EncoderBlock(tfkl.Layer):
             n_mask = x_mask
         else:
             n_mask = tf.math.logical_and(f_mask, res_mask)
-        if self.norm0.supports_masking:
-            mask = self.norm0.compute_mask(x, mask=n_mask)
+        if self.norm1.supports_masking:
+            mask = self.norm1.compute_mask(x, mask=n_mask)
         else:
             mask = n_mask
         return mask
