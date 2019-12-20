@@ -34,13 +34,16 @@ class EncoderBlockTest(tf.test.TestCase):
             norm = tfkl.LayerNormalization(epsilon=1e-6)
             df_net = PointWiseFeedForwardBlock(dff=dff, d_model=d_model)
             enc_block = EncoderBlock(sa_layer=sablock, norm0=norm, ffn=df_net, norm1=norm)
+
             stack = EncoderBlockStack([enc_block] * 3)
 
             test_input = tf.convert_to_tensor(normal(size=(1, length, d_model)).astype(np.float32))
             mask = to_tensor(([True] * (length - mask_len)) + ([False] * (mask_len)))
             mask = tf.expand_dims(mask, axis=0)
+            enc_out = enc_block(test_input, training=None, mask=mask)
             out = stack(test_input, training=None, mask=mask)
-
+            out_mask = enc_block.compute_mask(test_input, mask=mask)
             comp_out_shape = stack.compute_output_shape(test_input.shape)
 
             self.assertEqual(out.shape, comp_out_shape)
+            self.assertEqual(enc_out.shape, comp_out_shape)

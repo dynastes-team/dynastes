@@ -89,7 +89,7 @@ class PointWiseFeedForwardBlock(DynastesBaseLayer):
             if self.dff_layer.supports_masking:
                 mask = self.dff_layer.compute_mask(inputs, mask=mask)
             if self.out_layer.supports_masking:
-                mask = self.out_layer(inputs, mask=mask)
+                mask = self.out_layer.compute_mask(inputs, mask=mask)
         return mask
 
     def compute_output_shape(self, input_shape):
@@ -179,10 +179,7 @@ class EncoderBlock(tfkl.Layer):
             n_mask = x_mask
         else:
             n_mask = tf.math.logical_and(f_mask, res_mask)
-        if self.norm1.supports_masking:
-            x = self.norm1(f + res, training=training, mask=n_mask)
-        else:
-            x = self.norm1(f+res, training=training)
+        x, _ = cm(self.norm1, f + res, training=training, mask=n_mask)
         return x
 
     def compute_mask(self, inputs, mask=None):
