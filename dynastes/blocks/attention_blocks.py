@@ -4,7 +4,7 @@ from __future__ import print_function
 
 from functools import partial
 
-from tensorflow.python.keras import activations
+from dynastes import activations
 
 from dynastes.blocks import layer_factory
 from dynastes.layers.base_layers import DynastesBaseLayer

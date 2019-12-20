@@ -6,8 +6,8 @@ from functools import partial
 
 import tensorflow as tf
 import tensorflow.keras.layers as tfkl
-from tensorflow.python.keras import activations
 
+from dynastes import activations
 from dynastes.blocks import layer_factory
 from dynastes.layers.base_layers import DynastesBaseLayer
 from dynastes.util.layer_util import call_masked as cm
@@ -222,12 +222,11 @@ class EncoderBlock(tfkl.Layer):
             mask = n_mask
         return mask
 
-
     def compute_output_shape(self, input_shape):
-            s = input_shape
-            s = self.mha_skip_adapt.compute_output_shape(s)
-            s = self.ffn_skip_adapt.compute_output_shape(s)
-            return s
+        s = input_shape
+        s = self.mha_skip_adapt.compute_output_shape(s)
+        s = self.ffn_skip_adapt.compute_output_shape(s)
+        return s
 
 
 class EncoderBlockStack(tfkl.Layer):
