@@ -12,9 +12,6 @@ from dynastes.util.layer_util import call_masked as cm
 from dynastes.util.layer_util import compute_mask_if_possible as compm
 
 
-# A module that only depends on `keras.layers` import these from here.
-
-
 class SelfAttentionBlock1D(DynastesBaseLayer):
 
     def __init__(self,

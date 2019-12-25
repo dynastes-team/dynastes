@@ -11,11 +11,11 @@ from dynastes.layers.t2t_attention_layers import Attention1D, Attention2D, Pseud
 from dynastes.probability.pseudoblocksparse_bijectors import BlockSparseStridedRoll1D
 
 
-def _test_grads(testCase: tf.test.TestCase, func, input):
+def _test_grads(testCase: tf.test.TestCase, func, input, max_grad=400):
     _, grads = tf.test.compute_gradient(func, input)
     for grad in grads:
         testCase.assertNotAllClose(grad, np.zeros_like(grad))
-        testCase.assertAllInRange(grad, -400., 400)
+        testCase.assertAllInRange(grad, -max_grad, max_grad)
 
 
 to_tensor = tf.convert_to_tensor
@@ -35,7 +35,14 @@ class T2TAttention1DTest(tf.test.TestCase):
             s = 2
 
             layers = [
-
+                (
+                    'Sparse Unmasked Multiquery',
+                    Attention1D(num_heads=num_heads,
+                                multiquery_attention=True,
+                                self_attention=True, sparse=True, lsh_bucket_length=3,
+                                mask_right=True),
+                    {'self': True, 'steps_q': 64, 'steps_kv': 64, 'dim_q': dim_mq, 'dim_k': dim_mq // num_heads,
+                     'dim_v': dim_mq // num_heads, 'max_grad': 1000.}),
                 (
                     'PsuedoBlockSparse Masked',
                     PseudoBlockSparseAttention1D(num_heads=num_heads, block_size=8,
@@ -67,6 +74,7 @@ class T2TAttention1DTest(tf.test.TestCase):
                     Attention1D(num_heads=num_heads, self_attention=True, sparse=True, lsh_bucket_length=3,
                                 mask_right=True),
                     {'self': True, 'steps_q': 32, 'steps_kv': 32, 'dim_q': dim, 'dim_k': dim, 'dim_v': dim}),
+
                 (
                     'Normal',
                     Attention1D(num_heads=num_heads, self_attention=False),
@@ -137,6 +145,11 @@ class T2TAttention1DTest(tf.test.TestCase):
                 mask_kv = tf.expand_dims(mask_kv, axis=0)
                 mask_kv = tf.tile(mask_kv, [bs, 1])
 
+                if 'max_grad' in params:
+                    max_grad = params['max_grad']
+                else:
+                    max_grad = 400.
+
                 def get_test_fn(layer, mask):
                     @tf.function
                     def test_func(q, k, v):
@@ -147,7 +160,6 @@ class T2TAttention1DTest(tf.test.TestCase):
 
                 mask = [mask_q, mask_kv, mask_kv]
                 r, _ = layer([q, k, v], mask=mask)
-
 
                 test_fn = get_test_fn(layer, mask)
                 # Warmup
@@ -161,7 +173,7 @@ class T2TAttention1DTest(tf.test.TestCase):
                 time = timeit.timeit(fn, number=2) / (params['steps_q'] * params['steps_kv'] * params['dim_q'])
                 time *= 8192
 
-                _test_grads(self, test_fn, [q, k, v])
+                _test_grads(self, test_fn, [q, k, v], max_grad=max_grad)
                 return time
 
             for (type, layer, params) in layers:

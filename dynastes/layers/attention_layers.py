@@ -6,7 +6,6 @@ from dynastes.ops.localized_attention_nd import localized_attention_1d, localize
 from .base_layers import DynastesBaseLayer
 
 
-
 class LocalizedAttentionLayer1D(DynastesBaseLayer):
 
     def __init__(self,

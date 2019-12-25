@@ -975,17 +975,56 @@ def dot_product_batched_head(q, k, v, gates_q, gates_k, mask_right=False):
     # Bias of shape [batch*heads, nb_buckets, 1, capacity] broadcasted to every
     # queries
     bias = tf.expand_dims((k_dispatcher.nonpadding() - 1.0) * 1e9, 2)
+
+    kv_batch_heads, nb_buckets, capacity_k, depth_k = t2t_common.shape_list(k)
+    q_batch_heads, _, capacity_q, depth_q = t2t_common.shape_list(q)
+    _, _, _, depth_v = t2t_common.shape_list(q)
+
+    mqa_t_pattrn = [0, 2, 1, 3, 4]
     if mask_right:
         q_coordinate = t2t_common.to_float(
             tf.expand_dims(q_dispatcher.length_coordinate(), 3))
         k_coordinate = t2t_common.to_float(
             tf.expand_dims(k_dispatcher.length_coordinate(), 2))
-        bias += t2t_common.to_float(tf.greater(k_coordinate, q_coordinate)) * -1e9
+
+        if kv_batch_heads < q_batch_heads:
+            num_heads = q_batch_heads // kv_batch_heads
+            k_coordinate = tf.reshape(k_coordinate, [kv_batch_heads, 1, nb_buckets, 1, capacity_k])
+            q_coordinate = tf.reshape(q_coordinate, [kv_batch_heads, num_heads, nb_buckets, capacity_q, 1])
+            k_coordinate = tf.transpose(k_coordinate, mqa_t_pattrn)
+            q_coordinate = tf.transpose(q_coordinate, mqa_t_pattrn)
+
+            kq_coords = tf.greater(k_coordinate, q_coordinate)
+            #kq_coords = tf.transpose(kq_coords, mqa_t_pattrn)
+            #kq_coords = combine_first_two_dimensions(kq_coords)
+            bias = tf.reshape(bias, [kv_batch_heads, 1, nb_buckets, 1, capacity_k])
+            bias = tf.transpose(bias, mqa_t_pattrn)
+            bias += t2t_common.to_float(kq_coords) * -1e9
+        else:
+            bias += t2t_common.to_float(tf.greater(k_coordinate, q_coordinate)) * -1e9
     # The sequence padding is not masked but is ignored on the next layers
 
     # q, k, v now have shape [batch*heads, nb_bucket, capacity, depth]
     # The buckets can be seen as different heads
-    v_out, w_dict = dot_product_attention(q, k, v, bias=bias)
+
+
+    if kv_batch_heads < q_batch_heads:
+        num_heads = q_batch_heads // kv_batch_heads
+        q = tf.reshape(q, [kv_batch_heads, num_heads, nb_buckets, capacity_q, depth_q])
+        k = tf.reshape(k, [kv_batch_heads, 1, nb_buckets, capacity_k, depth_k])
+        v = tf.reshape(v, [kv_batch_heads, 1, nb_buckets, capacity_k, depth_v])
+        q = tf.transpose(q, mqa_t_pattrn)
+        k = tf.transpose(k, mqa_t_pattrn)
+        v = tf.transpose(v, mqa_t_pattrn)
+        #bias = tf.reshape(bias, [kv_batch_heads, num_heads, nb_buckets, 1, capacity])
+
+
+        v_out, w_dict = dot_product_attention(q, k, v, bias=bias)
+
+        v_out = tf.transpose(v_out, mqa_t_pattrn)
+        v_out = tf.reshape(v_out, [q_batch_heads, nb_buckets, capacity_q, depth_v])
+    else:
+        v_out, w_dict = dot_product_attention(q, k, v, bias=bias)
 
     # Combine all buckets together to restore the original length
     return q_dispatcher.combine(v_out), w_dict
@@ -1023,13 +1062,14 @@ def sparse_dot_product_attention_truncated(
     # Currently depth is the same for for q and v
     batch_size, nb_heads, _, depth = t2t_common.shape_list(q)
     _, nb_heads_kv, _, _ = t2t_common.shape_list(k)
+    _, nb_heads_kv, _, depth_v = t2t_common.shape_list(v)
 
     total_loss = 0.0
 
     # Each head get its own dispatcher
     # list_lsh = [LshGating(depth=depth, **experts_params) for _ in range(nb_heads)]
 
-    def get_gates_head(x, add_first=False):
+    def get_gates_head(x, nb_heads, add_first=False):
         """Return the gates for each heads of the current x.
         Args:
           x (tf.Tensor): of shape [batch, heads, length, depth]
@@ -1070,8 +1110,8 @@ def sparse_dot_product_attention_truncated(
 
         return gates
 
-    gates_q = get_gates_head(q)
-    gates_k = get_gates_head(k, add_first=True)
+    gates_q = get_gates_head(q, nb_heads)
+    gates_k = get_gates_head(k, nb_heads_kv, add_first=True)
 
     # [batch, heads, length, depth] => [batch*heads, length, depth]
     q, k, v, gates_q, gates_k = [
@@ -1081,7 +1121,7 @@ def sparse_dot_product_attention_truncated(
     v_out, w_dict, = dot_product_batched_head(q, k, v, gates_q, gates_k, mask_right)
 
     # Restore original dimension
-    v_out = tf.reshape(v_out, [batch_size, nb_heads, -1, depth])
+    v_out = tf.reshape(v_out, [batch_size, nb_heads, -1, depth_v])
 
     return v_out, total_loss / nb_heads, w_dict
 
