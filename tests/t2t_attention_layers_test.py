@@ -11,7 +11,7 @@ from dynastes.layers.t2t_attention_layers import Attention1D, Attention2D, Pseud
 from dynastes.probability.pseudoblocksparse_bijectors import BlockSparseStridedRoll1D
 
 
-def _test_grads(testCase: tf.test.TestCase, func, input, max_grad=400):
+def _test_grads(testCase: tf.test.TestCase, func, input, max_grad=900):
     _, grads = tf.test.compute_gradient(func, input)
     for grad in grads:
         testCase.assertNotAllClose(grad, np.zeros_like(grad))
@@ -148,7 +148,7 @@ class T2TAttention1DTest(tf.test.TestCase):
                 if 'max_grad' in params:
                     max_grad = params['max_grad']
                 else:
-                    max_grad = 400.
+                    max_grad = 900.
 
                 def get_test_fn(layer, mask):
                     @tf.function
