@@ -15,7 +15,8 @@ class SpectralOpsTest(tf.test.TestCase):
         fft_bins = n_fft // 2
         hop_length = 256
         pad = 8192 * 4
-        mel_upsampling = 8
+        mel_upsampling = 1
+        mel_mul = 2
         dir_path = os.path.dirname(os.path.realpath(__file__))
 
         raw_audio = tf.io.read_file(dir_path + '/data/test_wav.wav')
@@ -46,17 +47,45 @@ class SpectralOpsTest(tf.test.TestCase):
         assert (stft_err < 0.005)
         assert (stft_mean_err < 1e-4)
         l2mel = tf.signal.linear_to_mel_weight_matrix(num_spectrogram_bins=fft_bins,
-                                                      num_mel_bins=(fft_bins * mel_upsampling))
+                                                      sample_rate=44100,
+                                                      lower_edge_hertz=80.,
+                                                      upper_edge_hertz=44100/2,
+                                                      num_mel_bins=(fft_bins * mel_upsampling) * mel_mul)
+
+        def process_l2mel_mat(l2mel, iterations=200):
+
+            def iterate_l2mel(l2mel):
+                x = tf.expand_dims(l2mel, axis=-1)
+                x = tf.keras.layers.AveragePooling2D((1,2), strides=(1,2))(x)
+                x = tf.keras.layers.UpSampling2D((1,2), interpolation='bilinear')(x)
+                x = tf.squeeze(x, axis=-1)
+                mask = tf.cast(l2mel < 1e-16, x.dtype)
+                x = x * mask + l2mel * (1-mask)
+                x = (x * 0.5) + (l2mel * 0.5)
+                xs = tf.reduce_sum(x, axis=-1, keepdims=True)
+                ls = tf.reduce_sum(l2mel, axis=-1, keepdims=True)
+                return x * (ls/(xs + 1e-16))
+
+            l2mel = tf.expand_dims(l2mel, axis=0)
+            for i in range(iterations):
+                l2mel = iterate_l2mel(l2mel)
+                l2mel = tf.transpose(iterate_l2mel(tf.transpose(l2mel, [0,2,1])), [0,2,1])
+
+            return tf.squeeze(l2mel, axis=0)
+
+        l2mel = process_l2mel_mat(l2mel)
+        print(l2mel.numpy())
+        print(l2mel.shape)
         # Mel transform
         melspecgrams = spectral_ops.stfts_to_melspecgrams(stfts, l2mel=l2mel)
 
         # Using mel-upsampling yields much lower reconstruction error!
         if mel_upsampling > 1:
             melspecgrams = tf.keras.layers.AveragePooling2D((1, mel_upsampling), strides=(1, mel_upsampling),
-                                                            padding='same', data_format='channels_last')(melspecgrams)
+                                                            padding='same', data_format='channels_last', dtype='float64')(melspecgrams)
             # Simulate output downsampling
             melspecgrams = tf.keras.layers.UpSampling2D((1, mel_upsampling), data_format='channels_last',
-                                                        interpolation='bilinear')(melspecgrams)
+                                                        interpolation='nearest', dtype='float64')(melspecgrams)
 
         stfts_mel_recon = spectral_ops.melspecgrams_to_stfts(melspecgrams, mel2l=tf.transpose(l2mel))
         waves_mel_recon = spectral_ops.stfts_to_waves(stfts_mel_recon, n_fft=n_fft, hop_length=hop_length,
@@ -77,7 +106,7 @@ class SpectralOpsTest(tf.test.TestCase):
                                                                        mel2l=tf.transpose(l2mel))
         mel_recon_err = tf.abs(tf.reduce_mean(tf.abs(stfts_mel_recon) - tf.abs(stfts_mel_recon_mel_recon))).numpy()
         print('mel_recon_err', mel_recon_err)
-        assert (mel_recon_err < 0.001)
+        assert (mel_recon_err < 0.0025)
         waves_mel_recon = spectral_ops.stfts_to_waves(stfts_mel_recon, n_fft=n_fft, hop_length=hop_length, pad_l=pad,
                                                       pad_r=pad, discard_dc=True)
         waves_mel_recon_mel_recon = spectral_ops.stfts_to_waves(stfts_mel_recon_mel_recon, n_fft=n_fft,
@@ -85,8 +114,3 @@ class SpectralOpsTest(tf.test.TestCase):
                                                                 discard_dc=True)
         assert (tf.abs(tf.reduce_mean(tf.abs(waves_mel_recon) - tf.abs(waves_mel_recon_mel_recon))).numpy() < 0.05)
 
-        # TODO: FIX/IMPROVE NUMERICAL ERRORS!
-        # This performance is quite terrible, check if possible to fix the IFFT somehow...
-        # Update: Cast to tf.float64 before fft/ifft to get rid of most of numerical error!
-        #
-        assert (tf.__version__ != '2.1.0')
