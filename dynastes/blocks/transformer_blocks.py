@@ -136,9 +136,15 @@ class EncoderBlock(tfkl.Layer):
         self.mha_skip_adapt = mha_skip_adapt
         self.ffn_skip_adapt = ffn_skip_adapt
 
-    def call_masked(self, inputs, training=None, mask=None):
+    def request_cache(self, batch_size=1, max_length=1):
+        try:
+            return self.sa_layer.request_cache(batch_size=batch_size, max_length=max_length)
+        except:
+            return None
+
+    def call_masked(self, inputs, training=None, mask=None, cache=None, decode_loop_step=None):
         x = inputs
-        x, x_mask = cm(self.sa_layer, x, training=training, mask=mask)
+        x, x_mask = cm(self.sa_layer, x, training=training, mask=mask, cache=cache, decode_loop_step=decode_loop_step)
         res, res_mask = cm(self.mha_skip_adapt, inputs, training=training, mask=mask)
         if x_mask is None:
             n_mask = res_mask
@@ -159,9 +165,9 @@ class EncoderBlock(tfkl.Layer):
         x, mask = cm(self.norm1, f + res, training=training, mask=n_mask)
         return x, mask
 
-    def call(self, inputs, training=None, mask=None):
+    def call(self, inputs, training=None, mask=None, cache=None, decode_loop_step=None):
         x = inputs
-        x, x_mask = cm(self.sa_layer, x, training=training, mask=mask)
+        x, x_mask = cm(self.sa_layer, x, training=training, mask=mask, cache=cache, decode_loop_step=decode_loop_step)
         res, res_mask = cm(self.mha_skip_adapt, inputs, training=training, mask=mask)
         if x_mask is None:
             n_mask = res_mask
@@ -237,16 +243,35 @@ class EncoderBlockStack(tfkl.Layer):
         super(EncoderBlockStack, self).__init__(**kwargs)
         self.blocks = blocks
 
-    def call_masked(self, inputs, training=None, mask=None, **kwargs):
+    def request_cache(self, batch_size=1, max_length=1):
+        cache = {}
+        for i, block in enumerate(self.blocks):
+            try:
+                block_cache = block.request_cache(batch_size=batch_size, max_length=max_length)
+            except:
+                block_cache = None
+            cache[i] = block_cache
+        return cache
+
+    def call_masked(self, inputs, training=None, mask=None, cache=None, decode_loop_step=None, **kwargs):
         x = inputs
-        for block in self.blocks:
-            x, mask = cm(block, x, training=training, mask=mask, **kwargs)
+        for i, block in enumerate(self.blocks):
+            print('call_masked', i)
+            if cache is not None:
+                block_cache = cache[i]
+            else:
+                block_cache = None
+            x, mask = cm(block, x, training=training, mask=mask, cache=block_cache, decode_loop_step=decode_loop_step, **kwargs)
         return x, mask
 
-    def call(self, inputs, training=None, mask=None, **kwargs):
+    def call(self, inputs, training=None, mask=None, cache=None, decode_loop_step=None, **kwargs):
         x = inputs
-        for block in self.blocks:
-            x, mask = cm(block, x, training=training, mask=mask, **kwargs)
+        for i, block in enumerate(self.blocks):
+            if cache is not None:
+                block_cache = cache[i]
+            else:
+                block_cache = None
+            x = block(x, training=training, mask=mask, cache=block_cache, decode_loop_step=decode_loop_step, **kwargs)
         return x
 
     def compute_mask(self, inputs, mask=None):

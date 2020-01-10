@@ -72,6 +72,7 @@ class DynastesBaseLayer(tfkl.Layer):
                  use_wscale=False,
                  wlrmul=1.,
                  wgain=np.sqrt(2),
+                 supports_caching=False,
                  **kwargs):
         self.weights_dict = {}
         self.initializers, self.regularizers, self.constraints, self.normalizers = _get_regularizers_from_keywords(
@@ -79,12 +80,16 @@ class DynastesBaseLayer(tfkl.Layer):
         self.use_wscale = use_wscale
         self.lrmul = wlrmul
         self.gain = wgain
+        self.supports_caching = supports_caching
         super(DynastesBaseLayer, self).__init__(
             trainable=trainable,
             name=name,
             activity_regularizer=regularizers.get(activity_regularizer),
             **kwargs)
         self.supports_masking = True
+
+    def request_cache(self, batch_size, **kwargs):
+        pass
 
     def get_initializer(self, name):
         if name not in self.initializers:

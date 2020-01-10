@@ -134,7 +134,7 @@ class Attention1D(DynastesBaseLayer):
                  relative=False,
                  sparse=False,
                  dropout_rate=0.0,
-                 max_relative_position=None,
+                 max_relative_position=2,
                  lsh_bucket_length=4,
                  block_length=128,
                  filter_width=100,

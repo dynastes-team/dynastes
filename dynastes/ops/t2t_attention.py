@@ -557,8 +557,8 @@ def dot_product_self_attention_relative_v2(q,
     # This calculation only works for self attention.
     # q, k and v must therefore have the same shape.
     # (Except v can have different depth.)
-    q.get_shape()[2:].assert_is_compatible_with(k.get_shape()[2:])
-    q.get_shape()[2:-1].assert_is_compatible_with(v.get_shape()[2:-1])
+    #q.get_shape()[2:].assert_is_compatible_with(k.get_shape()[2:])
+    #q.get_shape()[2:-1].assert_is_compatible_with(v.get_shape()[2:-1])
 
     # Use separate embeddings suitable for keys and values.
     _, q_heads, length, _ = t2t_common.shape_list(q)
@@ -943,8 +943,8 @@ def dot_product_batched_head(q, k, v, gates_q, gates_k, mask_right=False):
     attention dot product on each subsequences.
     Args:
       q (tf.Tensor): [batch*heads, length_q, depth_q]
-      k (tf.Tensor): [batch*heads, length_k, depth_q]
-      v (tf.Tensor): [batch*heads, length_k, depth_v]
+      k (tf.Tensor): [batch*heads, length_kv, depth_q]
+      v (tf.Tensor): [batch*heads, length_kv, depth_v]
       gates_q (tf.Tensor): One-hot of shape [batch*heads, length_q, nb_buckets]
       gates_k (tf.Tensor): One-hot of shape [batch*heads, length_k, nb_buckets]
       mask_right (bool): Add a bias to prevent attention to the future
@@ -1012,7 +1012,7 @@ def sparse_dot_product_attention_truncated(
      prevent attention to the future.
     Args:
       q (tf.Tensor): Queries of shape [batch, heads, length_q, depth_k]
-      k (tf.Tensor): Keys of shape [batch, heads, length_q, depth_k]
+      k (tf.Tensor): Keys of shape [batch, heads, length_kv, depth_k]
       v (tf.Tensor): Values of shape [batch, heads, length_kv, depth_v]
       list_lsh: List of layers that can perform lsh-gating
       mask_right (bool):
