@@ -300,4 +300,6 @@ class SelfAttentionBlock1D(AttentionBlock1D):
         return mask
 
     def call(self, inputs, training=None, mask=None, cache=None, decode_loop_step=None):
-        return super(SelfAttentionBlock1D, self).call((inputs, inputs), training=training, mask=(mask, mask), cache=cache, decode_loop_step=decode_loop_step)
+        if mask is not None:
+            mask = (mask, mask)
+        return super(SelfAttentionBlock1D, self).call((inputs, inputs), training=training, mask=mask, cache=cache, decode_loop_step=decode_loop_step)
