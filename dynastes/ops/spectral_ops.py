@@ -7,6 +7,7 @@ from tensorflow.python.ops.signal import window_ops
 
 from dynastes.core.nn import array_ops as d_array_ops
 from dynastes.ops.t2t_common import shape_list
+
 """
     STFT, Mel-spectrogram and inverse methods
     Borrows heavily from
@@ -104,7 +105,6 @@ def stfts_to_waves(stfts: tf.Tensor, n_fft=512, hop_length=256, discard_dc=True,
     perm = perm[:-3] + [perm[-1], perm[-3], perm[-2]]
     stfts = tf.transpose(stfts, perm=perm)  # [..., channels, time, freq]
     stfts = tf.expand_dims(stfts, axis=-1)
-
     waves = _stfts_to_waves(stfts, n_fft=n_fft, hop_length=hop_length, discard_dc=discard_dc, pad_l=pad_l,
                             pad_r=pad_r)  # [..., channels, time, freq]
     return waves
@@ -113,7 +113,7 @@ def stfts_to_waves(stfts: tf.Tensor, n_fft=512, hop_length=256, discard_dc=True,
 def stfts_to_melspecgrams(stfts: tf.Tensor, l2mel, ifreq=True) -> tf.Tensor:
     """Converts stfts to specgrams.
     Args:
-      stfts: Complex64 tensor of stft, shape [..., time, freq, channels].
+      stfts: Complex64/Complex128 tensor of stft, shape [..., time, freq, channels].
     Returns:
       melspecgrams: Tensor of log magnitudes and instantaneous frequencies,
         shape [..., time, freq, 2*channels], mel scaling of frequencies.
@@ -164,7 +164,8 @@ def melspecgrams_to_stfts(melspecgrams: tf.Tensor, mel2l, ifreq=True) -> tf.Tens
     return stfts
 
 
-def _waves_to_stfts(waves: tf.Tensor, n_fft=512, hop_length=256, discard_dc=True, pad_l=128, pad_r=128) -> tf.Tensor:
+def _waves_to_stfts(waves: tf.Tensor, n_fft=512, hop_length=256, discard_dc=True, pad_l=128, pad_r=128,
+                    hq=True) -> tf.Tensor:
     """Convert from waves to complex stfts.
     Args:
       waves: Tensor of the waveform, shape [..., time, channels].
@@ -175,6 +176,8 @@ def _waves_to_stfts(waves: tf.Tensor, n_fft=512, hop_length=256, discard_dc=True
     waves = tf.linalg.matrix_transpose(waves)  # [..., channels, time]
     waves_padded = tf.pad(waves,
                           np.reshape(np.asarray([0, 0] * (len(waves_shape) - 1)), (-1, 2)).tolist() + [[pad_l, pad_r]])
+    if hq:
+        waves_padded = tf.cast(waves_padded, tf.float64)
     stfts = tf.signal.stft(
         waves_padded,
         window_fn=tf.signal.hann_window,
@@ -187,10 +190,10 @@ def _waves_to_stfts(waves: tf.Tensor, n_fft=512, hop_length=256, discard_dc=True
     return tf.expand_dims(stfts, axis=-1)
 
 
-def _stfts_to_waves(stfts, n_fft=512, hop_length=256, discard_dc=True, pad_l=128, pad_r=128):
+def _stfts_to_waves(stfts, n_fft=512, hop_length=256, discard_dc=True, pad_l=128, pad_r=128, hq=True):
     """Convert from complex stfts to waves.
     Args:
-      stfts: Complex64 tensor of stft, shape [..., channels, time, freq, 1].
+      stfts: Complex64/128 tensor of stft, shape [..., channels, time, freq, 1].
     Returns:
       waves: Tensor of the waveform, shape [..., time, channels].
     """
@@ -199,6 +202,8 @@ def _stfts_to_waves(stfts, n_fft=512, hop_length=256, discard_dc=True, pad_l=128
     dc = 1 if discard_dc else 0
     nyq = 1 - dc
     stfts = tf.pad(stfts, np.reshape(np.asarray([0, 0] * (len(stfts_shape) - 1)), (-1, 2)).tolist() + [[dc, nyq]])
+    if hq:
+        stfts = tf.cast(stfts, tf.complex128)
     waves_resyn = tf.signal.inverse_stft(
         stfts=stfts,
         frame_length=n_fft,
@@ -206,6 +211,8 @@ def _stfts_to_waves(stfts, n_fft=512, hop_length=256, discard_dc=True, pad_l=128
         fft_length=n_fft,
         window_fn=inverse_stft_window_fn(frame_step=hop_length))
     waves_resyn = tf.linalg.matrix_transpose(waves_resyn)
+    if hq:
+        waves_resyn = tf.cast(waves_resyn, tf.float32)
     crops = np.reshape(np.asarray([0, 0] * (len(stfts_shape) - 3)), (-1, 2)).tolist() + [[pad_l, pad_r], [0, 0]]
     return d_array_ops.crop(waves_resyn, crops)
 
@@ -261,7 +268,9 @@ def _stfts_to_melspecgrams(stfts: tf.Tensor, l2mel, ifreq=True) -> tf.Tensor:
       melspecgrams: Tensor of log magnitudes and instantaneous frequencies,
         shape [..., channels, time, freq, 2], mel scaling of frequencies.
     """
-    logmelmag2 = _safe_log(tf.matmul(tf.abs(stfts), l2mel, transpose_a=True))
+    amps = tf.abs(stfts)
+    l2mel = tf.cast(l2mel, amps.dtype)
+    logmelmag2 = _safe_log(tf.matmul(amps, l2mel, transpose_a=True))
     logmelmag2 = tf.linalg.matrix_transpose(logmelmag2)
     phase_angle = tf.math.angle(stfts)
     mel_phase_angle = tf.matmul(phase_angle, l2mel, transpose_a=True)
@@ -326,7 +335,7 @@ def _melspecgrams_to_stfts(melspecgrams, mel2l, ifreq=True):
             shape [..., channels, time, freq, 1].
         """
     logmelmag, mel_p = tf.unstack(melspecgrams, axis=-1)
-
+    mel2l = tf.cast(mel2l, logmelmag.dtype)
     mag = tf.matmul(tf.exp(logmelmag), mel2l)
     if ifreq:
         mel_phase_angle = tf.cumsum(mel_p * np.pi, axis=-2)

@@ -15,7 +15,7 @@ from tensorflow.python.ops import array_ops
 from tensorflow.python.ops import nn_ops
 
 from dynastes import regularizers
-from dynastes.layers.base_layers import ActivatedKernelBiasBaseLayer
+from dynastes.layers.base_layers import DynastesBaseLayer, ActivatedKernelBiasBaseLayer
 from dynastes.ops.t2t_common import shape_list
 
 
@@ -206,6 +206,7 @@ class _Conv(ActivatedKernelBiasBaseLayer, abc.ABC):
             raise ValueError('No support for NCHW yet')
 
 
+@tf.keras.utils.register_keras_serializable(package='Dynastes')
 class DynastesConv1D(_Conv):
     """1D convolution layer (e.g. temporal convolution).
     This layer creates a convolution kernel that is convolved
@@ -305,6 +306,7 @@ class DynastesConv1D(_Conv):
         return super(DynastesConv1D, self).call(inputs, training, mask=mask)
 
 
+@tf.keras.utils.register_keras_serializable(package='Dynastes')
 class DynastesConv2D(_Conv):
     """2D convolution layer (e.g. spatial convolution over images).
     This layer creates a convolution kernel that is convolved
@@ -406,6 +408,7 @@ class DynastesConv2D(_Conv):
         return super(DynastesConv2D, self).call(inputs, training, mask=mask)
 
 
+@tf.keras.utils.register_keras_serializable(package='Dynastes')
 class DynastesConv3D(_Conv):
     """2D convolution layer (e.g. spatial convolution over images).
     This layer creates a convolution kernel that is convolved
@@ -507,6 +510,7 @@ class DynastesConv3D(_Conv):
         return super(DynastesConv3D, self).call(inputs, training, mask=mask)
 
 
+@tf.keras.utils.register_keras_serializable(package='Dynastes')
 class DynastesConv2DTranspose(DynastesConv2D):
     """Transposed convolution layer (sometimes called Deconvolution).
     The need for transposed convolutions generally arises
@@ -803,6 +807,7 @@ class DynastesConv2DTranspose(DynastesConv2D):
         return config
 
 
+@tf.keras.utils.register_keras_serializable(package='Dynastes')
 class DynastesDepthwiseConv2D(DynastesConv2D):
     """Depthwise separable 2D convolution.
     Depthwise Separable convolutions consists in performing
@@ -920,12 +925,12 @@ class DynastesDepthwiseConv2D(DynastesConv2D):
                 mask_kernel = tf.reduce_max(tf.abs(mask_kernel), axis=-2, keepdims=True)
                 mask_kernel = tf.cast(mask_kernel, inputs.dtype)
                 mask = backend.depthwise_conv2d(
-                            mask,
-                            mask_kernel,
-                            strides=self.strides,
-                            padding=self.padding,
-                            dilation_rate=self.dilation_rate,
-                            data_format=self.data_format)
+                    mask,
+                    mask_kernel,
+                    strides=self.strides,
+                    padding=self.padding,
+                    dilation_rate=self.dilation_rate,
+                    data_format=self.data_format)
                 mask = mask > self.mask_threshold
                 mask = tf.squeeze(mask, axis=-1)
                 mask = tf.cast(mask, tf.bool)
@@ -971,6 +976,7 @@ class DynastesDepthwiseConv2D(DynastesConv2D):
         return config
 
 
+@tf.keras.utils.register_keras_serializable(package='Dynastes')
 class DynastesDepthwiseConv1D(DynastesDepthwiseConv2D):
     def __init__(self,
                  kernel_size: int = 1,
@@ -1037,6 +1043,7 @@ class DynastesDepthwiseConv1D(DynastesDepthwiseConv2D):
         return {**base_config, **config}
 
 
+@tf.keras.utils.register_keras_serializable(package='Dynastes')
 class DynastesConv1DTranspose(DynastesConv2DTranspose):
     def __init__(self,
                  filters,
@@ -1097,6 +1104,82 @@ class DynastesConv1DTranspose(DynastesConv2DTranspose):
             'dilation_rate': self.dilation_rate[0],
         }
         base_config = super(DynastesConv1DTranspose, self).get_config()
+        return {**base_config, **config}
+
+
+@tf.keras.utils.register_keras_serializable(package='Dynastes')
+class Upsampling2D(DynastesBaseLayer):
+
+    def __init__(self,
+                 strides=(2, 2),
+                 method='bilinear',
+                 **kwargs):
+        super(Upsampling2D, self).__init__(**kwargs)
+        self.strides = strides
+        self.method = method
+
+    def _resize(self, x):
+        x_shape = shape_list(x)
+        ret_h = x_shape[1] * self.strides[0]
+        ret_w = x_shape[2] * self.strides[1]
+        return tf.image.resize(x, size=[ret_h, ret_w], method=self.method)
+
+    def compute_mask(self, inputs, mask=None):
+        if mask is not None:
+            mask = tf.cast(mask, tf.float16)
+            mask = tf.expand_dims(mask, axis=-1)
+
+            mask = self._resize(mask)
+            mask = tf.squeeze(mask, axis=-1)
+            mask = tf.logical_not(mask < 0.51)
+        return mask
+
+    def call(self, inputs, training=None, mask=None):
+        return self._resize(inputs)
+
+    def compute_output_shape(self, input_shape):
+        return [input_shape[0], input_shape[1] * self.strides[0], input_shape[2] * self.strides[1], input_shape[3]]
+
+    def get_config(self):
+        config = {
+            'strides': self.strides,
+            'method': self.method,
+        }
+        base_config = super(Upsampling2D, self).get_config()
+        return {**base_config, **config}
+
+
+@tf.keras.utils.register_keras_serializable(package='Dynastes')
+class Upsampling1D(Upsampling2D):
+
+    def __init__(self,
+                 strides=2,
+                 method='bilinear',
+                 **kwargs):
+        super(Upsampling1D, self).__init__(strides=(strides, 1), method=method, **kwargs)
+
+    def compute_mask(self, inputs, mask=None):
+        if mask is not None:
+            mask = tf.expand_dims(mask, axis=-1)
+            mask = super(Upsampling1D, self).compute_mask(inputs=None, mask=mask)
+            mask = tf.squeeze(mask, axis=-1)
+        return mask
+
+    def call(self, inputs, training=None, mask=None):
+        inputs = tf.expand_dims(inputs, axis=-2)
+        x = super(Upsampling1D, self).call(inputs, training=training, mask=mask)
+        return tf.squeeze(x, axis=-2)
+
+    def compute_output_shape(self, input_shape):
+        input_shape = [input_shape[0], input_shape[1], 1, input_shape[2]]
+        return super(Upsampling1D, self).compute_output_shape(input_shape)
+
+    def get_config(self):
+        config = {
+            'strides': self.strides[0],
+            'method': self.method,
+        }
+        base_config = super(Upsampling1D, self).get_config()
         return {**base_config, **config}
 
 

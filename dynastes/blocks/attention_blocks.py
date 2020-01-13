@@ -4,8 +4,9 @@ from __future__ import print_function
 
 from functools import partial
 
-from dynastes import activations
+import tensorflow as tf
 
+from dynastes import activations
 from dynastes.blocks import layer_factory
 from dynastes.layers.base_layers import DynastesBaseLayer
 from dynastes.util.layer_util import call_masked as cm
@@ -14,7 +15,7 @@ from dynastes.util.layer_util import compute_mask_if_possible as compm
 
 # A module that only depends on `keras.layers` import these from here.
 
-
+@tf.keras.utils.register_keras_serializable(package='Dynastes')
 class SelfAttentionBlock1D(DynastesBaseLayer):
 
     def __init__(self,

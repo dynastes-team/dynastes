@@ -1,8 +1,10 @@
+import tensorflow as tf
 import tensorflow.keras.layers as tfkl
 
 from .base_layers import DynastesBaseLayer
 
 
+@tf.keras.utils.register_keras_serializable(package='Dynastes')
 class MultiHeadAttentionLayer(DynastesBaseLayer):
 
     def __init__(self,

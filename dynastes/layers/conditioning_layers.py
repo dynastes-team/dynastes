@@ -7,6 +7,7 @@ from dynastes.layers.base_layers import DynastesBaseLayer
 from dynastes.ops.t2t_common import shape_list
 
 
+@tf.keras.utils.register_keras_serializable(package='Dynastes')
 class ModulationLayer(DynastesBaseLayer, abc.ABC):
 
     def compute_output_shape(self, input_shape):
@@ -14,6 +15,7 @@ class ModulationLayer(DynastesBaseLayer, abc.ABC):
         return input_shape[0]
 
 
+@tf.keras.utils.register_keras_serializable(package='Dynastes')
 class FeaturewiseLinearModulation(ModulationLayer):
     """
         Call accepts list of:

@@ -1,9 +1,11 @@
 import tensorflow as tf
 import tensorflow.keras.layers as tfkl
+
 from dynastes.ops.t2t_common import shape_list
 
-class StatelessRandomNormalLike(tfkl.Layer):
 
+@tf.keras.utils.register_keras_serializable(package='Dynastes')
+class StatelessRandomNormalLike(tfkl.Layer):
     """
     A layer normal producing layer that outputs shape like input
     with optional seed of lower frequency, ie:

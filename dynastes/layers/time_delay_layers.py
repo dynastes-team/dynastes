@@ -9,6 +9,7 @@ from dynastes.layers import ActivatedKernelBiasBaseLayer
 from dynastes.ops.time_delay_ops import time_delay_nn_1d
 
 
+@tf.keras.utils.register_keras_serializable(package='Dynastes')
 class _TimeDelayLayer(ActivatedKernelBiasBaseLayer):
     def __init__(self,
                  activation=None,
@@ -25,6 +26,7 @@ class _TimeDelayLayer(ActivatedKernelBiasBaseLayer):
         return {**base_config, **config}
 
 
+@tf.keras.utils.register_keras_serializable(package='Dynastes')
 class TimeDelayLayer1D(_TimeDelayLayer):
     def __init__(self,
                  filters,
@@ -70,6 +72,7 @@ class TimeDelayLayer1D(_TimeDelayLayer):
         return {**base_config, **config}
 
 
+@tf.keras.utils.register_keras_serializable(package='Dynastes')
 class _MultiTimeDelayLayer(ActivatedKernelBiasBaseLayer):
 
     def __init__(self,
@@ -102,6 +105,7 @@ class _MultiTimeDelayLayer(ActivatedKernelBiasBaseLayer):
         return {**base_config, **config}
 
 
+@tf.keras.utils.register_keras_serializable(package='Dynastes')
 class DepthGroupwiseTimeDelayLayer1D(_MultiTimeDelayLayer):
     def __init__(self,
                  depth_multiplier=1,
@@ -170,6 +174,7 @@ class DepthGroupwiseTimeDelayLayer1D(_MultiTimeDelayLayer):
         return {**base_config, **config}
 
 
+@tf.keras.utils.register_keras_serializable(package='Dynastes')
 class TimeDelayLayerFake2D(_MultiTimeDelayLayer):
     def __init__(self,
                  filters,
@@ -219,6 +224,7 @@ class TimeDelayLayerFake2D(_MultiTimeDelayLayer):
         return {**base_config, **config}
 
 
+@tf.keras.utils.register_keras_serializable(package='Dynastes')
 class DepthGroupwiseTimeDelayLayerFake2D(_MultiTimeDelayLayer):
     def __init__(self,
                  depth_multiplier=1,

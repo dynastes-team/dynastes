@@ -1,10 +1,8 @@
 import numpy as np
 import tensorflow as tf
-from tensorflow.keras.utils import custom_object_scope
 from tensorflow.python.framework import test_util
 from tensorflow_addons.layers.normalizations import GroupNormalization
 
-import dynastes as d
 from dynastes.layers.normalization_layers import AdaptiveMultiNormalization, PoolNormalization2D
 
 
@@ -21,17 +19,16 @@ normal = np.random.normal
 class AdaptiveMultiNormalizationTest(tf.test.TestCase):
     @test_util.use_deterministic_cudnn
     def test_simple(self):
-        with custom_object_scope(d.object_scope):
-            normalizers = [
-                GroupNormalization(groups=1, center=False, scale=False),
-                GroupNormalization(groups=-1, center=False, scale=False),
-                PoolNormalization2D(pool_size=(-1, 3))
-            ]
-            layer = AdaptiveMultiNormalization(layers=normalizers)
-            x = tf.convert_to_tensor(normal(size=(1, 8, 8, 8)).astype(np.float16))
-            y = tf.convert_to_tensor(normal(size=(1, 2, 3, 4)).astype(np.float16))
-            res = layer([x, y])
-            self.assertShapeEqual(x.numpy(), res)
-            y = tf.convert_to_tensor(normal(size=(1, 4)).astype(np.float16))
-            res = layer([x, y])
-            self.assertShapeEqual(x.numpy(), res)
+        normalizers = [
+            GroupNormalization(groups=1, center=False, scale=False),
+            GroupNormalization(groups=-1, center=False, scale=False),
+            PoolNormalization2D(pool_size=(-1, 3))
+        ]
+        layer = AdaptiveMultiNormalization(layers=normalizers)
+        x = tf.convert_to_tensor(normal(size=(1, 8, 8, 8)).astype(np.float16))
+        y = tf.convert_to_tensor(normal(size=(1, 2, 3, 4)).astype(np.float16))
+        res = layer([x, y])
+        self.assertShapeEqual(x.numpy(), res)
+        y = tf.convert_to_tensor(normal(size=(1, 4)).astype(np.float16))
+        res = layer([x, y])
+        self.assertShapeEqual(x.numpy(), res)

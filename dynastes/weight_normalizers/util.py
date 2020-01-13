@@ -4,6 +4,7 @@ from __future__ import print_function
 
 import numpy as np
 import six
+import tensorflow as tf
 import tensorflow.keras.layers as tfkl
 from tensorflow.python.keras.utils.generic_utils import serialize_keras_object, deserialize_keras_object
 
@@ -41,6 +42,7 @@ def get(identifier):
         raise ValueError('Could not interpret normalizer identifier:', identifier)
 
 
+@tf.keras.utils.register_keras_serializable(package='Dynastes')
 class WscaleNormalizer(tfkl.Layer):
 
     def __init__(self,
