@@ -1115,7 +1115,7 @@ class Upsampling2D(DynastesBaseLayer):
                  method='bilinear',
                  **kwargs):
         super(Upsampling2D, self).__init__(**kwargs)
-        self.strides = strides
+        self.strides = conv_utils.normalize_tuple(strides, 2, 'strides')
         self.method = method
 
     def _resize(self, x):
@@ -1138,7 +1138,8 @@ class Upsampling2D(DynastesBaseLayer):
         return self._resize(inputs)
 
     def compute_output_shape(self, input_shape):
-        return [input_shape[0], input_shape[1] * self.strides[0], input_shape[2] * self.strides[1], input_shape[3]]
+        out_shape =  input_shape[0], input_shape[1] * self.strides[0], input_shape[2] * self.strides[1], input_shape[3]
+        return tensor_shape.TensorShape(out_shape)
 
     def get_config(self):
         config = {
@@ -1171,8 +1172,9 @@ class Upsampling1D(Upsampling2D):
         return tf.squeeze(x, axis=-2)
 
     def compute_output_shape(self, input_shape):
-        input_shape = [input_shape[0], input_shape[1], 1, input_shape[2]]
-        return super(Upsampling1D, self).compute_output_shape(input_shape)
+        input_shape = input_shape[:-1] + [1, input_shape[-1]]
+        output_shape = super().compute_output_shape(input_shape)
+        return output_shape[:-2] + (output_shape[-1],)
 
     def get_config(self):
         config = {
