@@ -4,6 +4,7 @@ from dynastes.ops.attention_nd import split_heads, scaled_dot_product_attention,
 from dynastes.ops.pad_ops import pad_input_2d
 from dynastes.ops.t2t_common import shape_list
 
+
 def extract_and_split_2d(x, kernel_size=(3, 3), strides=(1, 1), dilation_rate=(1, 1), padding='same'):
     shape = shape_list(x)
     x, padding = pad_input_2d(x, padding, kernel_size=kernel_size, dilation_rate=dilation_rate)

@@ -1,6 +1,7 @@
 import copy
 
 import numpy as np
+import tensorflow as tf
 import tensorflow.keras as tfk
 import tensorflow.keras.layers as tfkl
 from tensorflow.python.eager import context
@@ -20,6 +21,7 @@ from dynastes import regularizers
 from dynastes import weight_normalizers
 
 
+@tf.keras.utils.register_keras_serializable(package='Dynastes')
 class _WscaleInitializer(tfk.initializers.Initializer):
 
     def __init__(self,
@@ -64,6 +66,7 @@ def _get_regularizers_from_keywords(kwargs):
     return _initializers, _regularizers, _constraints, _normalizers
 
 
+@tf.keras.utils.register_keras_serializable(package='Dynastes')
 class DynastesBaseLayer(tfkl.Layer):
     def __init__(self,
                  activity_regularizer=None,
@@ -181,6 +184,7 @@ class DynastesBaseLayer(tfkl.Layer):
         return {**base_config, **config}
 
 
+@tf.keras.utils.register_keras_serializable(package='Dynastes')
 class ActivatedKernelBiasBaseLayer(DynastesBaseLayer):
     def __init__(self,
                  activation=None,
@@ -228,6 +232,7 @@ class ActivatedKernelBiasBaseLayer(DynastesBaseLayer):
         return {**base_config, **config}
 
 
+@tf.keras.utils.register_keras_serializable(package='Dynastes')
 class DynastesDense(ActivatedKernelBiasBaseLayer):
     """Just your regular densely-connected NN layer.
     `Dense` implements the operation:

@@ -2,6 +2,7 @@ import abc
 
 import numpy as np
 import tensorflow as tf
+
 tfal = None
 try:
     import tensorflow_addons.layers as tfal
@@ -14,6 +15,7 @@ from dynastes.layers.conditioning_layers import FeaturewiseLinearModulation, Mod
 from dynastes.ops.t2t_common import shape_list
 
 
+@tf.keras.utils.register_keras_serializable(package='Dynastes')
 class PoolNormalization2D(DynastesBaseLayer):
     """
     My (Göran Sandström) own invention, performs smooth local response normalization
@@ -75,6 +77,7 @@ class PoolNormalization2D(DynastesBaseLayer):
         return input_shape
 
 
+@tf.keras.utils.register_keras_serializable(package='Dynastes')
 class MultiNormalization(DynastesBaseLayer):
     def __init__(self,
                  layers,
@@ -96,6 +99,7 @@ class MultiNormalization(DynastesBaseLayer):
         return x
 
 
+@tf.keras.utils.register_keras_serializable(package='Dynastes')
 class ModulatedNormalization(DynastesBaseLayer, abc.ABC):
 
     def __init__(self, modulation_layer: ModulationLayer,
@@ -120,6 +124,7 @@ class ModulatedNormalization(DynastesBaseLayer, abc.ABC):
         return input_shape[0]
 
 
+@tf.keras.utils.register_keras_serializable(package='Dynastes')
 class AdaptiveNormalization(ModulatedNormalization, abc.ABC):
 
     def __init__(self, norm_layer, method=tf.image.ResizeMethod.BILINEAR, antialias=True, **kwargs):
@@ -138,6 +143,7 @@ class AdaptiveNormalization(ModulatedNormalization, abc.ABC):
         return {**base_config, **config}
 
 
+@tf.keras.utils.register_keras_serializable(package='Dynastes')
 class AdaptiveGroupNormalization(AdaptiveNormalization):
 
     def __init__(self, n_groups=2,
@@ -154,6 +160,7 @@ class AdaptiveGroupNormalization(AdaptiveNormalization):
         return {**base_config, **config}
 
 
+@tf.keras.utils.register_keras_serializable(package='Dynastes')
 class AdaptiveInstanceNormalization(AdaptiveGroupNormalization):
     """
     Introduced in:
@@ -175,6 +182,7 @@ class AdaptiveInstanceNormalization(AdaptiveGroupNormalization):
         super(AdaptiveInstanceNormalization, self).__init__(**kwargs)
 
 
+@tf.keras.utils.register_keras_serializable(package='Dynastes')
 class AdaptiveLayerNormalization(AdaptiveGroupNormalization):
 
     def __init__(self,
@@ -183,6 +191,7 @@ class AdaptiveLayerNormalization(AdaptiveGroupNormalization):
         super(AdaptiveLayerNormalization, self).__init__(**kwargs)
 
 
+@tf.keras.utils.register_keras_serializable(package='Dynastes')
 class AdaptiveMultiNormalization(AdaptiveNormalization):
 
     def __init__(self,
@@ -191,6 +200,7 @@ class AdaptiveMultiNormalization(AdaptiveNormalization):
         super(AdaptiveMultiNormalization, self).__init__(MultiNormalization(layers), **kwargs)
 
 
+@tf.keras.utils.register_keras_serializable(package='Dynastes')
 class AdaptiveLayerInstanceNormalization(AdaptiveMultiNormalization):
     """
     Introduced in:

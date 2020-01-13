@@ -3,10 +3,8 @@ import timeit
 import numpy as np
 import tensorflow as tf
 from tensorflow.keras import layers as tfkl
-from tensorflow.keras.utils import custom_object_scope
 from tensorflow.python.framework import test_util
 
-import dynastes as d
 from dynastes.models.growing_gan_models import GrowingGanGenerator, GrowingGanClassifier
 
 
@@ -48,14 +46,13 @@ class Simple2DGrowingGanGenerator(GrowingGanGenerator):
 class GrowingGanGeneratorTest(tf.test.TestCase):
     @test_util.use_deterministic_cudnn
     def test_simple(self):
-        with custom_object_scope(d.object_scope):
-            in_z_hw = 2
-            n_lods = 4
-            z = np.random.random(size=(1, in_z_hw, in_z_hw, 1)).astype(np.float32)
-            gen = Simple2DGrowingGanGenerator(n_lods=n_lods)
-            y = gen(z, lod_in=2.)
-            ex_hw = in_z_hw * (2 ** (n_lods))
-            self.assertShapeEqual(np.ones(shape=(1, ex_hw, ex_hw, 1)), y)
+        in_z_hw = 2
+        n_lods = 4
+        z = np.random.random(size=(1, in_z_hw, in_z_hw, 1)).astype(np.float32)
+        gen = Simple2DGrowingGanGenerator(n_lods=n_lods)
+        y = gen(z, lod_in=2.)
+        ex_hw = in_z_hw * (2 ** (n_lods))
+        self.assertShapeEqual(np.ones(shape=(1, ex_hw, ex_hw, 1)), y)
 
 
 class Real2DGrowingGanGenerator(GrowingGanGenerator):
@@ -96,14 +93,13 @@ class Real2DGrowingGanGenerator(GrowingGanGenerator):
 class GrowingGanGeneratorTestReal(tf.test.TestCase):
     @test_util.use_deterministic_cudnn
     def test_simple(self):
-        with custom_object_scope(d.object_scope):
-            in_z_hw = 2
-            n_lods = 2
-            z = np.random.random(size=(1, in_z_hw, in_z_hw, 2 ** (n_lods))).astype(np.float32)
-            gen = Real2DGrowingGanGenerator(n_lods)
-            y = gen(z, lod_in=0.5)
-            ex_hw = in_z_hw * (2 ** (n_lods))
-            self.assertShapeEqual(np.ones(shape=(1, ex_hw, ex_hw, 3)), y)
+        in_z_hw = 2
+        n_lods = 2
+        z = np.random.random(size=(1, in_z_hw, in_z_hw, 2 ** (n_lods))).astype(np.float32)
+        gen = Real2DGrowingGanGenerator(n_lods)
+        y = gen(z, lod_in=0.5)
+        ex_hw = in_z_hw * (2 ** (n_lods))
+        self.assertShapeEqual(np.ones(shape=(1, ex_hw, ex_hw, 3)), y)
 
 
 class Complex2DGrowingGanGenerator(GrowingGanGenerator):
@@ -151,27 +147,26 @@ class GrowingGanGeneratorTestComplex(tf.test.TestCase):
     @test_util.use_deterministic_cudnn
     def test_simple(self):
         print('GrowingGanGeneratorTestComplex - test_simple')
-        with custom_object_scope(d.object_scope):
-            in_z_hw = 1
-            strides = [7, 2, 3, 1, 3, 5, 1]
-            z = np.random.random(size=(1, in_z_hw, in_z_hw, 2 ** len(strides) + 1)).astype(np.float32)
-            gen = Complex2DGrowingGanGenerator(strides)
-            for i in range(len(strides) * 2):
-                y = gen(z, lod_in=i / 2)
-                ex_hw = in_z_hw * np.cumprod(strides)[-1]
-                self.assertShapeEqual(np.ones(shape=(1, ex_hw, ex_hw, 3)), y)
-            max_lod = float(len(strides) + 1)
+        in_z_hw = 1
+        strides = [7, 2, 3, 1, 3, 5, 1]
+        z = np.random.random(size=(1, in_z_hw, in_z_hw, 2 ** len(strides) + 1)).astype(np.float32)
+        gen = Complex2DGrowingGanGenerator(strides)
+        for i in range(len(strides) * 2):
+            y = gen(z, lod_in=i / 2)
+            ex_hw = in_z_hw * np.cumprod(strides)[-1]
+            self.assertShapeEqual(np.ones(shape=(1, ex_hw, ex_hw, 3)), y)
+        max_lod = float(len(strides) + 1)
 
-            # Test timing
-            def lod_0():
-                y = gen(z, lod_in=0.)
+        # Test timing
+        def lod_0():
+            y = gen(z, lod_in=0.)
 
-            def lod_max():
-                y = gen(z, lod_in=max_lod)
+        def lod_max():
+            y = gen(z, lod_in=max_lod)
 
-            time_l0 = timeit.timeit(lod_0, number=2)
-            time_l7 = timeit.timeit(lod_max, number=2)
-            print('LOD time diff', (time_l7 / time_l0))
+        time_l0 = timeit.timeit(lod_0, number=2)
+        time_l7 = timeit.timeit(lod_max, number=2)
+        print('LOD time diff', (time_l7 / time_l0))
 
 
 class Simple2DGrowingGanClassifier(GrowingGanClassifier):
@@ -202,29 +197,27 @@ class Simple2DGrowingGanClassifier(GrowingGanClassifier):
 class GrowingGanClassifierTest(tf.test.TestCase):
     @test_util.use_deterministic_cudnn
     def test_simple(self):
-        with custom_object_scope(d.object_scope):
-            in_hw = 32
-            n_lods = 3
-            z = np.random.random(size=(1, in_hw, in_hw, 1)).astype(np.float32)
-            cls = Simple2DGrowingGanClassifier(n_lods=n_lods)
-            y = cls(z, lod_in=1.)
-            ex_hw = in_hw // (2 ** (n_lods))
-            self.assertShapeEqual(np.ones(shape=(1, ex_hw, ex_hw, 1)), y)
+        in_hw = 32
+        n_lods = 3
+        z = np.random.random(size=(1, in_hw, in_hw, 1)).astype(np.float32)
+        cls = Simple2DGrowingGanClassifier(n_lods=n_lods)
+        y = cls(z, lod_in=1.)
+        ex_hw = in_hw // (2 ** (n_lods))
+        self.assertShapeEqual(np.ones(shape=(1, ex_hw, ex_hw, 1)), y)
 
 
 class GrowingEndToEndTest(tf.test.TestCase):
     @test_util.use_deterministic_cudnn
     def test_simple(self):
-        with custom_object_scope(d.object_scope):
-            n_lods = 3
-            z = np.random.random(size=(1, 64, 48, 1)).astype(np.float32)
-            z = tf.convert_to_tensor(z)
-            gen = Simple2DGrowingGanGenerator(n_lods=n_lods)
-            cls = Simple2DGrowingGanClassifier(n_lods=n_lods)
-            _z = z
-            for i in range(int(n_lods * 2.)):
-                _z = gen(cls(_z, lod_in=i / 2.), lod_in=i / 2.)
-            self.assertLess(tf.reduce_mean(tf.abs(z - _z)).numpy(), 0.26)
+        n_lods = 3
+        z = np.random.random(size=(1, 64, 48, 1)).astype(np.float32)
+        z = tf.convert_to_tensor(z)
+        gen = Simple2DGrowingGanGenerator(n_lods=n_lods)
+        cls = Simple2DGrowingGanClassifier(n_lods=n_lods)
+        _z = z
+        for i in range(int(n_lods * 2.)):
+            _z = gen(cls(_z, lod_in=i / 2.), lod_in=i / 2.)
+        self.assertLess(tf.reduce_mean(tf.abs(z - _z)).numpy(), 0.26)
 
 
 class Real2DGrowingGanClassifier(GrowingGanClassifier):
@@ -266,14 +259,13 @@ class Real2DGrowingGanClassifier(GrowingGanClassifier):
 class GrowingGanClassifierTestReal(tf.test.TestCase):
     @test_util.use_deterministic_cudnn
     def test_simple(self):
-        with custom_object_scope(d.object_scope):
-            in_hw = 32
-            n_lods = 4
-            z = np.random.random(size=(1, in_hw, in_hw, 1)).astype(np.float32)
-            cls = Real2DGrowingGanClassifier(n_lods=n_lods)
-            y = cls(z, lod_in=3.)
-            ex_hw = in_hw // (2 ** (n_lods))
-            self.assertShapeEqual(np.ones(shape=(1, ex_hw, ex_hw, 2 ** n_lods)), y)
+        in_hw = 32
+        n_lods = 4
+        z = np.random.random(size=(1, in_hw, in_hw, 1)).astype(np.float32)
+        cls = Real2DGrowingGanClassifier(n_lods=n_lods)
+        y = cls(z, lod_in=3.)
+        ex_hw = in_hw // (2 ** (n_lods))
+        self.assertShapeEqual(np.ones(shape=(1, ex_hw, ex_hw, 2 ** n_lods)), y)
 
 
 class ComplexGanClassifier(GrowingGanClassifier):
@@ -322,13 +314,12 @@ class ComplexGanClassifier(GrowingGanClassifier):
 class GrowingGanClassifierTestComplex(tf.test.TestCase):
     @test_util.use_deterministic_cudnn
     def test_simple(self):
-        with custom_object_scope(d.object_scope):
-            strides = [1, 3, 7, 5, 3]
-            in_base = 1
-            in_hw = in_base * np.cumprod(strides)[-1]
-            n_lods = len(strides)
-            z = np.random.random(size=(1, in_hw, in_hw, 1)).astype(np.float32)
-            cls = ComplexGanClassifier(strides)
-            y = cls(z, lod_in=3.)
-            ex_size_hw = in_hw // np.cumprod(strides)[-1]
-            self.assertShapeEqual(np.ones(shape=(1, ex_size_hw, ex_size_hw, 2 ** (n_lods + 1))), y)
+        strides = [1, 3, 7, 5, 3]
+        in_base = 1
+        in_hw = in_base * np.cumprod(strides)[-1]
+        n_lods = len(strides)
+        z = np.random.random(size=(1, in_hw, in_hw, 1)).astype(np.float32)
+        cls = ComplexGanClassifier(strides)
+        y = cls(z, lod_in=3.)
+        ex_size_hw = in_hw // np.cumprod(strides)[-1]
+        self.assertShapeEqual(np.ones(shape=(1, ex_size_hw, ex_size_hw, 2 ** (n_lods + 1))), y)

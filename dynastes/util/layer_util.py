@@ -9,6 +9,7 @@ def call_masked(layer, inputs, training=None, mask=None, **kwargs):
         out_mask = compute_mask_if_possible(layer, inputs, mask=mask)
         return out, out_mask
 
+
 def compute_mask_if_possible(layer, inputs, mask=None):
     if layer.supports_masking:
         out_mask = layer.compute_mask(inputs, mask)

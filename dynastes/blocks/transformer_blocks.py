@@ -13,6 +13,7 @@ from dynastes.layers.base_layers import DynastesBaseLayer
 from dynastes.util.layer_util import call_masked as cm
 
 
+@tf.keras.utils.register_keras_serializable(package='Dynastes')
 class PointWiseFeedForwardBlock(DynastesBaseLayer):
 
     def __init__(self,
@@ -118,6 +119,7 @@ class PointWiseFeedForwardBlock(DynastesBaseLayer):
         return {**base_config, **config}
 
 
+@tf.keras.utils.register_keras_serializable(package='Dynastes')
 class EncoderBlock(tfkl.Layer):
 
     def __init__(self,
@@ -235,6 +237,7 @@ class EncoderBlock(tfkl.Layer):
         return s
 
 
+@tf.keras.utils.register_keras_serializable(package='Dynastes')
 class EncoderBlockStack(tfkl.Layer):
 
     def __init__(self,

@@ -7,6 +7,7 @@ from tensorflow.python.ops.signal import window_ops
 
 from dynastes.core.nn import array_ops as d_array_ops
 from dynastes.ops.t2t_common import shape_list
+
 """
     STFT, Mel-spectrogram and inverse methods
     Borrows heavily from
@@ -163,7 +164,8 @@ def melspecgrams_to_stfts(melspecgrams: tf.Tensor, mel2l, ifreq=True) -> tf.Tens
     return stfts
 
 
-def _waves_to_stfts(waves: tf.Tensor, n_fft=512, hop_length=256, discard_dc=True, pad_l=128, pad_r=128, hq=True) -> tf.Tensor:
+def _waves_to_stfts(waves: tf.Tensor, n_fft=512, hop_length=256, discard_dc=True, pad_l=128, pad_r=128,
+                    hq=True) -> tf.Tensor:
     """Convert from waves to complex stfts.
     Args:
       waves: Tensor of the waveform, shape [..., time, channels].

@@ -31,39 +31,6 @@ from .time_delay_layers import DepthGroupwiseTimeDelayLayerFake2D
 from .time_delay_layers import TimeDelayLayer1D
 from .time_delay_layers import TimeDelayLayerFake2D
 
-object_scope = {
-    '_WscaleInitializer': _WscaleInitializer,
-    'DynastesDense': DynastesDense,
-    'LocalizedAttentionLayer1D': LocalizedAttentionLayer1D,
-    'LocalizedAttentionLayer2D': LocalizedAttentionLayer2D,
-    'ActivatedKernelBiasBaseLayer': ActivatedKernelBiasBaseLayer,
-    'DepthGroupwiseTimeDelayLayer1D': DepthGroupwiseTimeDelayLayer1D,
-    'DepthGroupwiseTimeDelayLayerFake2D': DepthGroupwiseTimeDelayLayerFake2D,
-    'TimeDelayLayer1D': TimeDelayLayer1D,
-    'TimeDelayLayerFake2D': TimeDelayLayerFake2D,
-    'AddTimingSignalLayer1D': AddTimingSignalLayer1D,
-    'LshGatingLayer': LshGatingLayer,
-    'Attention1D': Attention1D,
-    'Attention2D': Attention2D,
-    'PseudoBlockSparseAttention1D': PseudoBlockSparseAttention1D,
-    'StatelessRandomNormalLike': StatelessRandomNormalLike,
-    'PoolNormalization2D': PoolNormalization2D,
-    'MultiNormalization': MultiNormalization,
-    'AdaptiveMultiNormalization': AdaptiveMultiNormalization,
-    'AdaptiveLayerInstanceNormalization': AdaptiveLayerInstanceNormalization,
-    'AdaptiveInstanceNormalization': AdaptiveInstanceNormalization,
-    'AdaptiveGroupNormalization': AdaptiveGroupNormalization,
-    'AdaptiveLayerNormalization': AdaptiveLayerNormalization,
-    'FeaturewiseLinearModulation': FeaturewiseLinearModulation,
-    'DynastesConv1D': DynastesConv1D,
-    'DynastesConv2D': DynastesConv2D,
-    'DynastesConv3D': DynastesConv3D,
-    'DynastesConv1DTranspose': DynastesConv1DTranspose,
-    'DynastesConv2DTranspose': DynastesConv2DTranspose,
-    'DynastesDepthwiseConv1D': DynastesDepthwiseConv1D,
-    'DynastesDepthwiseConv2D': DynastesDepthwiseConv2D,
-}
-
 # Cleanup symbols to avoid polluting namespace.
 del absolute_import
 del division

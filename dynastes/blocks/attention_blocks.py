@@ -4,9 +4,9 @@ from __future__ import print_function
 
 from functools import partial
 
-from dynastes import activations
-
 import tensorflow as tf
+
+from dynastes import activations
 from dynastes.blocks import layer_factory
 from dynastes.layers.base_layers import DynastesBaseLayer
 from dynastes.util.layer_util import call_masked as cm
@@ -14,7 +14,6 @@ from dynastes.util.layer_util import compute_mask_if_possible as compm
 
 
 # A module that only depends on `keras.layers` import these from here.
-
 
 class _AttentionBlock1D(DynastesBaseLayer):
 
@@ -164,8 +163,6 @@ class _AttentionBlock1D(DynastesBaseLayer):
             return q_mask
         return mask
 
-
-
     def get_config(self):
         config = {
             'q_type': self.q_type,
@@ -209,6 +206,7 @@ class _AttentionBlock1D(DynastesBaseLayer):
         return output_shape[0]
 
 
+@tf.keras.utils.register_keras_serializable(package='Dynastes')
 class AttentionBlock1D(_AttentionBlock1D):
 
     def request_cache(self, batch_size=1, max_length=1):
@@ -239,7 +237,7 @@ class AttentionBlock1D(_AttentionBlock1D):
             if sx is not None:
                 # Combine cached keys and values with new keys and values.
                 if cache["k"] is not None:
-                    #Update cache
+                    # Update cache
                     if decode_loop_step is not None:
 
                         cache_k_shape = cache["k"].shape.as_list()
@@ -291,6 +289,7 @@ class AttentionBlock1D(_AttentionBlock1D):
         return x
 
 
+@tf.keras.utils.register_keras_serializable(package='Dynastes')
 class SelfAttentionBlock1D(AttentionBlock1D):
 
     def compute_mask(self, inputs, mask=None):
@@ -302,4 +301,5 @@ class SelfAttentionBlock1D(AttentionBlock1D):
     def call(self, inputs, training=None, mask=None, cache=None, decode_loop_step=None):
         if mask is not None:
             mask = (mask, mask)
-        return super(SelfAttentionBlock1D, self).call((inputs, inputs), training=training, mask=mask, cache=cache, decode_loop_step=decode_loop_step)
+        return super(SelfAttentionBlock1D, self).call((inputs, inputs), training=training, mask=mask, cache=cache,
+                                                      decode_loop_step=decode_loop_step)

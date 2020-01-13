@@ -10,6 +10,7 @@ from dynastes.util.precision_util import large_compatible_negative
 from .base_layers import DynastesBaseLayer
 
 
+@tf.keras.utils.register_keras_serializable(package='Dynastes')
 class AddTimingSignalLayer1D(DynastesBaseLayer):
 
     def __init__(self,
@@ -31,6 +32,7 @@ class AddTimingSignalLayer1D(DynastesBaseLayer):
         return {**base_config, **config}
 
 
+@tf.keras.utils.register_keras_serializable(package='Dynastes')
 class LshGatingLayer(DynastesBaseLayer):
 
     def __init__(self,
@@ -123,6 +125,7 @@ def _get_attention_type_1D(local, masked, relative, self_attention, sparse):
     return attention_type
 
 
+@tf.keras.utils.register_keras_serializable(package='Dynastes')
 class Attention1D(DynastesBaseLayer):
 
     def __init__(self,
@@ -330,6 +333,7 @@ class Attention1D(DynastesBaseLayer):
         return {**base_config, **config}
 
 
+@tf.keras.utils.register_keras_serializable(package='Dynastes')
 class PseudoBlockSparseAttention1D(DynastesBaseLayer):
 
     def __init__(self,
@@ -436,6 +440,7 @@ def _get_attention_type_2D(local, masked, relative, self_attention, sparse):
     return attention_type
 
 
+@tf.keras.utils.register_keras_serializable(package='Dynastes')
 class Attention2D(DynastesBaseLayer):
 
     def __init__(self,
