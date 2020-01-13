@@ -2,11 +2,13 @@ from __future__ import absolute_import
 from __future__ import division
 from __future__ import print_function
 
+import tensorflow as tf
+
 from dynastes.ops.localized_attention_nd import localized_attention_1d, localized_attention_2d
 from .base_layers import DynastesBaseLayer
 
 
-
+@tf.keras.utils.register_keras_serializable(package='Dynastes')
 class LocalizedAttentionLayer1D(DynastesBaseLayer):
 
     def __init__(self,
@@ -64,6 +66,7 @@ class LocalizedAttentionLayer1D(DynastesBaseLayer):
         return {**base_config, **config}
 
 
+@tf.keras.utils.register_keras_serializable(package='Dynastes')
 class LocalizedAttentionLayer2D(DynastesBaseLayer):
 
     def __init__(self,

@@ -23,6 +23,7 @@ class PseudoBlockSparseBijector(DynastesBaseLayer, abc.ABC):
         pass
 
 
+@tf.keras.utils.register_keras_serializable(package='Dynastes')
 class PseudoBlockSparseBijector1D(PseudoBlockSparseBijector, abc.ABC):
 
     def get_causality_matrix(self, x):
@@ -31,6 +32,7 @@ class PseudoBlockSparseBijector1D(PseudoBlockSparseBijector, abc.ABC):
         return tf.reshape(lrange, [1, length, 1])
 
 
+@tf.keras.utils.register_keras_serializable(package='Dynastes')
 class ChainedPseudoBlockSparseBijector1D(PseudoBlockSparseBijector1D):
 
     def __init__(self, partial_bijectors, **kwargs):
@@ -47,6 +49,7 @@ class ChainedPseudoBlockSparseBijector1D(PseudoBlockSparseBijector1D):
         return self.get_bijector(lrange).forward(lrange)
 
 
+@tf.keras.utils.register_keras_serializable(package='Dynastes')
 class BlockSparseStridedRoll1D(ChainedPseudoBlockSparseBijector1D):
 
     def __init__(self,
@@ -73,6 +76,7 @@ class BlockSparseStridedRoll1D(ChainedPseudoBlockSparseBijector1D):
         return {**base_config, **config}
 
 
+@tf.keras.utils.register_keras_serializable(package='Dynastes')
 class BlockSparsePrimedStridedRoll1D(ChainedPseudoBlockSparseBijector1D):
 
     def __init__(self,

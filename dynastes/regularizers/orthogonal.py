@@ -2,6 +2,7 @@ import tensorflow as tf
 from tensorflow.keras.regularizers import Regularizer
 
 
+@tf.keras.utils.register_keras_serializable(package='Dynastes')
 class Orthogonal(Regularizer):
     """Regularizer base class.
     """

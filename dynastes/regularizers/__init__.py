@@ -2,8 +2,8 @@ from __future__ import absolute_import
 from __future__ import division
 from __future__ import print_function
 
+import tensorflow as tf
 from tensorflow.keras.regularizers import Regularizer
-from tensorflow.keras.utils import custom_object_scope
 from tensorflow.python.keras import regularizers as tf_regularizers
 from tensorflow.python.keras.regularizers import deserialize as _deserialize
 from tensorflow.python.keras.regularizers import serialize as _serialize
@@ -11,11 +11,8 @@ from tensorflow.python.keras.regularizers import serialize as _serialize
 from . import orthogonal
 from .orthogonal import Orthogonal
 
-object_scope = {
-    'Orthogonal': Orthogonal
-}
 
-
+@tf.keras.utils.register_keras_serializable(package='Dynastes')
 class ModifyingRegularizer(Regularizer):
 
     def __init__(self, first, second,
@@ -41,6 +38,7 @@ def _add(self, other):
 def _sub(self, other):
     return ModifyingRegularizer(self, other, lambda x, y: x - y)
 
+
 def _mul(self, other):
     return ModifyingRegularizer(self, other, lambda x, y: x * y)
 
@@ -55,7 +53,6 @@ def serialize(regularizer):
 
 
 def deserialize(config, custom_objects={}):
-    custom_objects = {**custom_objects, **object_scope}
     return _deserialize(config, custom_objects)
 
 
@@ -63,8 +60,7 @@ def get(regularizer):
     if type(regularizer) == str:
         if regularizer == 'orthogonal':
             return Orthogonal()
-    with custom_object_scope(object_scope):
-        return tf_regularizers.get(regularizer)
+    return tf_regularizers.get(regularizer)
 
 
 # Cleanup symbols to avoid polluting namespace.

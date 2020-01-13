@@ -1,9 +1,10 @@
+import numpy as np
 import tensorflow as tf
 import tensorflow.keras as tfk
 import tensorflow.keras.layers as tfkl
-from dynastes.ops.t2t_common import shape_list
-import numpy as np
 
+
+@tf.keras.utils.register_keras_serializable(package='Dynastes')
 class SpectralNormalization(tfkl.Layer):
     def __init__(self,
                  power_iteration_rounds=1,
