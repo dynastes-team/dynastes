@@ -191,6 +191,7 @@ class DynastesDepthwiseConv1DTest(tf.test.TestCase):
                                              'kernel_normalizer': 'spectral',
                                              'kernel_regularizer': 'orthogonal'}, input_shape=(5, 32, 3))
 
+
 class Upsampling2DTest(tf.test.TestCase):
     def test_simple(self):
         layer_test(
@@ -226,7 +227,7 @@ class Upsampling2DTest(tf.test.TestCase):
 class Upsampling1DTest(tf.test.TestCase):
     def test_simple(self):
         layer_test(
-            Upsampling1D, kwargs={'strides': 2}, input_shape=(5, 32, 3), expected_output_shape=(5,64,3))
+            Upsampling1D, kwargs={'strides': 2}, input_shape=(None, 32, 3), expected_output_shape=(None, 64, 3))
 
     def test_masking(self):
         layer = Upsampling1D(strides=2)
@@ -247,7 +248,6 @@ class Upsampling1DTest(tf.test.TestCase):
             layer.compute_mask(x, mask=mask)
 
         graph_test_fn(x=ts, mask=mask)
-
 
 
 class DynastesDepthwiseConv2DTest(tf.test.TestCase):
