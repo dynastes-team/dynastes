@@ -6,9 +6,11 @@ from functools import partial
 
 import tensorflow as tf
 
+from dynastes.util import cache_context
 from dynastes import activations
 from dynastes.blocks import layer_factory
 from dynastes.layers.base_layers import DynastesBaseLayer
+from dynastes.ops import t2t_common
 from dynastes.util.layer_util import call_masked as cm
 from dynastes.util.layer_util import compute_mask_if_possible as compm
 
@@ -47,6 +49,8 @@ class _AttentionBlock1D(DynastesBaseLayer):
                  mask_right=False,
                  add_relative_to_values=False,
                  return_attn_weights=False,
+                 cache_kv = False,
+                 pad_q_to_kv = False,
                  **kwargs):
         super(_AttentionBlock1D, self).__init__(supports_caching=True, **kwargs)
         self.q_type = q_type
@@ -87,7 +91,8 @@ class _AttentionBlock1D(DynastesBaseLayer):
         self.add_relative_to_values = add_relative_to_values
         self.return_attn_weights = return_attn_weights
         self.supports_masking = True
-
+        self.cache_kv = cache_kv
+        self.pad_q_to_kv = pad_q_to_kv
         conv_partial = partial(layer_factory.get_1d_layer, kernel_size=kernel_size,
                                grouped=grouped,
                                group_size=group_size,
@@ -192,6 +197,8 @@ class _AttentionBlock1D(DynastesBaseLayer):
             'filter_width': self.filter_width,
             'mask_right': self.mask_right,
             'add_relative_to_values': self.add_relative_to_values,
+            'cache_kv': self.cache_kv,
+            'pad_q_to_kv': self.pad_q_to_kv
         }
         base_config = super(_AttentionBlock1D, self).get_config()
         return {**base_config, **config}
@@ -211,11 +218,8 @@ class AttentionBlock1D(_AttentionBlock1D):
 
     def request_cache(self, batch_size=1, max_length=1):
         return {
-            'k': tf.zeros((batch_size, max_length, self.k_filters)),
-            'v': tf.zeros((batch_size, max_length, self.v_filters)),
-            'k_mask': tf.cast(tf.zeros((batch_size, max_length)), tf.bool),
-            'v_mask': tf.cast(tf.zeros((batch_size, max_length)), tf.bool)
         }
+
 
     def compute_mask(self, inputs, mask=None):
         if mask is not None:
@@ -230,43 +234,28 @@ class AttentionBlock1D(_AttentionBlock1D):
         else:
             qmask, smask = (None, None)
         q, q_mask = cm(self.q_layer, qx, training=training, mask=qmask)
-        if sx is not None:
-            k, k_mask = cm(self.k_layer, sx, training=training, mask=smask)
-            v, v_mask = cm(self.v_layer, sx, training=training, mask=smask)
-        if cache is not None:
-            if sx is not None:
-                # Combine cached keys and values with new keys and values.
-                if cache["k"] is not None:
-                    # Update cache
-                    if decode_loop_step is not None:
 
-                        cache_k_shape = cache["k"].shape.as_list()
-                        indices = tf.reshape(
-                            tf.one_hot(decode_loop_step, cache_k_shape[1], dtype=k.dtype),
-                            [1, cache_k_shape[1], 1])
-                        k = cache["k"] + k * indices
-                        if mask is not None:
-                            indices = tf.reshape(
-                                tf.one_hot(decode_loop_step, cache_k_shape[1], dtype=tf.float16),
-                                [1, cache_k_shape[1]])
-                            k_mask = tf.logical_or(cache["k_mask"], (tf.cast(k_mask, tf.float16) * indices) > 0.)
+        # In cross-attention we may compute KV once and perform attention on it in subsequent steps
 
-                        cache_v_shape = cache["v"].shape.as_list()
-                        indices = tf.reshape(
-                            tf.one_hot(decode_loop_step, cache_v_shape[1], dtype=v.dtype),
-                            [1, cache_v_shape[1], 1])
-                        v = cache["v"] + v * indices
-                        if mask is not None:
-                            indices = tf.reshape(
-                                tf.one_hot(decode_loop_step, cache_v_shape[1], dtype=tf.float16),
-                                [1, cache_v_shape[1]])
-                            v_mask = tf.logical_or(cache["v_mask"], (tf.cast(v_mask, tf.float16) * indices) > 0.)
+        def get_kv():
+            def do_get_kv():
+                k, k_mask = cm(self.k_layer, sx, training=training, mask=smask)
+                v, v_mask = cm(self.v_layer, sx, training=training, mask=smask)
+                return k, k_mask, v, v_mask
+            if self.cache_kv and cache_context.cache_context is not None:
+                with cache_context.SubContext(self.name):
+                    if 'cached_kv' in cache_context.cache:
+                        k, k_mask, v, v_mask = cache_context.cache['cached_kv']
                     else:
-                        k = tf.concat([tf.cast(cache["k"], k.dtype), k], axis=1)
-                        v = tf.concat([tf.cast(cache["v"], v.dtype), v], axis=1)
-                        if mask is not None:
-                            k_mask = tf.concat([tf.cast(cache["k_mask"], k_mask.dtype), k_mask], axis=1)
-                            v_mask = tf.concat([tf.cast(cache["v_mask"], v_mask.dtype), v_mask], axis=1)
+                        k, k_mask, v, v_mask = do_get_kv()
+                        cache_context.cache['cached_kv'] = k, k_mask, v, v_mask
+            else:
+                k, k_mask, v, v_mask = do_get_kv()
+            return k, k_mask, v, v_mask
+
+        if cache is not None:
+            if 'k' not in cache:
+                k, k_mask, v, v_mask = get_kv()
 
                 # Update cache
                 cache["k"] = k
@@ -280,8 +269,10 @@ class AttentionBlock1D(_AttentionBlock1D):
                 if mask is not None:
                     k_mask = cache["k_mask"]
                     v_mask = cache["v_mask"]
+        else:
+            k, k_mask, v, v_mask = get_kv()
         if mask is not None:
-            mask = [q_mask, k_mask, v_mask]
+            mask = [q_mask, tf.logical_and(k_mask, v_mask)]
         x, weights = self.attention_layer([q, k, v], mask=mask, training=training)
 
         if self.return_attn_weights:
@@ -292,6 +283,14 @@ class AttentionBlock1D(_AttentionBlock1D):
 @tf.keras.utils.register_keras_serializable(package='Dynastes')
 class SelfAttentionBlock1D(AttentionBlock1D):
 
+    def request_cache(self, batch_size=1, max_length=1):
+        return {
+            'k': tf.zeros((batch_size, max_length, self.k_filters)),
+            'v': tf.zeros((batch_size, max_length, self.v_filters)),
+            'k_mask': tf.cast(tf.zeros((batch_size, max_length)), tf.bool),
+            'v_mask': tf.cast(tf.zeros((batch_size, max_length)), tf.bool)
+        }
+
     def compute_mask(self, inputs, mask=None):
         if mask is not None:
             q_mask = compm(self.q_layer, inputs, mask=mask)
@@ -299,7 +298,76 @@ class SelfAttentionBlock1D(AttentionBlock1D):
         return mask
 
     def call(self, inputs, training=None, mask=None, cache=None, decode_loop_step=None):
+        x = inputs
+        q, q_mask = cm(self.q_layer, x, training=training, mask=mask)
+        k, k_mask = cm(self.k_layer, x, training=training, mask=mask)
+        v, v_mask = cm(self.v_layer, x, training=training, mask=mask)
+        if cache is not None:
+            # Combine cached keys and values with new keys and values.
+            if cache["k"] is not None:
+                # Update cache
+                if decode_loop_step is not None:
+
+                    cache_k_shape = cache["k"].shape.as_list()
+                    indices = tf.reshape(
+                        tf.one_hot(decode_loop_step, cache_k_shape[1], dtype=k.dtype),
+                        [1, cache_k_shape[1], 1])
+                    k = cache["k"] + k * indices
+                    if mask is not None:
+                        indices = tf.reshape(
+                            tf.one_hot(decode_loop_step, cache_k_shape[1], dtype=tf.float16),
+                            [1, cache_k_shape[1]])
+                        k_mask = tf.logical_or(cache["k_mask"], (tf.cast(k_mask, tf.float16) * indices) > 0.)
+
+                    cache_v_shape = cache["v"].shape.as_list()
+                    indices = tf.reshape(
+                        tf.one_hot(decode_loop_step, cache_v_shape[1], dtype=v.dtype),
+                        [1, cache_v_shape[1], 1])
+                    v = cache["v"] + v * indices
+                    if mask is not None:
+                        indices = tf.reshape(
+                            tf.one_hot(decode_loop_step, cache_v_shape[1], dtype=tf.float16),
+                            [1, cache_v_shape[1]])
+                        v_mask = tf.logical_or(cache["v_mask"], (tf.cast(v_mask, tf.float16) * indices) > 0.)
+                else:
+                    k = tf.concat([tf.cast(cache["k"], k.dtype), k], axis=1)
+                    v = tf.concat([tf.cast(cache["v"], v.dtype), v], axis=1)
+                    if mask is not None:
+                        k_mask = tf.concat([tf.cast(cache["k_mask"], k_mask.dtype), k_mask], axis=1)
+                        v_mask = tf.concat([tf.cast(cache["v_mask"], v_mask.dtype), v_mask], axis=1)
+
+            # Update cache
+            cache["k"] = k
+            cache["v"] = v
+            if mask is not None:
+                cache["k_mask"] = k_mask
+                cache["v_mask"] = v_mask
+
+        if self.pad_q_to_kv:
+            q_shape = t2t_common.shape_list(q)
+            kv_shape = t2t_common.shape_list(k)
+            if q_shape[1] != kv_shape[1]:
+                if decode_loop_step is not None:
+                    q_prepad = decode_loop_step
+                    q_postpad = (kv_shape[1] - q_shape[1]) - decode_loop_step
+
+                else:
+                    q_prepad = (kv_shape[1] - q_shape[1])
+                    q_postpad = 0
+                q = tf.pad(q, paddings=[[0, 0], [q_prepad, q_postpad], [0, 0]])
+                if mask is not None:
+                    q_mask = tf.pad(q_mask, paddings=[[0, 0], [q_prepad, q_postpad]])
+
         if mask is not None:
-            mask = (mask, mask)
-        return super(SelfAttentionBlock1D, self).call((inputs, inputs), training=training, mask=mask, cache=cache,
-                                                      decode_loop_step=decode_loop_step)
+            mask = [q_mask, tf.logical_and(k_mask, v_mask)]
+        x, weights = self.attention_layer([q, k, v], mask=mask, training=training)
+        if self.pad_q_to_kv:
+            if q_shape[1] != kv_shape[1]:
+                x_shape = t2t_common.shape_list(x)
+                if decode_loop_step is not None:
+                    x = tf.slice(x, [0, q_prepad, 0], [x_shape[0], 1, x_shape[2]])
+                else:
+                    x = tf.slice(x, [0, q_prepad, 0], [x_shape[0], q_shape[1], x_shape[2]])
+        if self.return_attn_weights:
+            return x, weights
+        return x

@@ -168,7 +168,7 @@ def dot_product_attention(q,
                           bias,
                           dropout_rate=0.0,
                           name='dot_product_attention',
-                          dropout_broadcast_dims=None,
+                          dropout_broadcast_dims=[0,1],
                           activation_dtype=None,
                           weight_dtype=None,
                           hard_attention_k=0,
@@ -429,7 +429,7 @@ def dot_product_unmasked_self_attention_relative_v2(
         q, k, v, bias, key_leftright_embeddings, value_leftright_embeddings=None,
         max_relative_position=None, dropout_rate=0.0, save_weights_to=None,
         name='dot_product_unmasked_self_attention_relative_v2',
-        dropout_broadcast_dims=None, heads_share_relative_embedding=False,
+        dropout_broadcast_dims=[0,1], heads_share_relative_embedding=False,
         add_relative_to_values=False):
     """Calculate relative position-aware dot-product self-attention.
     The attention calculation is augmented with learned representations for the
@@ -519,7 +519,7 @@ def dot_product_self_attention_relative_v2(q,
                                            dropout_rate=0.0,
                                            save_weights_to=None,
                                            name='dot_product_self_attention_relative_v2',
-                                           dropout_broadcast_dims=None,
+                                           dropout_broadcast_dims=[0,1],
                                            heads_share_relative_embedding=False,
                                            add_relative_to_values=False):
     """Calculate relative position-aware dot-product self-attention.
@@ -1100,7 +1100,7 @@ def dot_product_unmasked_self_attention_relative_2d(
         height_key_relative_embeddings,
         width_key_relative_embeddings,
         max_relative_position=None, dropout_rate=0.0, name=None,
-        dropout_broadcast_dims=None, heads_share_relative_embedding=False,
+        dropout_broadcast_dims=[0,1], heads_share_relative_embedding=False,
         add_relative_to_values=False):
     """Calculate relative position unmasked dot-product self-attention 2d.
     The attention calculation is augmented with learned representations for the
