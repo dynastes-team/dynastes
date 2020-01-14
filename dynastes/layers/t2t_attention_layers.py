@@ -137,7 +137,7 @@ class Attention1D(DynastesBaseLayer):
                  relative=False,
                  sparse=False,
                  dropout_rate=0.0,
-                 max_relative_position=None,
+                 max_relative_position=2,
                  lsh_bucket_length=4,
                  block_length=128,
                  filter_width=100,
@@ -249,14 +249,21 @@ class Attention1D(DynastesBaseLayer):
 
         if mask is not None and self.attention_type != 'masked_local_attention_1d':
             q_mask = (1. - tf.cast(mask[0], tf.float32))[:, tf.newaxis, :, tf.newaxis]
+            if self.mask_right:
+                assert mask[0].shape[1] == mask[1].shape[1] or mask[0].shape[1] == 1
+                look_ahead_mask = self._create_look_ahead_mask(q.shape[1])
+                q_mask = tf.maximum(q_mask, look_ahead_mask)
             kv_mask = (1. - tf.cast(mask[1], tf.float32))[:, tf.newaxis, tf.newaxis, :]
             c_mask = tf.maximum(q_mask, kv_mask)
-            if self.mask_right:
-                look_ahead_mask = self._create_look_ahead_mask(mask[0].shape[1])
-                c_mask = tf.maximum(c_mask, look_ahead_mask)
+
+            # c_mask = tf.maximum(c_mask, look_ahead_mask)
             bias = c_mask * large_compatible_negative(k.dtype)
         else:
-            bias = None
+            if self.attention_type != 'masked_local_attention_1d' and self.mask_right:
+                look_ahead_mask = self._create_look_ahead_mask(q.shape[1])
+                bias = look_ahead_mask * large_compatible_negative(k.dtype)
+            else:
+                bias = None
 
         r = None
         weights = None
@@ -264,6 +271,10 @@ class Attention1D(DynastesBaseLayer):
         q = t2t_attention.split_heads(q, self.num_heads)
         k = t2t_attention.split_heads(k, self.num_heads_kv)
         v = t2t_attention.split_heads(v, self.num_heads_kv)
+        if training:
+            rate = self.dropout_rate
+        else:
+            rate = 0.
 
         if 'relative' in self.attention_type:
             key_embeddings = self.get_weight('key_embeddings', training=training)
@@ -275,14 +286,14 @@ class Attention1D(DynastesBaseLayer):
                 r, weights = t2t_attention.dot_product_unmasked_self_attention_relative_v2(q=q, k=k, v=v, bias=bias,
                                                                                            key_leftright_embeddings=key_embeddings,
                                                                                            value_leftright_embeddings=value_embeddings,
-                                                                                           dropout_rate=self.dropout_rate,
+                                                                                           dropout_rate=rate,
                                                                                            max_relative_position=self.max_relative_position,
                                                                                            heads_share_relative_embedding=self.heads_share_relative_embeddings)
             elif self.attention_type == 'masked_self_attention_relative':
                 r, weights = t2t_attention.dot_product_self_attention_relative_v2(q=q, k=k, v=v, bias=bias,
                                                                                   key_left_embedding=key_embeddings,
                                                                                   value_left_embedding=value_embeddings,
-                                                                                  dropout_rate=self.dropout_rate,
+                                                                                  dropout_rate=rate,
                                                                                   max_relative_position=self.max_relative_position,
                                                                                   heads_share_relative_embedding=self.heads_share_relative_embeddings)
         else:
@@ -290,10 +301,14 @@ class Attention1D(DynastesBaseLayer):
                 r, weights = t2t_attention.local_attention_1d(q=q, k=k, v=v, block_length=self.block_length,
                                                               filter_width=self.filter_width)
             elif self.attention_type == 'masked_local_attention_1d':
+                if mask is not None:
+                    attn_mask = tf.cast(mask[1], k.dtype)
+                else:
+                    attn_mask = None
                 r, weights = t2t_attention.masked_local_attention_1d(q=q, k=k, v=v, block_length=self.block_length,
                                                                      mask_right=self.mask_right,
-                                                                     mask=tf.cast(mask[1], k.dtype),
-                                                                     dropout_rate=self.dropout_rate)
+                                                                     mask=attn_mask,
+                                                                     dropout_rate=rate)
             elif self.attention_type == 'sparse_attention_truncated':
                 r, loss, weights = t2t_attention.sparse_dot_product_attention_truncated(q=q, k=k, v=v,
                                                                                         list_lsh=self.lsh_gates,
@@ -301,7 +316,7 @@ class Attention1D(DynastesBaseLayer):
                 self.add_loss(loss)
             else:
                 r, weights = t2t_attention.dot_product_attention(q=q, k=k, v=v, bias=bias,
-                                                                 dropout_rate=self.dropout_rate)
+                                                                 dropout_rate=rate)
 
         r = t2t_attention.combine_heads(r)
         return r, weights
@@ -384,12 +399,15 @@ class PseudoBlockSparseAttention1D(DynastesBaseLayer):
         q = t2t_attention.split_heads(q, self.num_heads)
         k = t2t_attention.split_heads(k, self.num_heads_kv)
         v = t2t_attention.split_heads(v, self.num_heads_kv)
-
+        if training:
+            rate = self.dropout_rate
+        else:
+            rate = 0.
         r, weights = t2t_attention.masked_local_attention_1d(q=q, k=k, v=v, block_length=self.block_size,
                                                              mask_right=self.mask_right,
                                                              causality_tensor=causality_mat,
                                                              mask=tf.cast(mask, k.dtype),
-                                                             dropout_rate=self.dropout_rate)
+                                                             dropout_rate=rate)
 
         r = t2t_attention.combine_heads(r)
         r_chain = self.blocksparse_bijector.get_bijector(r)
@@ -564,6 +582,11 @@ class Attention2D(DynastesBaseLayer):
         k = t2t_attention.split_heads_2d(k, self.num_heads_kv)
         v = t2t_attention.split_heads_2d(v, self.num_heads_kv)
 
+        if training:
+            rate = self.dropout_rate
+        else:
+            rate = 0.
+
         if 'relative' in self.attention_type:
             height_key_embeddings = self.get_weight('height_key_embeddings', training=training)
             width_key_embeddings = self.get_weight('width_key_embeddings', training=training)
@@ -573,7 +596,7 @@ class Attention2D(DynastesBaseLayer):
                 r, weights = t2t_attention.dot_product_unmasked_self_attention_relative_2d(q=q, k=k, v=v, bias=bias,
                                                                                            width_key_relative_embeddings=width_key_embeddings,
                                                                                            height_key_relative_embeddings=height_key_embeddings,
-                                                                                           dropout_rate=self.dropout_rate,
+                                                                                           dropout_rate=rate,
                                                                                            max_relative_position=self.max_relative_position,
                                                                                            heads_share_relative_embedding=self.heads_share_relative_embeddings)
             else:
