@@ -17,6 +17,7 @@ from dynastes.util.layer_util import compute_mask_if_possible as compm
 
 # A module that only depends on `keras.layers` import these from here.
 
+@tf.keras.utils.register_keras_serializable(package='Dynastes')
 class _AttentionBlock1D(DynastesBaseLayer):
 
     def __init__(self,

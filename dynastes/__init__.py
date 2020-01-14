@@ -16,7 +16,7 @@ from dynastes import weight_normalizers
 from dynastes.core import backend
 from dynastes.probability import bijectors, bijector_partials, pseudoblocksparse_bijectors
 
-__version__ = "0.6.0"
+__version__ = "0.6.1"
 # Cleanup symbols to avoid polluting namespace.
 del absolute_import
 del division

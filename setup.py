@@ -12,10 +12,10 @@ def get_requirements_dynamic():
     requires = []
     try:
         import tensorflow
-        if parse_ver_as_float(tensorflow.__version__) < 2.:
+        if parse_ver_as_float(tensorflow.__version__) < 2.1:
             raise ImportError
     except:
-        requires.append('tensorflow>=2.0.0')
+        requires.append('tensorflow>=2.1.0')
     try:
         import tensorflow_probability
         if parse_ver_as_float(tensorflow_probability.__version__) < 0.8:
@@ -24,7 +24,7 @@ def get_requirements_dynamic():
         print('Warning! TensorFlow probability is missing!')
     try:
         import tensorflow_addons
-        if parse_ver_as_float(tensorflow_addons.__version__) < 0.6:
+        if parse_ver_as_float(tensorflow_addons.__version__) < 0.7:
             raise ImportError
     except:
         print('Warning! TensorFlow addons are missing!')
@@ -50,12 +50,12 @@ def find_version(*file_paths):
 setup(
     name="dynastes",
     version=find_version('dynastes', '__init__.py'),
-    author="Göran Sandström (Veqtor)",
+    author="Team Dynastes",
     author_email="v3qt0r@gmail.com",
     description="A collection of layers and utils for TensorFlow (Keras) 2.+",
     long_description=read_file('README.md'),
     long_description_content_type="text/markdown",
-    url="https://github.com/veqtor/dynastes",
+    url="https://github.com/dynastes-team/dynastes",
     install_requires=get_requirements_dynamic(),
     packages=find_packages(),
     classifiers=[
