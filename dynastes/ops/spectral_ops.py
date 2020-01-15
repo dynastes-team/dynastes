@@ -78,14 +78,14 @@ def _safe_log(x: tf.Tensor):
     return tf.math.log(x + eps(x.dtype))
 
 
-def waves_to_stfts(waves: tf.Tensor, n_fft=512, hop_length=256, discard_dc=True, pad_l=128, pad_r=128) -> tf.Tensor:
+def waves_to_stfts(waves: tf.Tensor, n_fft=512, hop_length=256, discard_dc=True, pad_l=128, pad_r=128, hq=True) -> tf.Tensor:
     """Convert from waves to complex stfts.
        Args:
          waves: Tensor of the waveform, shape [..., time, channels].
        Returns:
          stfts: Complex64 tensor of stft, shape [..., time, freq, channels].
        """
-    stfts = _waves_to_stfts(waves, n_fft=n_fft, hop_length=hop_length, discard_dc=discard_dc, pad_l=pad_l, pad_r=pad_r)
+    stfts = _waves_to_stfts(waves, n_fft=n_fft, hop_length=hop_length, discard_dc=discard_dc, pad_l=pad_l, pad_r=pad_r, hq=hq)
     stfts = tf.squeeze(stfts, axis=-1)  # [..., channels, time, freq]
     stfts_shape = shape_list(stfts)
     perm = list(range(len(stfts_shape)))
@@ -110,7 +110,7 @@ def stfts_to_waves(stfts: tf.Tensor, n_fft=512, hop_length=256, discard_dc=True,
     return waves
 
 
-def stfts_to_melspecgrams(stfts: tf.Tensor, l2mel, ifreq=True) -> tf.Tensor:
+def stfts_to_melspecgrams(stfts: tf.Tensor, l2mel, ifreq=True, return_phase=True) -> tf.Tensor:
     """Converts stfts to specgrams.
     Args:
       stfts: Complex64/Complex128 tensor of stft, shape [..., time, freq, channels].
@@ -124,7 +124,7 @@ def stfts_to_melspecgrams(stfts: tf.Tensor, l2mel, ifreq=True) -> tf.Tensor:
     perm = perm[:-3] + [perm[-1], perm[-3], perm[-2]]
     stfts = tf.transpose(stfts, perm=perm)
     stfts = tf.expand_dims(stfts, axis=-1)  # [..., channels, time, freq, 1]
-    melspecgrams = _stfts_to_melspecgrams(stfts, l2mel=l2mel, ifreq=ifreq)  # [..., channels, time, freq, 2]
+    melspecgrams = _stfts_to_melspecgrams(stfts, l2mel=l2mel, ifreq=ifreq, return_phase=return_phase)  # [..., channels, time, freq, 2]
 
     melspecgrams_shape = shape_list(melspecgrams)
     perm = list(range(len(melspecgrams_shape)))
@@ -260,7 +260,7 @@ def _specgrams_to_melspecgrams(specgrams, l2mel):
     return tf.stack([logmelmag2, mel_p], axis=-1)
 
 
-def _stfts_to_melspecgrams(stfts: tf.Tensor, l2mel, ifreq=True) -> tf.Tensor:
+def _stfts_to_melspecgrams(stfts: tf.Tensor, l2mel, ifreq=True, return_phase=True) -> tf.Tensor:
     """Converts stfts to specgrams.
     Args:
       stfts: Complex64 tensor of stft, shape [..., channels, time, freq, 1].
@@ -272,6 +272,8 @@ def _stfts_to_melspecgrams(stfts: tf.Tensor, l2mel, ifreq=True) -> tf.Tensor:
     l2mel = tf.cast(l2mel, amps.dtype)
     logmelmag2 = _safe_log(tf.matmul(amps, l2mel, transpose_a=True))
     logmelmag2 = tf.linalg.matrix_transpose(logmelmag2)
+    if not return_phase:
+        return logmelmag2
     phase_angle = tf.math.angle(stfts)
     mel_phase_angle = tf.matmul(phase_angle, l2mel, transpose_a=True)
     mel_phase_angle = tf.linalg.matrix_transpose(mel_phase_angle)

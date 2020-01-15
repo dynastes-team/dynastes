@@ -1,11 +1,12 @@
 import numpy as np
 import tensorflow as tf
 import tensorflow.keras.layers as tfkl
+from tensorflow.python.framework import test_util
 
-from dynastes.util import cache_context
 from dynastes.blocks.attention_blocks import SelfAttentionBlock1D, AttentionBlock1D
 from dynastes.blocks.transformer_blocks import PointWiseFeedForwardBlock, EncoderBlock, DecoderBlock, EncoderBlockStack, \
     DecoderBlockStack
+from dynastes.util import cache_context
 
 
 def _test_grads(testCase: tf.test.TestCase, func, input):
@@ -20,6 +21,8 @@ normal = np.random.normal
 
 
 class DecoderBlockTest(tf.test.TestCase):
+
+    @test_util.use_deterministic_cudnn
     def test_simple(self):
         with cache_context.CacheContext():
             d_model = 16
@@ -65,7 +68,8 @@ class DecoderBlockTest(tf.test.TestCase):
                                            cache_kv=True)
             dec_norm = tfkl.LayerNormalization(epsilon=1e-6)
             dec_df_net = PointWiseFeedForwardBlock(dff=dff, d_model=d_model)
-            dec_block = DecoderBlock(sa_layer=dec_sablock, ca_layer=dec_cablock, norm0=dec_norm, ffn=dec_df_net, norm1=dec_norm, norm2=dec_norm)
+            dec_block = DecoderBlock(sa_layer=dec_sablock, ca_layer=dec_cablock, norm0=dec_norm, ffn=dec_df_net,
+                                     norm1=dec_norm, norm2=dec_norm)
 
             stack = DecoderBlockStack([dec_block] * 3)
             cache = stack.request_cache(batch_size=batch_size, max_length_sa=max_length, max_length_ca=32)
@@ -82,15 +86,17 @@ class DecoderBlockTest(tf.test.TestCase):
                     mask = to_tensor([True])
                     mask = tf.expand_dims(mask, axis=0)
                     mask = tf.tile(mask, [batch_size, 1])
-                    out = stack((out, _enc_input), training=None, mask=(mask, _enc_mask), cache=cache, decode_loop_step=i)
+                    out = stack((out, _enc_input), training=None, mask=(mask, _enc_mask), cache=cache,
+                                decode_loop_step=i)
                     outs.append(out)
                 outs = tf.concat(outs, axis=1)
                 return outs
 
             ret = inc_encode(dec_input, encoded_out, enc_mask)
-            check_input = tf.concat([dec_input, ret[:,:-1,:]], axis=1)
+            check_input = tf.concat([dec_input, ret[:, :-1, :]], axis=1)
             # Call sanity check outside of cache_context to make sure we're getting the same-ish result
-        sanity_check = stack((check_input, encoded_out), training=None, mask=(tf.cast(tf.ones((batch_size, max_length)), tf.bool), enc_mask))#, cache=cache, decode_loop_step=0)
+        sanity_check = stack((check_input, encoded_out), training=None, mask=(
+        tf.cast(tf.ones((batch_size, max_length)), tf.bool), enc_mask))  # , cache=cache, decode_loop_step=0)
 
         print(tf.reduce_max(ret - sanity_check), tf.reduce_mean(ret - sanity_check))
         self.assertAllClose(ret, sanity_check, atol=3e-6, rtol=0.2)
