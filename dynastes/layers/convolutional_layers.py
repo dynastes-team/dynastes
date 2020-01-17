@@ -913,8 +913,10 @@ class DynastesDepthwiseConv2D(DynastesConv2D):
         if mask is not None:
             mask = tf.cast(mask, inputs.dtype)
             mask = 1 - tf.expand_dims(mask, axis=-1)
+            padding = self.padding
             if self.padding == 'causal':
                 mask = array_ops.pad(mask, self._compute_causal_padding())
+                padding = 'valid'
             mask_kernel = self.get_weight('kernel', training=None)
             mask_shapes = max(shape_list(mask_kernel[:-2]))
             if mask_shapes > 1:
@@ -924,7 +926,7 @@ class DynastesDepthwiseConv2D(DynastesConv2D):
                     mask,
                     mask_kernel,
                     strides=self.strides,
-                    padding=self.padding,
+                    padding=padding,
                     dilation_rate=self.dilation_rate,
                     data_format=self.data_format)
                 mask = mask > self.mask_threshold
@@ -934,13 +936,15 @@ class DynastesDepthwiseConv2D(DynastesConv2D):
         return mask
 
     def call(self, inputs, training=None, mask=None):
-        if self.padding == 'causal':
+        padding = self.padding
+        if padding == 'causal':
             inputs = array_ops.pad(inputs, self._compute_causal_padding())
+            padding = 'valid'
         outputs = backend.depthwise_conv2d(
             inputs,
             self.get_weight("kernel", training=training),
             strides=self.strides,
-            padding=self.padding,
+            padding=padding,
             dilation_rate=self.dilation_rate,
             data_format=self.data_format)
 
