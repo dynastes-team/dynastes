@@ -7,10 +7,10 @@ from functools import partial
 import tensorflow as tf
 import tensorflow.keras.layers as tfkl
 
-from dynastes.util import cache_context
 from dynastes import activations
 from dynastes.blocks import layer_factory
 from dynastes.layers.base_layers import DynastesBaseLayer
+from dynastes.util import cache_context
 from dynastes.util.layer_util import call_masked as cm
 
 
@@ -148,7 +148,8 @@ class EncoderBlock(tfkl.Layer):
     def call_masked(self, inputs, training=None, mask=None, cache=None, decode_loop_step=None):
         with cache_context.SubContext(self.name):
             x = inputs
-            x, x_mask = cm(self.sa_layer, x, training=training, mask=mask, cache=cache, decode_loop_step=decode_loop_step)
+            x, x_mask = cm(self.sa_layer, x, training=training, mask=mask, cache=cache,
+                           decode_loop_step=decode_loop_step)
             res, res_mask = cm(self.mha_skip_adapt, inputs, training=training, mask=mask)
             if x_mask is None:
                 n_mask = res_mask
@@ -172,7 +173,8 @@ class EncoderBlock(tfkl.Layer):
     def call(self, inputs, training=None, mask=None, cache=None, decode_loop_step=None):
         with cache_context.SubContext(self.name):
             x = inputs
-            x, x_mask = cm(self.sa_layer, x, training=training, mask=mask, cache=cache, decode_loop_step=decode_loop_step)
+            x, x_mask = cm(self.sa_layer, x, training=training, mask=mask, cache=cache,
+                           decode_loop_step=decode_loop_step)
             res, res_mask = cm(self.mha_skip_adapt, inputs, training=training, mask=mask)
             if x_mask is None:
                 n_mask = res_mask
@@ -268,7 +270,8 @@ class EncoderBlockStack(tfkl.Layer):
                     block_cache = cache[i]
                 else:
                     block_cache = None
-                x, mask = cm(block, x, training=training, mask=mask, cache=block_cache, decode_loop_step=decode_loop_step,
+                x, mask = cm(block, x, training=training, mask=mask, cache=block_cache,
+                             decode_loop_step=decode_loop_step,
                              **kwargs)
             return x, mask
 
@@ -280,7 +283,8 @@ class EncoderBlockStack(tfkl.Layer):
                     block_cache = cache[i]
                 else:
                     block_cache = None
-                x = block(x, training=training, mask=mask, cache=block_cache, decode_loop_step=decode_loop_step, **kwargs)
+                x = block(x, training=training, mask=mask, cache=block_cache, decode_loop_step=decode_loop_step,
+                          **kwargs)
             return x
 
     def compute_mask(self, inputs, mask=None):
@@ -419,7 +423,8 @@ class DecoderBlockStack(tfkl.Layer):
         cache = {}
         for i, block in enumerate(self.blocks):
             try:
-                block_cache = block.request_cache(batch_size=batch_size, max_length_ca=max_length_ca, max_length_sa=max_length_sa)
+                block_cache = block.request_cache(batch_size=batch_size, max_length_ca=max_length_ca,
+                                                  max_length_sa=max_length_sa)
             except:
                 block_cache = None
             cache[i] = block_cache
@@ -443,7 +448,8 @@ class DecoderBlockStack(tfkl.Layer):
                 block_cache = cache[i]
             else:
                 block_cache = None
-            x = block((x, enc), training=training, mask=mask, cache=block_cache, decode_loop_step=decode_loop_step, **kwargs)
+            x = block((x, enc), training=training, mask=mask, cache=block_cache, decode_loop_step=decode_loop_step,
+                      **kwargs)
         return x
 
     def compute_mask(self, inputs, mask=None):

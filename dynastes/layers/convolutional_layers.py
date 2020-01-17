@@ -1118,7 +1118,7 @@ class Upsampling2D(DynastesBaseLayer):
         x_shape = shape_list(x)
         ret_h = x_shape[1] * self.strides[0]
         ret_w = x_shape[2] * self.strides[1]
-        return tf.image.resize(x, size=[ret_h, ret_w], method=self.method)
+        return tf.image.resize(x, size=[ret_h, ret_w], method=self.method, antialias=True)
 
     def compute_mask(self, inputs, mask=None):
         if mask is not None:
@@ -1134,7 +1134,7 @@ class Upsampling2D(DynastesBaseLayer):
         return self._resize(inputs)
 
     def compute_output_shape(self, input_shape):
-        out_shape =  input_shape[0], input_shape[1] * self.strides[0], input_shape[2] * self.strides[1], input_shape[3]
+        out_shape = input_shape[0], input_shape[1] * self.strides[0], input_shape[2] * self.strides[1], input_shape[3]
         return tensor_shape.TensorShape(out_shape)
 
     def get_config(self):
@@ -1178,6 +1178,84 @@ class Upsampling1D(Upsampling2D):
             'method': self.method,
         }
         base_config = super(Upsampling1D, self).get_config()
+        return {**base_config, **config}
+
+
+@tf.keras.utils.register_keras_serializable(package='Dynastes')
+class Downsampling2D(DynastesBaseLayer):
+
+    def __init__(self,
+                 strides=(2, 2),
+                 method='bilinear',
+                 **kwargs):
+        super(Downsampling2D, self).__init__(**kwargs)
+        self.strides = conv_utils.normalize_tuple(strides, 2, 'strides')
+        self.method = method
+
+    def _resize(self, x):
+        x_shape = shape_list(x)
+        ret_h = x_shape[1] // self.strides[0]
+        ret_w = x_shape[2] // self.strides[1]
+        return tf.image.resize(x, size=[ret_h, ret_w], method=self.method, antialias=True)
+
+    def compute_mask(self, inputs, mask=None):
+        if mask is not None:
+            mask = tf.cast(mask, tf.float16)
+            mask = tf.expand_dims(mask, axis=-1)
+
+            mask = self._resize(mask)
+            mask = tf.squeeze(mask, axis=-1)
+            mask = tf.logical_not(mask < 0.51)
+        return mask
+
+    def call(self, inputs, training=None, mask=None):
+        return self._resize(inputs)
+
+    def compute_output_shape(self, input_shape):
+        out_shape = input_shape[0], input_shape[1] // self.strides[0], input_shape[2] // self.strides[1], input_shape[3]
+        return tensor_shape.TensorShape(out_shape)
+
+    def get_config(self):
+        config = {
+            'strides': self.strides,
+            'method': self.method,
+        }
+        base_config = super(Downsampling2D, self).get_config()
+        return {**base_config, **config}
+
+
+@tf.keras.utils.register_keras_serializable(package='Dynastes')
+class Downsampling1D(Downsampling2D):
+
+    def __init__(self,
+                 strides=2,
+                 method='bilinear',
+                 **kwargs):
+        super(Downsampling1D, self).__init__(strides=(strides, 1), method=method, **kwargs)
+
+    def compute_mask(self, inputs, mask=None):
+        if mask is not None:
+            mask = tf.expand_dims(mask, axis=-1)
+            mask = super(Downsampling1D, self).compute_mask(inputs=None, mask=mask)
+            mask = tf.squeeze(mask, axis=-1)
+        return mask
+
+    def call(self, inputs, training=None, mask=None):
+        inputs = tf.expand_dims(inputs, axis=-2)
+        x = super(Downsampling1D, self).call(inputs, training=training, mask=mask)
+        return tf.squeeze(x, axis=-2)
+
+    def compute_output_shape(self, input_shape):
+        input_shape = input_shape[:-1] + [1, input_shape[-1]]
+        output_shape = super().compute_output_shape(input_shape)
+        return output_shape[:-2] + (output_shape[-1],)
+
+    def get_config(self):
+        config = {
+            'strides': self.strides[0],
+            'method': self.method,
+        }
+        base_config = super(Downsampling1D, self).get_config()
         return {**base_config, **config}
 
 

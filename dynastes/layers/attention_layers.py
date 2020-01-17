@@ -1,7 +1,7 @@
 import tensorflow as tf
 
-from dynastes.ops.localized_attention_nd import localized_attention_1d, localized_attention_2d
 from dynastes.layers.base_layers import DynastesBaseLayer
+from dynastes.ops.localized_attention_nd import localized_attention_1d, localized_attention_2d
 
 
 @tf.keras.utils.register_keras_serializable(package='Dynastes')

@@ -2,6 +2,8 @@ from .attention_layers import LocalizedAttentionLayer1D
 from .attention_layers import LocalizedAttentionLayer2D
 from .base_layers import ActivatedKernelBiasBaseLayer, _WscaleInitializer, DynastesDense
 from .conditioning_layers import FeaturewiseLinearModulation
+from .convolutional_layers import Downsampling1D
+from .convolutional_layers import Downsampling2D
 from .convolutional_layers import DynastesConv1D
 from .convolutional_layers import DynastesConv1DTranspose
 from .convolutional_layers import DynastesConv2D

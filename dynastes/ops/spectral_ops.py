@@ -78,14 +78,16 @@ def _safe_log(x: tf.Tensor):
     return tf.math.log(x + eps(x.dtype))
 
 
-def waves_to_stfts(waves: tf.Tensor, n_fft=512, hop_length=256, discard_dc=True, pad_l=128, pad_r=128, hq=True) -> tf.Tensor:
+def waves_to_stfts(waves: tf.Tensor, n_fft=512, hop_length=256, discard_dc=True, pad_l=128, pad_r=128,
+                   hq=True) -> tf.Tensor:
     """Convert from waves to complex stfts.
        Args:
          waves: Tensor of the waveform, shape [..., time, channels].
        Returns:
          stfts: Complex64 tensor of stft, shape [..., time, freq, channels].
        """
-    stfts = _waves_to_stfts(waves, n_fft=n_fft, hop_length=hop_length, discard_dc=discard_dc, pad_l=pad_l, pad_r=pad_r, hq=hq)
+    stfts = _waves_to_stfts(waves, n_fft=n_fft, hop_length=hop_length, discard_dc=discard_dc, pad_l=pad_l, pad_r=pad_r,
+                            hq=hq)
     stfts = tf.squeeze(stfts, axis=-1)  # [..., channels, time, freq]
     stfts_shape = shape_list(stfts)
     perm = list(range(len(stfts_shape)))
@@ -124,7 +126,8 @@ def stfts_to_melspecgrams(stfts: tf.Tensor, l2mel, ifreq=True, return_phase=True
     perm = perm[:-3] + [perm[-1], perm[-3], perm[-2]]
     stfts = tf.transpose(stfts, perm=perm)
     stfts = tf.expand_dims(stfts, axis=-1)  # [..., channels, time, freq, 1]
-    melspecgrams = _stfts_to_melspecgrams(stfts, l2mel=l2mel, ifreq=ifreq, return_phase=return_phase)  # [..., channels, time, freq, 2]
+    melspecgrams = _stfts_to_melspecgrams(stfts, l2mel=l2mel, ifreq=ifreq,
+                                          return_phase=return_phase)  # [..., channels, time, freq, 2]
 
     melspecgrams_shape = shape_list(melspecgrams)
     perm = list(range(len(melspecgrams_shape)))

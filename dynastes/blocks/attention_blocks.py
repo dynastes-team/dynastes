@@ -6,11 +6,11 @@ from functools import partial
 
 import tensorflow as tf
 
-from dynastes.util import cache_context
 from dynastes import activations
 from dynastes.blocks import layer_factory
 from dynastes.layers.base_layers import DynastesBaseLayer
 from dynastes.ops import t2t_common
+from dynastes.util import cache_context
 from dynastes.util.layer_util import call_masked as cm
 from dynastes.util.layer_util import compute_mask_if_possible as compm
 
@@ -50,8 +50,8 @@ class _AttentionBlock1D(DynastesBaseLayer):
                  mask_right=False,
                  add_relative_to_values=False,
                  return_attn_weights=False,
-                 cache_kv = False,
-                 pad_q_to_kv = False,
+                 cache_kv=False,
+                 pad_q_to_kv=False,
                  **kwargs):
         super(_AttentionBlock1D, self).__init__(supports_caching=True, **kwargs)
         self.q_type = q_type
@@ -221,7 +221,6 @@ class AttentionBlock1D(_AttentionBlock1D):
         return {
         }
 
-
     def compute_mask(self, inputs, mask=None):
         if mask is not None:
             q_mask = compm(self.q_layer, inputs[0], mask=mask[0])
@@ -243,6 +242,7 @@ class AttentionBlock1D(_AttentionBlock1D):
                 k, k_mask = cm(self.k_layer, sx, training=training, mask=smask)
                 v, v_mask = cm(self.v_layer, sx, training=training, mask=smask)
                 return k, k_mask, v, v_mask
+
             if self.cache_kv and cache_context.cache_context is not None:
                 with cache_context.SubContext(self.name):
                     if 'cached_kv' in cache_context.cache:

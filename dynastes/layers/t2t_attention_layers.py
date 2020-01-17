@@ -1,9 +1,9 @@
 import tensorflow as tf
 
+from dynastes.layers.base_layers import DynastesBaseLayer
 from dynastes.ops import t2t_attention
 from dynastes.probability.pseudoblocksparse_bijectors import PseudoBlockSparseBijector1D
 from dynastes.util.precision_util import large_compatible_negative
-from dynastes.layers.base_layers import DynastesBaseLayer
 
 
 @tf.keras.utils.register_keras_serializable(package='Dynastes')
