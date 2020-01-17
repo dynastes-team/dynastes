@@ -1,7 +1,3 @@
-from __future__ import absolute_import
-from __future__ import division
-from __future__ import print_function
-
 import tensorflow as tf
 
 from dynastes import activations
@@ -296,8 +292,3 @@ class DepthGroupwiseTimeDelayLayerFake2D(_MultiTimeDelayLayer):
                   'input_dim': self.input_dim}
         base_config = super(DepthGroupwiseTimeDelayLayerFake2D, self).get_config()
         return {**base_config, **config}
-
-
-del absolute_import
-del division
-del print_function

@@ -3,8 +3,7 @@ import math
 import tensorflow as tf
 
 from dynastes.util import t2t_expert_util
-from . import t2t_common
-
+from dynastes.ops import t2t_common
 
 def split_last_dimension(x, n):
     """Reshape x so that the last dimension becomes two dimensions.

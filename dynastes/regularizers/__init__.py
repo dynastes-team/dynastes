@@ -1,7 +1,3 @@
-from __future__ import absolute_import
-from __future__ import division
-from __future__ import print_function
-
 import tensorflow as tf
 from tensorflow.keras.regularizers import Regularizer
 from tensorflow.python.keras import regularizers as tf_regularizers
@@ -61,9 +57,3 @@ def get(regularizer):
         if regularizer == 'orthogonal':
             return Orthogonal()
     return tf_regularizers.get(regularizer)
-
-
-# Cleanup symbols to avoid polluting namespace.
-del absolute_import
-del division
-del print_function

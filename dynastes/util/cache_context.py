@@ -1,5 +1,3 @@
-
-
 class CacheContext:
 
     def __init__(self):
@@ -16,8 +14,10 @@ class CacheContext:
         cache_context = None
         cache = {}
 
+
 cache_context: CacheContext = None
 cache = {}
+
 
 class SubContext:
 

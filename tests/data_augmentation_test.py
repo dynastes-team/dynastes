@@ -18,11 +18,18 @@ class SpecAugmentTest(tf.test.TestCase):
 
         raw_audio = tf.io.read_file(dir_path + '/data/test_wav.wav')
         waves = tf.audio.decode_wav(raw_audio)[0][:20480] * 0.99
-
+        waves.shape
         waves = tf.expand_dims(waves, 0)
 
-        stfts = spectral_ops.waves_to_stfts(waves, n_fft=n_fft, hop_length=hop_length, pad_l=pad, pad_r=pad,
-                                            discard_dc=True, hq=False)
+        print(waves.shape)
+
+        @tf.function
+        def graph_test(waves):
+            stfts = spectral_ops.waves_to_stfts(waves, n_fft=n_fft, hop_length=hop_length, pad_l=pad, pad_r=pad,
+                                                discard_dc=True, hq=False)
+            return stfts
+        stfts = graph_test(waves)
+
 
         stfts_mags = tf.maximum(tf.minimum(tf.abs(stfts), 0.5), -0.5)
         stfts_angles = tf.math.angle(stfts)

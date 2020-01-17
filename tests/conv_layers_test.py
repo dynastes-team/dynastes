@@ -1,6 +1,6 @@
 import numpy as np
 import tensorflow as tf
-
+import dynastes.layers as dynl
 from dynastes.layers.convolutional_layers import DynastesConv1DTranspose, DynastesDepthwiseConv1D, \
     DynastesConv2DTranspose, DynastesConv2D, DynastesDepthwiseConv2D, DynastesConv1D, Upsampling1D, Upsampling2D
 from dynastes.util.test_utils import layer_test
