@@ -47,7 +47,7 @@ def sparse_warp(mel_spectrogram, time_warping_para: float = 80.):
     return warped_image
 
 
-def frequency_masking(mel_spectrogram, frequency_masking_para: int = 100, frequency_mask_num: int = 1):
+def frequency_masking(mel_spectrogram, frequency_masking_para: int = 100, frequency_mask_num: int = 1, roll_mask=None):
     """Spec augmentation Calculation Function.
     'SpecAugment' have 3 steps for audio data augmentation.
     first step is time warping using Tensorflow's image_sparse_warp function.
@@ -77,11 +77,15 @@ def frequency_masking(mel_spectrogram, frequency_masking_para: int = 100, freque
                           tf.zeros(shape=(1, n, f, 1)),
                           tf.ones(shape=(1, n, f0, 1)),
                           ), 2)
-        mel_spectrogram = mel_spectrogram * mask
+        if roll_mask is not None:
+            roll_mel_spectrograms = tf.roll(mel_spectrograms, roll_mask, axis=0)
+            mel_spectrograms = (mel_spectrograms * mask) + (roll_mel_spectrograms * (1-mask))
+        else:
+            mel_spectrograms = mel_spectrograms * mask
     return tf.cast(mel_spectrogram, dtype=tf.float32)
 
 
-def time_masking(mel_spectrograms, time_masking_para: int = 27, time_mask_num: int = 1):
+def time_masking(mel_spectrograms, time_masking_para: int = 27, time_mask_num: int = 1, roll_mask=None):
     """Spec augmentation Calculation Function.
     'SpecAugment' have 3 steps for audio data augmentation.
     first step is time warping using Tensorflow's image_sparse_warp function.
@@ -109,7 +113,12 @@ def time_masking(mel_spectrograms, time_masking_para: int = 27, time_mask_num: i
                           tf.zeros(shape=(1, t, n_mels, 1)),
                           tf.ones(shape=(1, t0, n_mels, 1)),
                           ), 1)
-        mel_spectrograms = mel_spectrograms * mask
+        if roll_mask is not None:
+            roll_mel_spectrograms = tf.roll(mel_spectrograms, roll_mask, axis=0)
+            mel_spectrograms = (mel_spectrograms * mask) + (roll_mel_spectrograms * (1-mask))
+        else:
+            mel_spectrograms = mel_spectrograms * mask
+
     return tf.cast(mel_spectrograms, dtype=tf.float32)
 
 
@@ -119,7 +128,8 @@ def spec_augment(mel_spectrograms: tf.Tensor,
                  time_mask_num: int = 1,
                  frequency_masking_para: int = 100,
                  frequency_mask_num: int = 1,
-                 normalize=True):
+                 normalize=True,
+                 roll_mask=None):
     """
     Args:
       mel_spectrograms(tf.Tensor): Tensor of log magnitudes and possibly instantaneous frequencies / phases,
@@ -134,6 +144,7 @@ def spec_augment(mel_spectrograms: tf.Tensor,
         If none, default = 100 for LibriSpeech.
       frequency_mask_num(int): number of frequency masking lines, "m_F".
         If none, default = 1 for LibriSpeech.
+      roll_mask(int): if not none, replace masked indices with batch rolled by [roll_mask] steps
     Returns:
       mel_spectrograms: Tensor of log magnitudes and possibly instantaneous frequencies,
             shape [..., time, freq, ch*(1/2)], mel scaling of frequencies.
@@ -147,12 +158,14 @@ def spec_augment(mel_spectrograms: tf.Tensor,
 
     warped_frequency_spectrogram = frequency_masking(warped_mel_spectrogram,
                                                      frequency_masking_para=frequency_masking_para,
-                                                     frequency_mask_num=frequency_mask_num)
+                                                     frequency_mask_num=frequency_mask_num,
+                                                     roll_mask=roll_mask)
 
-    warped_frequency_time_sepctrogram = time_masking(warped_frequency_spectrogram,
+    warped_frequency_time_spectrogram = time_masking(warped_frequency_spectrogram,
                                                      time_masking_para=time_masking_para,
-                                                     time_mask_num=time_mask_num)
+                                                     time_mask_num=time_mask_num,
+                                                     roll_mask=roll_mask)
 
     if normalize:
-        warped_frequency_time_sepctrogram = (warped_frequency_time_sepctrogram * std) + mean
-    return warped_frequency_time_sepctrogram
+        warped_frequency_time_spectrogram = (warped_frequency_time_spectrogram * std) + mean
+    return warped_frequency_time_spectrogram
