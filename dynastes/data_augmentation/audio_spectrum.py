@@ -4,13 +4,13 @@ from tensorflow_addons.image import sparse_image_warp
 from dynastes.ops.t2t_common import shape_list
 
 
-def sparse_warp(mel_spectrogram, time_warping_para: float = 80.):
+def sparse_warp(mel_spectrograms, time_warping_para: float = 80.):
     """Spec augmentation Calculation Function.
     'SpecAugment' have 3 steps for audio data augmentation.
     first step is time warping using Tensorflow's image_sparse_warp function.
     Second step is frequency masking, last step is time masking.
     Args:
-      mel_spectrogram: Tensor of log magnitudes and possibly instantaneous frequencies,
+      mel_spectrograms: Tensor of log magnitudes and possibly instantaneous frequencies,
             shape [..., time, freq, ch*(1/2)], mel scaling of frequencies.
       time_warping_para(float): Augmentation parameter, "time warp parameter W".
         If none, default = 80 for LibriSpeech.
@@ -19,7 +19,7 @@ def sparse_warp(mel_spectrogram, time_warping_para: float = 80.):
             shape [..., time, freq, ch*(1/2)], mel scaling of frequencies.
     """
 
-    fbank_size = shape_list(mel_spectrogram)
+    fbank_size = shape_list(mel_spectrograms)
     _, n, n_mels, _ = fbank_size
     # Step 1 : Time warping
     # Image warping control point setting.
@@ -41,19 +41,19 @@ def sparse_warp(mel_spectrogram, time_warping_para: float = 80.):
     # warp
     source_control_point_locations = tf.expand_dims(src_ctr_pts, 0)  # (1, v//2, 2)
     dest_control_point_locations = tf.expand_dims(dest_ctr_pts, 0)  # (1, v//2, 2)
-    warped_image, _ = sparse_image_warp(mel_spectrogram,
+    warped_image, _ = sparse_image_warp(mel_spectrograms,
                                         source_control_point_locations,
                                         dest_control_point_locations)
     return warped_image
 
 
-def frequency_masking(mel_spectrogram, frequency_masking_para: int = 100, frequency_mask_num: int = 1, roll_mask=None):
+def frequency_masking(mel_spectrograms, frequency_masking_para: int = 100, frequency_mask_num: int = 1, roll_mask=None):
     """Spec augmentation Calculation Function.
     'SpecAugment' have 3 steps for audio data augmentation.
     first step is time warping using Tensorflow's image_sparse_warp function.
     Second step is frequency masking, last step is time masking.
     Args:
-      mel_spectrogram: Tensor of log magnitudes and possibly instantaneous frequencies,
+      mel_spectrograms: Tensor of log magnitudes and possibly instantaneous frequencies,
             shape [..., time, freq, ch*(1/2)], mel scaling of frequencies.
       frequency_masking_para(int): Augmentation parameter, "frequency mask parameter F"
         If none, default = 100 for LibriSpeech.
@@ -64,7 +64,7 @@ def frequency_masking(mel_spectrogram, frequency_masking_para: int = 100, freque
             shape [..., time, freq, ch*(1/2)], mel scaling of frequencies.
     """
     # Step 2 : Frequency masking
-    fbank_size = shape_list(mel_spectrogram)
+    fbank_size = shape_list(mel_spectrograms)
     _, n, n_mels, _ = fbank_size
     frequency_masking_para = min(frequency_masking_para, n_mels // 2)
 
@@ -82,7 +82,7 @@ def frequency_masking(mel_spectrogram, frequency_masking_para: int = 100, freque
             mel_spectrograms = (mel_spectrograms * mask) + (roll_mel_spectrograms * (1-mask))
         else:
             mel_spectrograms = mel_spectrograms * mask
-    return tf.cast(mel_spectrogram, dtype=tf.float32)
+    return tf.cast(mel_spectrograms, dtype=tf.float32)
 
 
 def time_masking(mel_spectrograms, time_masking_para: int = 27, time_mask_num: int = 1, roll_mask=None):
