@@ -178,7 +178,7 @@ class AdaptiveInstanceNormalization(AdaptiveGroupNormalization):
 
     def __init__(self,
                  **kwargs):
-        kwargs["groups"] = -1
+        kwargs["n_groups"] = -1
         super(AdaptiveInstanceNormalization, self).__init__(**kwargs)
 
 
@@ -187,7 +187,7 @@ class AdaptiveLayerNormalization(AdaptiveGroupNormalization):
 
     def __init__(self,
                  **kwargs):
-        kwargs["groups"] = 1
+        kwargs["n_groups"] = 1
         super(AdaptiveLayerNormalization, self).__init__(**kwargs)
 
 
