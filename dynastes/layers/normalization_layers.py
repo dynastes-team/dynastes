@@ -247,10 +247,10 @@ class AdaptiveInstanceNormalization(AdaptiveNormalization):
     """
 
     def __init__(self,
-                 axes=(1,2),
+                 axes=(1, 2),
                  epsilon=1e-8,
                  **kwargs):
-        super(AdaptiveNormalization, self).__init__(
+        super(AdaptiveInstanceNormalization, self).__init__(
             InstanceNormalization(axes=axes, epsilon=epsilon), **kwargs)
         self.epsilon = epsilon
         self.axes = axes
