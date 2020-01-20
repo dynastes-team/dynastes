@@ -77,6 +77,7 @@ class PoolNormalization2D(DynastesBaseLayer):
         return input_shape
 
 
+@tf.keras.utils.register_keras_serializable(package='Dynastes')
 class InstanceNormalization(DynastesBaseLayer):
     def __init__(self,
                  epsilon=1e-8,
@@ -108,6 +109,7 @@ class InstanceNormalization(DynastesBaseLayer):
         return input_shape
 
 
+@tf.keras.utils.register_keras_serializable(package='Dynastes')
 class InstanceNormalization2D(InstanceNormalization):
 
     def __init__(self,
@@ -126,6 +128,7 @@ class InstanceNormalization2D(InstanceNormalization):
         return f_config
 
 
+@tf.keras.utils.register_keras_serializable(package='Dynastes')
 class InstanceNormalization1D(InstanceNormalization):
 
     def __init__(self,
@@ -228,7 +231,7 @@ class AdaptiveGroupNormalization(AdaptiveNormalization):
 
 
 @tf.keras.utils.register_keras_serializable(package='Dynastes')
-class AdaptiveInstanceNormalization(AdaptiveGroupNormalization):
+class AdaptiveInstanceNormalization(AdaptiveNormalization):
     """
     Introduced in:
     Arbitrary Style Transfer in Real-time with Adaptive Instance Normalization
@@ -244,9 +247,21 @@ class AdaptiveInstanceNormalization(AdaptiveGroupNormalization):
     """
 
     def __init__(self,
+                 axes=(1,2),
+                 epsilon=1e-8,
                  **kwargs):
-        kwargs["n_groups"] = -1
-        super(AdaptiveInstanceNormalization, self).__init__(**kwargs)
+        super(AdaptiveNormalization, self).__init__(
+            InstanceNormalization(axes=axes, epsilon=epsilon), **kwargs)
+        self.epsilon = epsilon
+        self.axes = axes
+
+    def get_config(self):
+        config = {
+            'epsilon': self.epsilon,
+            'axes': self.axes,
+        }
+        base_config = super(AdaptiveInstanceNormalization, self).get_config()
+        return {**base_config, **config}
 
 
 @tf.keras.utils.register_keras_serializable(package='Dynastes')
