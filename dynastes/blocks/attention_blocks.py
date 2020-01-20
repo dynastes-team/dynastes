@@ -53,7 +53,8 @@ class _AttentionBlock1D(DynastesBaseLayer):
                  cache_kv=False,
                  pad_q_to_kv=False,
                  **kwargs):
-        super(_AttentionBlock1D, self).__init__(supports_caching=True, **kwargs)
+        kwargs['supports_caching'] = True
+        super(_AttentionBlock1D, self).__init__(**kwargs)
         self.q_type = q_type
         self.activation = activations.get(activation)
         self.use_bias = use_bias
