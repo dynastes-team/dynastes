@@ -76,6 +76,7 @@ class DynastesBaseLayer(tfkl.Layer):
                  wlrmul=1.,
                  wgain=np.sqrt(2),
                  supports_caching=False,
+                 mask_threshold=0.5,
                  **kwargs):
         self.weights_dict = {}
         self.initializers, self.regularizers, self.constraints, self.normalizers = _get_regularizers_from_keywords(
@@ -84,6 +85,7 @@ class DynastesBaseLayer(tfkl.Layer):
         self.lrmul = wlrmul
         self.gain = wgain
         self.supports_caching = supports_caching
+        self.mask_threshold = mask_threshold
         super(DynastesBaseLayer, self).__init__(
             trainable=trainable,
             name=name,
@@ -170,6 +172,8 @@ class DynastesBaseLayer(tfkl.Layer):
             'use_wscale': self.use_wscale,
             'wlrmul': self.lrmul,
             'wgain': self.gain,
+            'supports_caching': self.supports_caching,
+            'mask_threshold': self.mask_threshold,
         }
         for name, initializer in self.initializers.items():
             config[name + '_initializer'] = initializers.serialize(initializer)

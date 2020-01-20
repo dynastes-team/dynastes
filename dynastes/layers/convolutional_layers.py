@@ -13,6 +13,7 @@ from tensorflow.python.ops import nn_ops
 from dynastes import regularizers
 from dynastes.layers.base_layers import DynastesBaseLayer, ActivatedKernelBiasBaseLayer
 from dynastes.ops.t2t_common import shape_list
+from dynastes.ops import scale_ops
 
 
 class _Conv(ActivatedKernelBiasBaseLayer, abc.ABC):
@@ -70,7 +71,6 @@ class _Conv(ActivatedKernelBiasBaseLayer, abc.ABC):
                  strides: object = 1,
                  padding: object = 'valid',
                  dilation_rate: object = 1,
-                 mask_threshold: float = 0.51,
                  activity_regularizer: object = None,
                  input_spec=None,
                  trainable: object = True,
@@ -93,7 +93,6 @@ class _Conv(ActivatedKernelBiasBaseLayer, abc.ABC):
         if input_spec is None:
             input_spec = InputSpec(ndim=self.rank + 2)
         self.input_spec = input_spec
-        self.mask_threshold = mask_threshold
 
     def build(self, input_shape):
         input_shape = tensor_shape.TensorShape(input_shape)
@@ -145,7 +144,7 @@ class _Conv(ActivatedKernelBiasBaseLayer, abc.ABC):
                 mask_kernel = tf.reduce_max(tf.abs(mask_kernel), axis=-2, keepdims=True)
                 mask_kernel = tf.cast(mask_kernel, tf.float16)
                 mask = self._mask_convolution_op(mask, mask_kernel)
-                mask = mask > self.mask_threshold
+                mask = mask >= self.mask_threshold
                 mask = tf.squeeze(mask, axis=-1)
             return mask
         return None
@@ -179,7 +178,6 @@ class _Conv(ActivatedKernelBiasBaseLayer, abc.ABC):
             'strides': self.strides,
             'padding': self.padding,
             'dilation_rate': self.dilation_rate,
-            'mask_threshold': self.mask_threshold
         }
         base_config = super(_Conv, self).get_config()
         return {**base_config, **config}
@@ -394,7 +392,7 @@ class DynastesConv2D(_Conv):
                 mask = 1 - tf.expand_dims(mask, axis=-1)
                 inputs = array_ops.pad(inputs, self._compute_causal_padding())
                 mask = array_ops.pad(mask, self._compute_causal_padding())
-                mask = mask > self.mask_threshold
+                mask = mask >= self.mask_threshold
                 mask = tf.squeeze(mask, axis=-1)
         return super(DynastesConv2D, self).compute_mask(inputs, mask)
 
@@ -496,7 +494,7 @@ class DynastesConv3D(_Conv):
                 mask = 1 - tf.expand_dims(mask, axis=-1)
                 inputs = array_ops.pad(inputs, self._compute_causal_padding())
                 mask = array_ops.pad(mask, self._compute_causal_padding())
-                mask = mask > self.mask_threshold
+                mask = mask >= self.mask_threshold
                 mask = tf.squeeze(mask, axis=-1)
         return super(DynastesConv3D, self).compute_mask(inputs, mask)
 
@@ -929,7 +927,7 @@ class DynastesDepthwiseConv2D(DynastesConv2D):
                     padding=padding,
                     dilation_rate=self.dilation_rate,
                     data_format=self.data_format)
-                mask = mask > self.mask_threshold
+                mask = mask >= self.mask_threshold
                 mask = tf.squeeze(mask, axis=-1)
                 mask = tf.cast(mask, tf.bool)
             return mask
@@ -1119,19 +1117,19 @@ class Upsampling2D(DynastesBaseLayer):
         self.method = method
 
     def _resize(self, x):
-        x_shape = shape_list(x)
-        ret_h = x_shape[1] * self.strides[0]
-        ret_w = x_shape[2] * self.strides[1]
-        return tf.image.resize(x, size=[ret_h, ret_w], method=self.method, antialias=True)
+        return scale_ops.upscale2d(x, strides=self.strides, method=self.method)
+
+    def _resize_cheap(self, x):
+        return scale_ops.upscale2d(x, strides=self.strides, method='nearest', antialias=False)
 
     def compute_mask(self, inputs, mask=None):
         if mask is not None:
             mask = tf.cast(mask, tf.float16)
             mask = tf.expand_dims(mask, axis=-1)
 
-            mask = self._resize(mask)
+            mask = self._resize_cheap(mask)
             mask = tf.squeeze(mask, axis=-1)
-            mask = tf.logical_not(mask < 0.51)
+            mask = mask >= self.mask_threshold
         return mask
 
     def call(self, inputs, training=None, mask=None):
@@ -1196,20 +1194,21 @@ class Downsampling2D(DynastesBaseLayer):
         self.strides = conv_utils.normalize_tuple(strides, 2, 'strides')
         self.method = method
 
+
     def _resize(self, x):
-        x_shape = shape_list(x)
-        ret_h = x_shape[1] // self.strides[0]
-        ret_w = x_shape[2] // self.strides[1]
-        return tf.image.resize(x, size=[ret_h, ret_w], method=self.method, antialias=True)
+        return scale_ops.downscale2d(x, strides=self.strides, method=self.method)
+
+    def _resize_cheap(self, x):
+        return scale_ops.downscale2d(x, strides=self.strides, method='nearest', antialias=False)
 
     def compute_mask(self, inputs, mask=None):
         if mask is not None:
             mask = tf.cast(mask, tf.float16)
             mask = tf.expand_dims(mask, axis=-1)
 
-            mask = self._resize(mask)
+            mask = self._resize_cheap(mask)
             mask = tf.squeeze(mask, axis=-1)
-            mask = tf.logical_not(mask < 0.51)
+            mask = mask >= self.mask_threshold
         return mask
 
     def call(self, inputs, training=None, mask=None):
