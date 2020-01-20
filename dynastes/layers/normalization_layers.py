@@ -77,6 +77,73 @@ class PoolNormalization2D(DynastesBaseLayer):
         return input_shape
 
 
+class InstanceNormalization(DynastesBaseLayer):
+    def __init__(self,
+                 epsilon=1e-8,
+                 axes=(1, 2),
+                 **kwargs):
+        super(InstanceNormalization, self).__init__(**kwargs)
+        self.epsilon = epsilon
+        self.axes = axes
+
+    def call(self, inputs, **kwargs):
+        x = inputs
+        orig_dtype = x.dtype
+        x = tf.cast(x, tf.float32)
+        x -= tf.reduce_mean(x, axis=self.axes, keepdims=True)
+        epsilon = tf.constant(self.epsilon, dtype=x.dtype, name='epsilon')
+        x *= tf.math.rsqrt(tf.reduce_mean(tf.square(x), axis=self.axes, keepdims=True) + epsilon)
+        x = tf.cast(x, orig_dtype)
+        return x
+
+    def get_config(self):
+        config = {
+            'epsilon': self.epsilon,
+            'axes': self.axes,
+        }
+        base_config = super(InstanceNormalization, self).get_config()
+        return {**base_config, **config}
+
+    def compute_output_shape(self, input_shape):
+        return input_shape
+
+
+class InstanceNormalization2D(InstanceNormalization):
+
+    def __init__(self,
+                 epsilon=1e-8,
+                 **kwargs):
+        kwargs['axes'] = (1, 2)
+        super(InstanceNormalization2D, self).__init__(epsilon=epsilon, **kwargs)
+
+    def get_config(self):
+        config = {
+            'epsilon': self.epsilon,
+        }
+        base_config = super(InstanceNormalization2D, self).get_config()
+        f_config = {**base_config, **config}
+        f_config.pop('axes')
+        return f_config
+
+
+class InstanceNormalization1D(InstanceNormalization):
+
+    def __init__(self,
+                 epsilon=1e-8,
+                 **kwargs):
+        kwargs['axes'] = (1,)
+        super(InstanceNormalization1D, self).__init__(epsilon=epsilon, **kwargs)
+
+    def get_config(self):
+        config = {
+            'epsilon': self.epsilon,
+        }
+        base_config = super(InstanceNormalization1D, self).get_config()
+        f_config = {**base_config, **config}
+        f_config.pop('axes')
+        return f_config
+
+
 @tf.keras.utils.register_keras_serializable(package='Dynastes')
 class MultiNormalization(DynastesBaseLayer):
     def __init__(self,
