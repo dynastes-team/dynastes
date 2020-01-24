@@ -3,7 +3,7 @@ from __future__ import division
 from __future__ import print_function
 
 import threading
-
+import tensorflow as tf
 import numpy as np
 from tensorflow.python import keras
 from tensorflow.python.eager import context
@@ -69,9 +69,13 @@ def layer_test(layer_cls, kwargs=None, input_shape=None, input_dtype=None,
             if e is None:
                 input_data_shape[i] = np.random.randint(1, 4)
         input_data = 10 * np.random.random(input_data_shape)
-        if input_dtype[:5] == 'float':
-            input_data -= 0.5
-        input_data = input_data.astype(input_dtype)
+        if input_dtype in [tf.complex64, tf.complex128]:
+            input_data = tf.complex(input_data, tf.convert_to_tensor(0.0, dtype=input_data.dtype))
+            input_data = tf.cast(input_data, input_dtype).numpy()
+        else:
+            if input_dtype == 'float':
+                input_data -= 0.5
+            input_data = input_data.astype(input_dtype)
     elif input_shape is None:
         input_shape = input_data.shape
     if input_dtype is None:

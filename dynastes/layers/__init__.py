@@ -24,6 +24,8 @@ from .normalization_layers import InstanceNormalization2D
 from .normalization_layers import MultiNormalization
 from .normalization_layers import PoolNormalization2D
 from .random_layers import StatelessRandomNormalLike
+from .spectral_layers import STFT2MelspectrogramLayer
+from .spectral_layers import Wave2STFTLayer
 from .t2t_attention_layers import AddTimingSignalLayer1D
 from .t2t_attention_layers import Attention1D
 from .t2t_attention_layers import Attention2D
