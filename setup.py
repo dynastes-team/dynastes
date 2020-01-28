@@ -18,7 +18,7 @@ def get_requirements_dynamic():
         requires.append('tensorflow>=2.1.0')
     try:
         import tensorflow_probability
-        if parse_ver_as_float(tensorflow_probability.__version__) < 0.8:
+        if parse_ver_as_float(tensorflow_probability.__version__) < 0.9:
             raise ImportError
     except:
         print('Warning! TensorFlow probability is missing!')
