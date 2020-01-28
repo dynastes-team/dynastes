@@ -828,7 +828,7 @@ def masked_local_attention_1d(q,
     v = tf.pad(v, padding)
     if mask is not None:
         # tf.get_logger().warning('Use of mask and/or causality tensor in masked_local_attention_1d is experimental')
-        mask = tf.reshape(mask, [batch, 1, length, 1])
+        mask = tf.reshape(mask, [batch, 1, original_length, 1])
         mask = tf.pad(mask, padding)
         if mask_right or causality_tensor is not None:
             causality_tensor = tf.reshape(causality_tensor, [ct_batch, 1, length, 1])

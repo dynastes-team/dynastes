@@ -10,7 +10,7 @@ except:
     print('WARNING! TensorFlow Addons are missing!')
     tfal = None
 
-from dynastes.layers.base_layers import DynastesBaseLayer
+from dynastes.layers.base_layers import DynastesBaseLayer, ActivatedKernelBiasBaseLayer
 from dynastes.layers.conditioning_layers import FeaturewiseLinearModulation, ModulationLayer
 from dynastes.ops.t2t_common import shape_list
 
@@ -78,14 +78,20 @@ class PoolNormalization2D(DynastesBaseLayer):
 
 
 @tf.keras.utils.register_keras_serializable(package='Dynastes')
-class InstanceNormalization(DynastesBaseLayer):
+class InstanceNormalization(ActivatedKernelBiasBaseLayer):
     def __init__(self,
                  epsilon=1e-8,
                  axes=(1, 2),
+                 scale=False,
+                 use_bias=False,
                  **kwargs):
-        super(InstanceNormalization, self).__init__(**kwargs)
+        super(InstanceNormalization, self).__init__(use_bias=use_bias, **kwargs)
         self.epsilon = epsilon
         self.axes = axes
+        self.scale = scale
+
+    def build(self, input_shape):
+        self.build_kernel(shape=[input_shape[-1]])
 
     def call(self, inputs, **kwargs):
         x = inputs
@@ -101,6 +107,7 @@ class InstanceNormalization(DynastesBaseLayer):
         config = {
             'epsilon': self.epsilon,
             'axes': self.axes,
+            'scale': self.scale
         }
         base_config = super(InstanceNormalization, self).get_config()
         return {**base_config, **config}
@@ -183,6 +190,12 @@ class ModulatedNormalization(DynastesBaseLayer, abc.ABC):
         self.modulation_layer.build(input_shape)
         self.norm_layer.build(input_shape[0])
         super(ModulatedNormalization, self).build(input_shape)
+
+    def compute_mask(self, inputs, mask=None):
+        if mask is not None:
+            if type(mask) == list:
+                return mask[0]
+            return mask
 
     def call(self, inputs, training=None):
         orig_dtype = inputs[0].dtype
