@@ -831,8 +831,8 @@ def masked_local_attention_1d(q,
         mask = tf.reshape(mask, [batch, 1, original_length, 1])
         mask = tf.pad(mask, padding)
         if mask_right or causality_tensor is not None:
-            causality_tensor = tf.reshape(causality_tensor, [ct_batch, 1, length, 1])
-            causality_tensor = tf.pad(causality_tensor, padding, constant_values=length + 1)
+            causality_tensor = tf.reshape(causality_tensor, [ct_batch, 1, original_length, 1])
+            causality_tensor = tf.pad(causality_tensor, padding, constant_values=original_length + 1)
     if isinstance(length, int) and isinstance(block_length, int):
         num_blocks = length // block_length
     else:

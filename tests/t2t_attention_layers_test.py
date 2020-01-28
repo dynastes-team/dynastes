@@ -33,7 +33,20 @@ class T2TAttention1DTest(tf.test.TestCase):
         s = 2
 
         layers = [
-
+            (
+                'Local Masked',
+                Attention1D(num_heads=num_heads, self_attention=True, local=True, masked=True, block_length=8,
+                            mask_right=True,
+                            filter_width=6),
+                {'self': True, 'steps_q': 57, 'steps_kv': 57, 'dim_q': dim, 'dim_k': dim, 'dim_v': dim}),
+            (
+                'Local Multiquery Masked',
+                Attention1D(num_heads=num_heads, multiquery_attention=True, self_attention=True, local=True,
+                            mask_right=True,
+                            masked=True, block_length=8,
+                            filter_width=6),
+                {'self': True, 'steps_q': 57, 'steps_kv': 57, 'dim_q': dim_mq, 'dim_k': dim_mq // num_heads,
+                 'dim_v': dim_mq // num_heads}),
             (
                 'PsuedoBlockSparse Masked',
                 PseudoBlockSparseAttention1D(num_heads=num_heads, block_size=8,
@@ -48,18 +61,7 @@ class T2TAttention1DTest(tf.test.TestCase):
                                              mask_right=True),
                 {'self': True, 'steps_q': 64, 'steps_kv': 64, 'dim_q': dim_mq, 'dim_k': dim_mq // num_heads,
                  'dim_v': dim_mq // num_heads}),
-            (
-                'Local Masked',
-                Attention1D(num_heads=num_heads, self_attention=True, local=True, masked=True, block_length=8,
-                            filter_width=6),
-                {'self': True, 'steps_q': 64, 'steps_kv': 64, 'dim_q': dim, 'dim_k': dim, 'dim_v': dim}),
-            (
-                'Local Multiquery Masked',
-                Attention1D(num_heads=num_heads, multiquery_attention=True, self_attention=True, local=True,
-                            masked=True, block_length=8,
-                            filter_width=6),
-                {'self': True, 'steps_q': 64, 'steps_kv': 64, 'dim_q': dim_mq, 'dim_k': dim_mq // num_heads,
-                 'dim_v': dim_mq // num_heads}),
+
             (
                 'Sparse Unmasked',
                 Attention1D(num_heads=num_heads, self_attention=True, sparse=True, lsh_bucket_length=3,
