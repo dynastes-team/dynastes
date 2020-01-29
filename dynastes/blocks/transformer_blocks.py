@@ -332,7 +332,7 @@ class DecoderBlock(tfkl.Layer):
         except:
             return None
 
-    def _call(self, inputs, training=None, mask=None, cache=None, decode_loop_step=None):
+    def _call(self, inputs, training=None, mask=None, cache=None, decode_loop_step=None, pad_q_to_kv=False):
         x, enc_in = inputs
         _x = x
         if mask is not None:
@@ -348,7 +348,7 @@ class DecoderBlock(tfkl.Layer):
         else:
             sa_cache = None
         x, x_mask = cm(self.sa_layer, x, training=training, mask=x_mask, cache=sa_cache,
-                       decode_loop_step=decode_loop_step)
+                       decode_loop_step=decode_loop_step, pad_q_to_kv=pad_q_to_kv)
         res, res_mask = cm(self.mha_skip_adapt, _x, training=training, mask=_x_mask)
         if x_mask is None:
             n_mask = res_mask
@@ -393,11 +393,11 @@ class DecoderBlock(tfkl.Layer):
 
         return x, mask
 
-    def call_masked(self, inputs, training=None, mask=None, cache=None, decode_loop_step=None):
-        return self._call(inputs, training=training, mask=mask, cache=cache, decode_loop_step=decode_loop_step)
+    def call_masked(self, inputs, training=None, mask=None, cache=None, decode_loop_step=None, pad_q_to_kv=False):
+        return self._call(inputs, training=training, mask=mask, cache=cache, decode_loop_step=decode_loop_step, pad_q_to_kv=pad_q_to_kv)
 
-    def call(self, inputs, training=None, mask=None, cache=None, decode_loop_step=None):
-        x, _ = self._call(inputs, training=training, mask=mask, cache=cache, decode_loop_step=decode_loop_step)
+    def call(self, inputs, training=None, mask=None, cache=None, decode_loop_step=None, pad_q_to_kv=False):
+        x, _ = self._call(inputs, training=training, mask=mask, cache=cache, decode_loop_step=decode_loop_step, pad_q_to_kv=pad_q_to_kv)
         return x
 
     def compute_mask(self, inputs, mask=None):
@@ -441,7 +441,7 @@ class DecoderBlockStack(tfkl.Layer):
                          **kwargs)
         return x, mask
 
-    def call(self, inputs, training=None, mask=None, cache=None, decode_loop_step=None, **kwargs):
+    def call(self, inputs, training=None, mask=None, cache=None, decode_loop_step=None, pad_q_to_kv=False, **kwargs):
         x, enc = inputs
         for i, block in enumerate(self.blocks):
             if cache is not None:
@@ -449,6 +449,7 @@ class DecoderBlockStack(tfkl.Layer):
             else:
                 block_cache = None
             x = block((x, enc), training=training, mask=mask, cache=block_cache, decode_loop_step=decode_loop_step,
+                      pad_q_to_kv=pad_q_to_kv,
                       **kwargs)
         return x
 

@@ -51,7 +51,6 @@ class _AttentionBlock1D(DynastesBaseLayer):
                  add_relative_to_values=False,
                  return_attn_weights=False,
                  cache_kv=False,
-                 pad_q_to_kv=False,
                  **kwargs):
         kwargs['supports_caching'] = True
         super(_AttentionBlock1D, self).__init__(**kwargs)
@@ -94,7 +93,6 @@ class _AttentionBlock1D(DynastesBaseLayer):
         self.return_attn_weights = return_attn_weights
         self.supports_masking = True
         self.cache_kv = cache_kv
-        self.pad_q_to_kv = pad_q_to_kv
         conv_partial = partial(layer_factory.get_1d_layer, kernel_size=kernel_size,
                                grouped=grouped,
                                group_size=group_size,
@@ -200,7 +198,6 @@ class _AttentionBlock1D(DynastesBaseLayer):
             'mask_right': self.mask_right,
             'add_relative_to_values': self.add_relative_to_values,
             'cache_kv': self.cache_kv,
-            'pad_q_to_kv': self.pad_q_to_kv
         }
         base_config = super(_AttentionBlock1D, self).get_config()
         return {**base_config, **config}
@@ -299,7 +296,7 @@ class SelfAttentionBlock1D(AttentionBlock1D):
             return q_mask
         return mask
 
-    def call(self, inputs, training=None, mask=None, cache=None, decode_loop_step=None):
+    def call(self, inputs, training=None, mask=None, cache=None, decode_loop_step=None, pad_q_to_kv=False):
         x = inputs
         q, q_mask = cm(self.q_layer, x, training=training, mask=mask)
         k, k_mask = cm(self.k_layer, x, training=training, mask=mask)
@@ -348,7 +345,7 @@ class SelfAttentionBlock1D(AttentionBlock1D):
         q_shape = t2t_common.shape_list(q)
         kv_shape = t2t_common.shape_list(k)
 
-        if self.pad_q_to_kv:
+        if pad_q_to_kv:
             if q_shape[1] != kv_shape[1]:
                 if decode_loop_step is not None:
                     q_prepad = decode_loop_step
@@ -377,7 +374,7 @@ class SelfAttentionBlock1D(AttentionBlock1D):
             mask = [q_mask, tf.logical_and(k_mask, v_mask)]
         x, weights = self.attention_layer([q, k, v], mask=mask, training=training)
         x_shape = t2t_common.shape_list(x)
-        if self.pad_q_to_kv:
+        if pad_q_to_kv:
             if q_shape[1] != kv_shape[1]:
                 if decode_loop_step is not None:
                     x = tf.slice(x, [0, q_prepad, 0], [x_shape[0], 1, x_shape[2]])
