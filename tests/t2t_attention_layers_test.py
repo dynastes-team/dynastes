@@ -14,7 +14,7 @@ def _test_grads(testCase: tf.test.TestCase, func, input):
     _, grads = tf.test.compute_gradient(func, input)
     for grad in grads:
         testCase.assertNotAllClose(grad, np.zeros_like(grad))
-        testCase.assertAllInRange(grad, -400., 400)
+        testCase.assertAllInRange(grad, -1900., 1900.)
 
 
 to_tensor = tf.convert_to_tensor
