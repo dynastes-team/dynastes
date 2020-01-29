@@ -2,6 +2,7 @@ import tensorflow as tf
 
 from dynastes.layers.base_layers import DynastesBaseLayer
 from dynastes.ops import t2t_attention
+from dynastes.ops.t2t_common import shape_list
 from dynastes.probability.pseudoblocksparse_bijectors import PseudoBlockSparseBijector1D
 from dynastes.util.precision_util import large_compatible_negative
 
@@ -243,11 +244,15 @@ class Attention1D(DynastesBaseLayer):
         else:
             raise ValueError()
 
+        q_shape = shape_list(q)
+
         if mask is not None and self.attention_type != 'masked_local_attention_1d':
+            mask_0_shape = shape_list(mask[0])
+            mask_1_shape = shape_list(mask[1])
             q_mask = (1. - tf.cast(mask[0], tf.float32))[:, tf.newaxis, :, tf.newaxis]
-            if self.mask_right:
-                assert mask[0].shape[1] == mask[1].shape[1] or mask[0].shape[1] == 1
-                look_ahead_mask = self._create_look_ahead_mask(q.shape[1])
+            if self.mask_right and q_shape[1] is not None:
+                assert mask_0_shape[1] == mask_1_shape[1] or mask_0_shape[1] == 1
+                look_ahead_mask = self._create_look_ahead_mask(q_shape[1])
                 q_mask = tf.maximum(q_mask, look_ahead_mask)
             kv_mask = (1. - tf.cast(mask[1], tf.float32))[:, tf.newaxis, tf.newaxis, :]
             c_mask = tf.maximum(q_mask, kv_mask)
@@ -256,7 +261,7 @@ class Attention1D(DynastesBaseLayer):
             bias = c_mask * large_compatible_negative(k.dtype)
         else:
             if self.attention_type != 'masked_local_attention_1d' and self.mask_right:
-                look_ahead_mask = self._create_look_ahead_mask(q.shape[1])
+                look_ahead_mask = self._create_look_ahead_mask(q_shape[1])
                 bias = look_ahead_mask * large_compatible_negative(k.dtype)
             else:
                 bias = None

@@ -92,7 +92,7 @@ class FeaturewiseLinearModulation(ModulationLayer):
         mean_var_shape = shape_list(mean_var)
         x_shape = shape_list(x)
         if len(mean_var_shape) != len(x_shape):
-            mean_var = tf.reshape(mean_var, [-1, ] + ([1] * (len(x.shape) - 2)) + [2, x.shape[-1]])
+            mean_var = tf.reshape(mean_var, [-1, ] + ([1] * (len(x.shape) - 2)) + [2, x_shape[-1]])
         else:
             mean_var_shape_npa = np.array(mean_var_shape[1:-1])
             x_shape_npa = np.array(x_shape[1:-1])
@@ -106,8 +106,9 @@ class FeaturewiseLinearModulation(ModulationLayer):
                                                           antialias=self.antialias), axis=1)
                 else:
                     raise ValueError('Only works for 1D or 2D tensors')
+
             shape = [mean_var_shape[0]] + np.where(mean_var_shape_npa == 1, mean_var_shape_npa,
-                                                   x_shape_npa).tolist() + [2, x.shape[-1]]
+                                                   x_shape_npa).tolist() + [2, x_shape[-1]]
             mean_var = tf.reshape(mean_var, shape)
         mean, var = tf.unstack(mean_var, axis=-2)
 
