@@ -251,13 +251,15 @@ class Attention1D(DynastesBaseLayer):
             mask_1_shape = shape_list(mask[1])
             q_mask = (1. - tf.cast(mask[0], tf.float32))[:, tf.newaxis, :, tf.newaxis]
             if self.mask_right and q_shape[1] is not None:
+                # TODO: Reenable this somehow
 
+                """
                 @tf.function
                 def assert_mask_ok(mask_0_shape, mask_1_shape):
                     assert mask_0_shape[1] == mask_1_shape[1] or mask_0_shape[1] == 1
 
                 assert_mask_ok(mask_0_shape, mask_1_shape)
-
+                """
                 look_ahead_mask = self._create_look_ahead_mask(q_shape[1])
                 q_mask = tf.maximum(q_mask, look_ahead_mask)
             kv_mask = (1. - tf.cast(mask[1], tf.float32))[:, tf.newaxis, tf.newaxis, :]
