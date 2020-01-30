@@ -85,21 +85,27 @@ class InstanceNormalization(ActivatedKernelBiasBaseLayer):
                  scale=False,
                  use_bias=False,
                  **kwargs):
+        kwargs['activation'] = None
         super(InstanceNormalization, self).__init__(use_bias=use_bias, **kwargs)
         self.epsilon = epsilon
         self.axes = axes
         self.scale = scale
 
     def build(self, input_shape):
-        self.build_kernel(shape=[input_shape[-1]])
+        if self.scale:
+            self.scale_kernel = self.build_kernel(shape=[input_shape[-1]])
+        self.build_bias(output_dim=input_shape[-1])
 
-    def call(self, inputs, **kwargs):
+    def call(self, inputs, training=None, **kwargs):
         x = inputs
         orig_dtype = x.dtype
         x = tf.cast(x, tf.float32)
         x -= tf.reduce_mean(x, axis=self.axes, keepdims=True)
         epsilon = tf.constant(self.epsilon, dtype=x.dtype, name='epsilon')
         x *= tf.math.rsqrt(tf.reduce_mean(tf.square(x), axis=self.axes, keepdims=True) + epsilon)
+        if self.scale:
+            x *= self.get_weight('kernel', training=training)
+        x = super(InstanceNormalization, self).call(x, training=training)
         x = tf.cast(x, orig_dtype)
         return x
 

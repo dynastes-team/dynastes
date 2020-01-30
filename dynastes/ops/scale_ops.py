@@ -35,9 +35,10 @@ def upscale2d(x, strides=(2, 2), method='bilinear', antialias=True):
 
             @tf.custom_gradient
             def grad(dy):
-                dx = _downscale2d(dy, strides=strides, method=method, antialias=antialias,
-                                  gain=((strides[0] + strides[1]) / 2) ** 2)
-                return dx, lambda ddx: _upscale2d(ddx, strides=strides, method=method, antialias=antialias)
+                with tf.name_scope('Upscale2DGrad'):
+                    dx = _downscale2d(dy, strides=strides, method=method, antialias=antialias,
+                                      gain=((strides[0] + strides[1]) / 2) ** 2)
+                    return dx, lambda ddx: _upscale2d(ddx, strides=strides, method=method, antialias=antialias)
 
             return y, grad
 
@@ -52,9 +53,10 @@ def downscale2d(x, strides=(2, 2), method='bilinear', antialias=True):
 
             @tf.custom_gradient
             def grad(dy):
-                dx = _upscale2d(dy, strides=strides, method=method, antialias=antialias,
-                                gain=1 / ((strides[0] + strides[1]) / 2) ** 2)
-                return dx, lambda ddx: _downscale2d(ddx, strides=strides, method=method, antialias=antialias)
+                with tf.name_scope('Downscale2DGrad'):
+                    dx = _upscale2d(dy, strides=strides, method=method, antialias=antialias,
+                                    gain=1 / ((strides[0] + strides[1]) / 2) ** 2)
+                    return dx, lambda ddx: _downscale2d(ddx, strides=strides, method=method, antialias=antialias)
 
             return y, grad
 
