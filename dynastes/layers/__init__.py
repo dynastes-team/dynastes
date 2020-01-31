@@ -13,6 +13,7 @@ from .convolutional_layers import DynastesDepthwiseConv1D
 from .convolutional_layers import DynastesDepthwiseConv2D
 from .convolutional_layers import Upsampling1D
 from .convolutional_layers import Upsampling2D
+from .data_augmentation import SpecAugmentLayer
 from .normalization_layers import AdaptiveGroupNormalization
 from .normalization_layers import AdaptiveInstanceNormalization
 from .normalization_layers import AdaptiveLayerInstanceNormalization

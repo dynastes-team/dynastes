@@ -372,7 +372,7 @@ class DecoderBlock(tfkl.Layer):
         else:
             ca_cache = None
         x, x_mask = cm(self.ca_layer, (x, enc_in), training=training, mask=ca_mask, cache=ca_cache)
-        attn_weights_sa = None
+        attn_weights_ca = None
         if type(x) in [list, tuple]:
             x, attn_weights_ca = x
 
