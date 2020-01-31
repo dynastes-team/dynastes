@@ -49,6 +49,7 @@ class _AttentionBlock1D(DynastesBaseLayer):
                  filter_width=2,
                  mask_right=False,
                  add_relative_to_values=False,
+                 scaled=False,
                  return_attn_weights=False,
                  cache_kv=False,
                  **kwargs):
@@ -93,6 +94,7 @@ class _AttentionBlock1D(DynastesBaseLayer):
         self.return_attn_weights = return_attn_weights
         self.supports_masking = True
         self.cache_kv = cache_kv
+        self.scaled=scaled
         conv_partial = partial(layer_factory.get_1d_layer, kernel_size=kernel_size,
                                grouped=grouped,
                                group_size=group_size,
@@ -160,6 +162,7 @@ class _AttentionBlock1D(DynastesBaseLayer):
             mask_right=mask_right,
             filter_width=filter_width,
             add_relative_to_values=add_relative_to_values,
+            scaled=scaled,
         )
 
     def compute_mask(self, inputs, mask=None):
@@ -198,6 +201,7 @@ class _AttentionBlock1D(DynastesBaseLayer):
             'mask_right': self.mask_right,
             'add_relative_to_values': self.add_relative_to_values,
             'cache_kv': self.cache_kv,
+            'scaled': self.scaled
         }
         base_config = super(_AttentionBlock1D, self).get_config()
         return {**base_config, **config}

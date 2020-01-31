@@ -100,12 +100,20 @@ class InstanceNormalization(ActivatedKernelBiasBaseLayer):
         x = inputs
         orig_dtype = x.dtype
         x = tf.cast(x, tf.float32)
-        x -= tf.reduce_mean(x, axis=self.axes, keepdims=True)
-        epsilon = tf.constant(self.epsilon, dtype=x.dtype, name='epsilon')
-        x *= tf.math.rsqrt(tf.reduce_mean(tf.square(x), axis=self.axes, keepdims=True) + epsilon)
+        mean, var = tf.nn.moments(x, axes=self.axes, keepdims=True)
+        scale = None
         if self.scale:
-            x *= self.get_weight('kernel', training=training)
-        x = super(InstanceNormalization, self).call(x, training=training)
+            scale = self.get_weight('kernel')
+        offset = None
+        if self.use_bias:
+            offset = self.get_weight('bias')
+        x = tf.nn.batch_normalization(
+            x,
+            mean=mean,
+            variance=var,
+            scale=scale,
+            offset=offset,
+            variance_epsilon=self.epsilon)
         x = tf.cast(x, orig_dtype)
         return x
 

@@ -13,8 +13,9 @@ from dynastes.probability.pseudoblocksparse_bijectors import BlockSparseStridedR
 def _test_grads(testCase: tf.test.TestCase, func, input):
     _, grads = tf.test.compute_gradient(func, input)
     for grad in grads:
+        tf.debugging.check_numerics(grad, '')
         testCase.assertNotAllClose(grad, np.zeros_like(grad))
-        testCase.assertAllInRange(grad, -1900., 1900.)
+        testCase.assertAllInRange(grad, -50., 50.)
 
 
 to_tensor = tf.convert_to_tensor
@@ -47,20 +48,7 @@ class T2TAttention1DTest(tf.test.TestCase):
                             filter_width=6),
                 {'self': True, 'steps_q': 57, 'steps_kv': 57, 'dim_q': dim_mq, 'dim_k': dim_mq // num_heads,
                  'dim_v': dim_mq // num_heads}),
-            (
-                'PsuedoBlockSparse Masked',
-                PseudoBlockSparseAttention1D(num_heads=num_heads, block_size=8,
-                                             blocksparse_bijector=BlockSparseStridedRoll1D(block_size=8),
-                                             mask_right=True),
-                {'self': True, 'steps_q': 64, 'steps_kv': 64, 'dim_q': dim, 'dim_k': dim, 'dim_v': dim}),
-            (
-                'PsuedoBlockSparse Multiquery Masked',
-                PseudoBlockSparseAttention1D(num_heads=num_heads, block_size=8,
-                                             multiquery_attention=True,
-                                             blocksparse_bijector=BlockSparseStridedRoll1D(block_size=8),
-                                             mask_right=True),
-                {'self': True, 'steps_q': 64, 'steps_kv': 64, 'dim_q': dim_mq, 'dim_k': dim_mq // num_heads,
-                 'dim_v': dim_mq // num_heads}),
+
 
             (
                 'Sparse Unmasked',
@@ -118,7 +106,20 @@ class T2TAttention1DTest(tf.test.TestCase):
                             block_length=8, filter_width=6),
                 {'self': True, 'steps_q': 64, 'steps_kv': 64, 'dim_q': dim_mq, 'dim_k': dim_mq // num_heads,
                  'dim_v': dim_mq // num_heads}),
-
+            (
+                'PsuedoBlockSparse Masked',
+                PseudoBlockSparseAttention1D(num_heads=num_heads, block_size=8,
+                                             blocksparse_bijector=BlockSparseStridedRoll1D(block_size=8),
+                                             mask_right=True),
+                {'self': True, 'steps_q': 64, 'steps_kv': 64, 'dim_q': dim, 'dim_k': dim, 'dim_v': dim}),
+            (
+                'PsuedoBlockSparse Multiquery Masked',
+                PseudoBlockSparseAttention1D(num_heads=num_heads, block_size=8,
+                                             multiquery_attention=True,
+                                             blocksparse_bijector=BlockSparseStridedRoll1D(block_size=8),
+                                             mask_right=True),
+                {'self': True, 'steps_q': 64, 'steps_kv': 64, 'dim_q': dim_mq, 'dim_k': dim_mq // num_heads,
+                 'dim_v': dim_mq // num_heads}),
         ]
 
         def test_layer(layer, params):

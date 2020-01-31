@@ -125,7 +125,8 @@ def get_1D_attention_layer(type,
                            filter_width=None,
                            mask_right=False,
                            add_relative_to_values=False,
-                           heads_share_relative_embeddings=False):
+                           heads_share_relative_embeddings=False,
+                           scaled=False):
     if type.lower() == 'LocalizedAttentionLayer1D'.lower():
         return layers.LocalizedAttentionLayer1D(strides=strides,
                                                 dilation_rate=dilation_rate,
@@ -147,7 +148,8 @@ def get_1D_attention_layer(type,
                                   filter_width=filter_width,
                                   mask_right=mask_right,
                                   add_relative_to_values=add_relative_to_values,
-                                  heads_share_relative_embeddings=heads_share_relative_embeddings)
+                                  heads_share_relative_embeddings=heads_share_relative_embeddings,
+                                  scaled=scaled)
     elif type.lower() == 'PseudoBlockSparseAttention1D'.lower():
         return layers.PseudoBlockSparseAttention1D(num_heads=num_heads,
                                                    blocksparse_bijector=blocksparse_bijector(block_size=block_length),

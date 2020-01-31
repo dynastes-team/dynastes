@@ -172,7 +172,8 @@ def dot_product_attention(q,
                           activation_dtype=None,
                           weight_dtype=None,
                           hard_attention_k=0,
-                          gumbel_noise_weight=0.0):
+                          gumbel_noise_weight=0.0,
+                          scaled=False):
     """Dot-product attention.
     Args:
       q: Tensor with shape [..., length_q, depth_k].
@@ -197,8 +198,10 @@ def dot_product_attention(q,
     Returns:
       Tensor with shape [..., length_q, depth_v].
     """
-
+    dk = tf.cast(t2t_common.shape_list(k)[-1], tf.float32)
     logits = tf.matmul(q, k, transpose_b=True)  # [..., length_q, length_kv]
+    if scaled:
+        logits /= tf.math.sqrt(dk)
     if bias is not None:
         bias = t2t_common.cast_like(bias, logits)
         logits += bias
@@ -430,7 +433,8 @@ def dot_product_unmasked_self_attention_relative_v2(
         max_relative_position=None, dropout_rate=0.0, save_weights_to=None,
         name='dot_product_unmasked_self_attention_relative_v2',
         dropout_broadcast_dims=[0, 1], heads_share_relative_embedding=False,
-        add_relative_to_values=False):
+        add_relative_to_values=False,
+        scaled=False):
     """Calculate relative position-aware dot-product self-attention.
     The attention calculation is augmented with learned representations for the
     relative position between each element in q and each element in k and v.
@@ -484,7 +488,9 @@ def dot_product_unmasked_self_attention_relative_v2(
     unmasked_rel_logits = _relative_position_to_absolute_position_unmasked(
         unmasked_rel_logits)
     logits += unmasked_rel_logits
-
+    dk = tf.cast(t2t_common.shape_list(k)[-1], tf.float32)
+    if scaled:
+        logits /= tf.math.sqrt(dk)
     if bias is not None:
         logits += bias
 
@@ -521,7 +527,8 @@ def dot_product_self_attention_relative_v2(q,
                                            name='dot_product_self_attention_relative_v2',
                                            dropout_broadcast_dims=[0, 1],
                                            heads_share_relative_embedding=False,
-                                           add_relative_to_values=False):
+                                           add_relative_to_values=False,
+                                           scaled=False):
     """Calculate relative position-aware dot-product self-attention.
     Only works for masked self-attention (no looking forward).
     The attention calculation is augmented with learned representations for the
@@ -574,6 +581,9 @@ def dot_product_self_attention_relative_v2(q,
                                            heads_share_relative_embedding)
     rel_logits = _relative_position_to_absolute_position_masked(rel_logits)
     logits += rel_logits
+    dk = tf.cast(t2t_common.shape_list(k)[-1], tf.float32)
+    if scaled:
+        logits /= tf.math.sqrt(dk)
     if bias is not None:
         logits += bias
 
@@ -659,7 +669,7 @@ def attention_bias_lower_triangle(length):
     return attention_bias_local(length, -1, 0)
 
 
-def local_attention_1d(q, k, v, block_length=128, filter_width=100, name='local_attention_1d'):
+def local_attention_1d(q, k, v, block_length=128, filter_width=100, name='local_attention_1d', scaled=False):
     """Strided block local self-attention.
     The sequence is divided into blocks of length block_length. Attention for a
     given query position can see all memory positions in the corresponding block
@@ -748,7 +758,8 @@ def local_attention_1d(q, k, v, block_length=128, filter_width=100, name='local_
         v,
         bias=attention_bias,
         dropout_rate=0.,
-        name="local_1d", )
+        name="local_1d",
+        scaled=scaled)
     output = tf.reshape(output, [batch_size, num_heads, -1, depth_v])
 
     # Remove the padding if introduced.
@@ -776,7 +787,8 @@ def masked_local_attention_1d(q,
                               mask_right=True,
                               block_length=128,
                               dropout_rate=0.,
-                              name='masked_local_attention_1d'):
+                              name='masked_local_attention_1d',
+                              scaled=False):
     """Attention to the source position and a neighborhood to the left of it.
     The sequence is divided into blocks of length block_length. Attention for a
     given query position can only see memory positions less than or equal to the
@@ -858,7 +870,8 @@ def masked_local_attention_1d(q,
         first_v,
         bias=first_bias,
         dropout_rate=dropout_rate,
-        name="first_block")
+        name="first_block",
+        scaled=scaled)
 
     # Compute attention for all subsequent query blocks.
     q = tf.reshape(q, [batch, heads, num_blocks, block_length, depth_k])
@@ -911,7 +924,8 @@ def masked_local_attention_1d(q,
         local_v,
         bias=bias,
         dropout_rate=dropout_rate,
-        name="tail_block")
+        name="tail_block",
+        scaled=scaled)
     tail_output = tf.reshape(
         tail_output, [batch, heads, (num_blocks - 1) * block_length, depth_v])
     output = tf.concat([first_output, tail_output], axis=2)
@@ -937,7 +951,7 @@ def combine_first_two_dimensions(x):
     return ret
 
 
-def dot_product_batched_head(q, k, v, gates_q, gates_k, mask_right=False):
+def dot_product_batched_head(q, k, v, gates_q, gates_k, mask_right=False, scaled=False):
     """Perform a dot product attention on a single sequence on a single head.
     This function dispatch the q, k, v and loop over the buckets to compute the
     attention dot product on each subsequences.
@@ -985,7 +999,7 @@ def dot_product_batched_head(q, k, v, gates_q, gates_k, mask_right=False):
 
     # q, k, v now have shape [batch*heads, nb_bucket, capacity, depth]
     # The buckets can be seen as different heads
-    v_out, w_dict = dot_product_attention(q, k, v, bias=bias)
+    v_out, w_dict = dot_product_attention(q, k, v, bias=bias, scaled=scaled)
 
     # Combine all buckets together to restore the original length
     return q_dispatcher.combine(v_out), w_dict
@@ -996,7 +1010,8 @@ def sparse_dot_product_attention_truncated(
         k,
         v,
         list_lsh,
-        mask_right=False):  # pylint: disable=unused-argument
+        mask_right=False,
+        scaled=False):  # pylint: disable=unused-argument
     """Sparse multihead self attention.
     Perform an approximation of the full multihead attention by dispatching
     the tokens using their keys/values. Thus the attention matrix are only
@@ -1078,7 +1093,7 @@ def sparse_dot_product_attention_truncated(
         combine_first_two_dimensions(t) for t in (q, k, v, gates_q, gates_k)
     ]
 
-    v_out, w_dict, = dot_product_batched_head(q, k, v, gates_q, gates_k, mask_right)
+    v_out, w_dict, = dot_product_batched_head(q, k, v, gates_q, gates_k, mask_right, scaled=scaled)
 
     # Restore original dimension
     v_out = tf.reshape(v_out, [batch_size, nb_heads, -1, depth])

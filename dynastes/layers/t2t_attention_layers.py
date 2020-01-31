@@ -141,6 +141,7 @@ class Attention1D(DynastesBaseLayer):
                  mask_right=False,
                  add_relative_to_values=False,
                  heads_share_relative_embeddings=False,
+                 scaled=False,
                  **kwargs):
         super(Attention1D, self).__init__(**kwargs)
 
@@ -174,6 +175,7 @@ class Attention1D(DynastesBaseLayer):
         self.add_relative_to_values = add_relative_to_values
         self.maybe_build_lsh_gates()
         self.heads_share_relative_embeddings = heads_share_relative_embeddings
+        self.scaled = scaled
 
     def maybe_build_lsh_gates(self):
         if self.attention_type == 'sparse_attention_truncated' and self.num_heads is not None and self.lsh_gates is None:
@@ -297,18 +299,21 @@ class Attention1D(DynastesBaseLayer):
                                                                                            value_leftright_embeddings=value_embeddings,
                                                                                            dropout_rate=rate,
                                                                                            max_relative_position=self.max_relative_position,
-                                                                                           heads_share_relative_embedding=self.heads_share_relative_embeddings)
+                                                                                           heads_share_relative_embedding=self.heads_share_relative_embeddings,
+                                                                                           scaled=self.scaled)
             elif self.attention_type == 'masked_self_attention_relative':
                 r, weights = t2t_attention.dot_product_self_attention_relative_v2(q=q, k=k, v=v, bias=bias,
                                                                                   key_left_embedding=key_embeddings,
                                                                                   value_left_embedding=value_embeddings,
                                                                                   dropout_rate=rate,
                                                                                   max_relative_position=self.max_relative_position,
-                                                                                  heads_share_relative_embedding=self.heads_share_relative_embeddings)
+                                                                                  heads_share_relative_embedding=self.heads_share_relative_embeddings,
+                                                                                  scaled=self.scaled)
         else:
             if self.attention_type == 'unmasked_local_attention_1d':
                 r, weights = t2t_attention.local_attention_1d(q=q, k=k, v=v, block_length=self.block_length,
-                                                              filter_width=self.filter_width)
+                                                              filter_width=self.filter_width,
+                                                              scaled=self.scaled)
             elif self.attention_type == 'masked_local_attention_1d':
                 if mask is not None:
                     attn_mask = tf.cast(mask[1], k.dtype)
@@ -317,15 +322,18 @@ class Attention1D(DynastesBaseLayer):
                 r, weights = t2t_attention.masked_local_attention_1d(q=q, k=k, v=v, block_length=self.block_length,
                                                                      mask_right=self.mask_right,
                                                                      mask=attn_mask,
-                                                                     dropout_rate=rate)
+                                                                     dropout_rate=rate,
+                                                                     scaled=self.scaled)
             elif self.attention_type == 'sparse_attention_truncated':
                 r, loss, weights = t2t_attention.sparse_dot_product_attention_truncated(q=q, k=k, v=v,
                                                                                         list_lsh=self.lsh_gates,
-                                                                                        mask_right=self.mask_right)
+                                                                                        mask_right=self.mask_right,
+                                                                                        scaled=self.scaled)
                 self.add_loss(loss)
             else:
                 r, weights = t2t_attention.dot_product_attention(q=q, k=k, v=v, bias=bias,
-                                                                 dropout_rate=rate)
+                                                                 dropout_rate=rate,
+                                                                 scaled=self.scaled)
 
         r = t2t_attention.combine_heads(r)
         return r, weights
@@ -351,7 +359,8 @@ class Attention1D(DynastesBaseLayer):
             'filter_width': self.filter_width,
             'mask_right': self.mask_right,
             'add_relative_to_values': self.add_relative_to_values,
-            'heads_share_relative_embeddings': self.heads_share_relative_embeddings
+            'heads_share_relative_embeddings': self.heads_share_relative_embeddings,
+            'scaled': self.scaled
         }
         base_config = super(Attention1D, self).get_config()
         return {**base_config, **config}
