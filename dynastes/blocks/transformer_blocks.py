@@ -130,6 +130,7 @@ class EncoderBlock(tfkl.Layer):
                  norm1: tfkl.Layer,
                  mha_skip_adapt: tfkl.Layer = tfkl.Activation('linear'),
                  ffn_skip_adapt: tfkl.Layer = tfkl.Activation('linear'),
+                 dropout_rate=0.0,
                  **kwargs):
         super(EncoderBlock, self).__init__(**kwargs)
         self.sa_layer = sa_layer
@@ -138,6 +139,7 @@ class EncoderBlock(tfkl.Layer):
         self.norm1 = norm1
         self.mha_skip_adapt = mha_skip_adapt
         self.ffn_skip_adapt = ffn_skip_adapt
+        self.dropout_rate = dropout_rate
 
     def request_cache(self, batch_size=1, max_length=1):
         try:
@@ -157,6 +159,7 @@ class EncoderBlock(tfkl.Layer):
                 n_mask = x_mask
             else:
                 n_mask = tf.math.logical_and(x_mask, res_mask)
+            x = tfkl.Dropout(self.dropout_rate)(x, training=training)
             x, x_mask = cm(self.norm0, x + res, training=training, mask=n_mask)
 
             f, f_mask = cm(self.ffn, x, training=training, mask=x_mask)
@@ -167,6 +170,7 @@ class EncoderBlock(tfkl.Layer):
                 n_mask = x_mask
             else:
                 n_mask = tf.math.logical_and(f_mask, res_mask)
+            f = tfkl.Dropout(self.dropout_rate)(f, training=training)
             x, mask = cm(self.norm1, f + res, training=training, mask=n_mask)
             return x, mask
 
@@ -182,6 +186,7 @@ class EncoderBlock(tfkl.Layer):
                 n_mask = x_mask
             else:
                 n_mask = tf.math.logical_and(x_mask, res_mask)
+            x = tfkl.Dropout(self.dropout_rate)(x, training=training)
             x, x_mask = cm(self.norm0, x + res, training=training, mask=n_mask)
 
             f, f_mask = cm(self.ffn, x, training=training, mask=x_mask)
@@ -192,6 +197,7 @@ class EncoderBlock(tfkl.Layer):
                 n_mask = x_mask
             else:
                 n_mask = tf.math.logical_and(f_mask, res_mask)
+            f = tfkl.Dropout(self.dropout_rate)(f, training=training)
             x, _ = cm(self.norm1, f + res, training=training, mask=n_mask)
             return x
 
@@ -314,6 +320,7 @@ class DecoderBlock(tfkl.Layer):
                  norm2: tfkl.Layer,
                  mha_skip_adapt: tfkl.Layer = tfkl.Activation('linear'),
                  ffn_skip_adapt: tfkl.Layer = tfkl.Activation('linear'),
+                 dropout_rate=0.,
                  **kwargs):
         super(DecoderBlock, self).__init__(**kwargs)
         self.sa_layer = sa_layer
@@ -324,6 +331,7 @@ class DecoderBlock(tfkl.Layer):
         self.norm2 = norm2
         self.mha_skip_adapt = mha_skip_adapt
         self.ffn_skip_adapt = ffn_skip_adapt
+        self.dropout_rate = dropout_rate
 
     def request_cache(self, batch_size=1, max_length_sa=1, max_length_ca=1):
         try:
@@ -359,6 +367,7 @@ class DecoderBlock(tfkl.Layer):
             n_mask = x_mask
         else:
             n_mask = tf.math.logical_and(x_mask, res_mask)
+        x = tfkl.Dropout(self.dropout_rate)(x, training=training)
         x, x_mask = cm(self.norm0, x + res, training=training, mask=n_mask)
         _x = x
         ## Attend to encoding
@@ -383,6 +392,7 @@ class DecoderBlock(tfkl.Layer):
             n_mask = x_mask
         else:
             n_mask = tf.math.logical_and(x_mask, res_mask)
+        x = tfkl.Dropout(self.dropout_rate)(x, training=training)
 
         x, x_mask = cm(self.norm1, x + res, training=training, mask=n_mask)
         _x = x
@@ -395,20 +405,22 @@ class DecoderBlock(tfkl.Layer):
             n_mask = x_mask
         else:
             n_mask = tf.math.logical_and(f_mask, res_mask)
+        f = tfkl.Dropout(self.dropout_rate)(f, training=training)
         x, mask = cm(self.norm2, f + res, training=training, mask=n_mask)
         if attn_weights_ca is not None or attn_weights_sa is not None:
             return x, mask, {'sa': attn_weights_sa, 'ca': attn_weights_ca}
         return x, mask
 
     def call_masked(self, inputs, training=None, mask=None, cache=None, decode_loop_step=None, pad_q_to_kv=False):
-        rets = self._call(inputs, training=training, mask=mask, cache=cache, decode_loop_step=decode_loop_step, pad_q_to_kv=pad_q_to_kv)
+        rets = self._call(inputs, training=training, mask=mask, cache=cache, decode_loop_step=decode_loop_step,
+                          pad_q_to_kv=pad_q_to_kv)
         if len(rets) == 3:
             return (rets[0], rets[2]), rets[1]
         return rets
 
-
     def call(self, inputs, training=None, mask=None, cache=None, decode_loop_step=None, pad_q_to_kv=False):
-        rets = self._call(inputs, training=training, mask=mask, cache=cache, decode_loop_step=decode_loop_step, pad_q_to_kv=pad_q_to_kv)
+        rets = self._call(inputs, training=training, mask=mask, cache=cache, decode_loop_step=decode_loop_step,
+                          pad_q_to_kv=pad_q_to_kv)
         if len(rets) == 3:
             return rets[0], rets[2]
         return rets[0]

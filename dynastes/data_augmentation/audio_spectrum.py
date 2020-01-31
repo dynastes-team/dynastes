@@ -1,5 +1,10 @@
 import tensorflow as tf
-from tensorflow_addons.image import sparse_image_warp
+import tensorflow_addons as tfa
+
+if tfa.__version__ == '0.7.0':
+    from dynastes.ops.image_ops import sparse_image_warp
+else:
+    from tensorflow_addons.image import sparse_image_warp
 
 from dynastes.ops.t2t_common import shape_list
 
@@ -79,7 +84,7 @@ def frequency_masking(mel_spectrograms, frequency_masking_para: int = 100, frequ
                           ), 2)
         if roll_mask is not None:
             roll_mel_spectrograms = tf.roll(mel_spectrograms, roll_mask, axis=0)
-            mel_spectrograms = (mel_spectrograms * mask) + (roll_mel_spectrograms * (1-mask))
+            mel_spectrograms = (mel_spectrograms * mask) + (roll_mel_spectrograms * (1 - mask))
         else:
             mel_spectrograms = mel_spectrograms * mask
     return tf.cast(mel_spectrograms, dtype=tf.float32)
@@ -115,7 +120,7 @@ def time_masking(mel_spectrograms, time_masking_para: int = 27, time_mask_num: i
                           ), 1)
         if roll_mask is not None:
             roll_mel_spectrograms = tf.roll(mel_spectrograms, roll_mask, axis=0)
-            mel_spectrograms = (mel_spectrograms * mask) + (roll_mel_spectrograms * (1-mask))
+            mel_spectrograms = (mel_spectrograms * mask) + (roll_mel_spectrograms * (1 - mask))
         else:
             mel_spectrograms = mel_spectrograms * mask
 

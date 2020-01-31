@@ -3,8 +3,9 @@ from __future__ import division
 from __future__ import print_function
 
 import threading
-import tensorflow as tf
+
 import numpy as np
+import tensorflow as tf
 from tensorflow.python import keras
 from tensorflow.python.eager import context
 from tensorflow.python.framework import tensor_shape

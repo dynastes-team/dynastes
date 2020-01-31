@@ -12,8 +12,8 @@ from tensorflow.python.ops import nn_ops
 
 from dynastes import regularizers
 from dynastes.layers.base_layers import DynastesBaseLayer, ActivatedKernelBiasBaseLayer
-from dynastes.ops.t2t_common import shape_list
 from dynastes.ops import scale_ops
+from dynastes.ops.t2t_common import shape_list
 
 
 class _Conv(ActivatedKernelBiasBaseLayer, abc.ABC):
@@ -1193,7 +1193,6 @@ class Downsampling2D(DynastesBaseLayer):
         super(Downsampling2D, self).__init__(**kwargs)
         self.strides = conv_utils.normalize_tuple(strides, 2, 'strides')
         self.method = method
-
 
     def _resize(self, x):
         return scale_ops.downscale2d(x, strides=self.strides, method=self.method)

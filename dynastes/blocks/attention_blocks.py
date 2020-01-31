@@ -94,7 +94,7 @@ class _AttentionBlock1D(DynastesBaseLayer):
         self.return_attn_weights = return_attn_weights
         self.supports_masking = True
         self.cache_kv = cache_kv
-        self.scaled=scaled
+        self.scaled = scaled
         conv_partial = partial(layer_factory.get_1d_layer, kernel_size=kernel_size,
                                grouped=grouped,
                                group_size=group_size,

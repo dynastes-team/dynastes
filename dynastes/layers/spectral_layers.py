@@ -45,7 +45,7 @@ class Wave2STFTLayer(DynastesBaseLayer):
                                             pad_r=self.padding,
                                             discard_dc=not self.keep_dc,
                                             hq=self.hq)
-        return stfts#tf.cast(stfts, inputs.dtype)
+        return stfts  # tf.cast(stfts, inputs.dtype)
 
     def compute_output_shape(self, input_shape, invert=False):
         if invert:
@@ -76,7 +76,8 @@ class Wave2STFTLayer(DynastesBaseLayer):
             if self.hq:
                 output_dtype = tf.complex128
             input_shape = input_signature.shape.as_list()
-            out_len = max(0, math.floor(((input_shape[1] + (self.padding * 2) - (self.n_bins * 2)) / self.hop_length)) + 1)
+            out_len = max(0,
+                          math.floor(((input_shape[1] + (self.padding * 2) - (self.n_bins * 2)) / self.hop_length)) + 1)
             output_shape = tf.TensorShape([input_shape[0], out_len, out_bins, input_shape[2]])
             return tf.TensorSpec(shape=output_shape, dtype=output_dtype)
 
