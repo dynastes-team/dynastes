@@ -349,6 +349,9 @@ class DecoderBlock(tfkl.Layer):
             sa_cache = None
         x, x_mask = cm(self.sa_layer, x, training=training, mask=x_mask, cache=sa_cache,
                        decode_loop_step=decode_loop_step, pad_q_to_kv=pad_q_to_kv)
+        attn_weights_sa = None
+        if type(x) in [list, tuple]:
+            x, attn_weights_sa = x
         res, res_mask = cm(self.mha_skip_adapt, _x, training=training, mask=_x_mask)
         if x_mask is None:
             n_mask = res_mask
@@ -369,6 +372,9 @@ class DecoderBlock(tfkl.Layer):
         else:
             ca_cache = None
         x, x_mask = cm(self.ca_layer, (x, enc_in), training=training, mask=ca_mask, cache=ca_cache)
+        attn_weights_sa = None
+        if type(x) in [list, tuple]:
+            x, attn_weights_ca = x
 
         res, res_mask = cm(self.mha_skip_adapt, _x, training=training, mask=x_mask)
         if x_mask is None:
@@ -390,15 +396,22 @@ class DecoderBlock(tfkl.Layer):
         else:
             n_mask = tf.math.logical_and(f_mask, res_mask)
         x, mask = cm(self.norm2, f + res, training=training, mask=n_mask)
-
+        if attn_weights_ca is not None or attn_weights_sa is not None:
+            return x, mask, {'sa': attn_weights_sa, 'ca': attn_weights_ca}
         return x, mask
 
     def call_masked(self, inputs, training=None, mask=None, cache=None, decode_loop_step=None, pad_q_to_kv=False):
-        return self._call(inputs, training=training, mask=mask, cache=cache, decode_loop_step=decode_loop_step, pad_q_to_kv=pad_q_to_kv)
+        rets = self._call(inputs, training=training, mask=mask, cache=cache, decode_loop_step=decode_loop_step, pad_q_to_kv=pad_q_to_kv)
+        if len(rets) == 3:
+            return (rets[0], rets[2]), rets[1]
+        return rets
+
 
     def call(self, inputs, training=None, mask=None, cache=None, decode_loop_step=None, pad_q_to_kv=False):
-        x, _ = self._call(inputs, training=training, mask=mask, cache=cache, decode_loop_step=decode_loop_step, pad_q_to_kv=pad_q_to_kv)
-        return x
+        rets = self._call(inputs, training=training, mask=mask, cache=cache, decode_loop_step=decode_loop_step, pad_q_to_kv=pad_q_to_kv)
+        if len(rets) == 3:
+            return rets[0], rets[2]
+        return rets[0]
 
     def compute_mask(self, inputs, mask=None):
         return mask
