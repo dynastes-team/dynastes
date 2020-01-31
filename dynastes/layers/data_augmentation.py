@@ -16,6 +16,7 @@ class SpecAugmentLayer(DynastesBaseLayer):
                  normalize=True,
                  roll_mask=None,
                  **kwargs):
+        kwargs['dynamic'] = True
         super(SpecAugmentLayer, self).__init__(**kwargs)
         self.time_warping_para: float = time_warping_para
         self.time_masking_para: int = time_masking_para
@@ -53,3 +54,6 @@ class SpecAugmentLayer(DynastesBaseLayer):
 
     def compute_output_shape(self, input_shape):
         return input_shape
+
+    def compute_mask(self, inputs, mask=None):
+        return mask
