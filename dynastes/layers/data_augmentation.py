@@ -50,3 +50,6 @@ class SpecAugmentLayer(DynastesBaseLayer):
         }
         base_config = super(SpecAugmentLayer, self).get_config()
         return {**base_config, **config}
+
+    def compute_output_shape(self, input_shape):
+        return input_shape
