@@ -491,7 +491,7 @@ class DynastesEmbedding(DynastesBaseLayer):
         dtype = K.dtype(inputs)
         if dtype != 'int32' and dtype != 'int64':
             inputs = math_ops.cast(inputs, 'int32')
-        out = embedding_ops.embedding_lookup(inputs, self.embedding,
+        out = embedding_ops.embedding_lookup(inputs, self.get_weight('embedding', training=training),
                                              symbol_dropout_rate=self.symbol_dropout_rate,
                                              dtype=self.dtype)
         return out
