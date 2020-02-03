@@ -15,8 +15,8 @@ except:
 
 
 @tf.keras.utils.register_keras_serializable(package='Dynastes', name='swish')
-def swish(x, beta=1):
-    return x * tf.math.sigmoid(beta * x)
+def swish(x):
+    return tf.nn.swish(x)
 
 
 mish = None
@@ -29,11 +29,13 @@ if tfaa is not None:
 
 def get(activation):
     if type(activation) == str:
-        if activation == 'swish':
+        if activation in ['Dynastes>swish', 'swish']:
             return swish
         elif tfaa is not None:
-            if activation == 'mish':
+            if activation in ['Addons>mish', 'mish']:
                 return mish
+            elif activation in ['Addons>rrelu', 'rrelu']:
+                return rrelu
     return tf_activations.get(activation)
 
 

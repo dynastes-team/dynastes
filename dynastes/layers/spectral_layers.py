@@ -1,6 +1,7 @@
 import math
 
 import tensorflow as tf
+import tensorflow.keras as tfk
 
 from dynastes.layers.base_layers import DynastesBaseLayer
 from dynastes.ops import spectral_ops
@@ -162,6 +163,7 @@ class STFT2MelspectrogramLayer(DynastesBaseLayer):
                  smooth_l2mel=False,
                  ifreq=False,
                  return_phase=False,
+                 reconstruction_loss: tfk.losses.Loss = None,
                  **kwargs):
         super(STFT2MelspectrogramLayer, self).__init__(trainable=trainable, **kwargs)
         self.n_mels = n_mels
@@ -172,6 +174,7 @@ class STFT2MelspectrogramLayer(DynastesBaseLayer):
         self.ifreq = ifreq
         self.return_phase = return_phase
         self.inverted = False
+        self.reconstruction_loss = tfk.losses.deserialize(reconstruction_loss)
 
     def build(self, input_shape):
         n_bins = input_shape[-2]
@@ -193,6 +196,12 @@ class STFT2MelspectrogramLayer(DynastesBaseLayer):
                                                               l2mel=self.get_weight('l2mel', training=training),
                                                               ifreq=self.ifreq,
                                                               return_phase=self.return_phase)
+        if self.reconstruction_loss is not None:
+            stfts = spectral_ops.melspecgrams_to_stfts(melspecgrams=mel_spectrograms,
+                                                       mel2l=tf.transpose(self.get_weight('l2mel', training=training)),
+                                                       ifreq=self.ifreq and self.return_phase)
+            stfts = tf.cast(stfts, inputs.dtype)
+            self.add_loss(self.reconstruction_loss(inputs, stfts))
         mel_spectrograms = tf.cast(mel_spectrograms, self.dtype)
         return mel_spectrograms
 

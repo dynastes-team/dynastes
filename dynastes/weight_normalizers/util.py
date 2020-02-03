@@ -28,10 +28,10 @@ def get(identifier):
         return deserialize(identifier)
     elif isinstance(identifier, six.string_types):
         identifier = str(identifier)
-        # We have to special-case functions that return classes.
-        # TODO(omalleyt): Turn these into classes or class aliases.
         if identifier == 'spectral':
             return SpectralNormalization()
+        elif identifier == 'spectral_t':
+            return SpectralNormalization(transposed=True)
     elif callable(identifier):
         return identifier
     else:

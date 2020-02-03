@@ -1,4 +1,5 @@
 from . import attention_nd
+from . import embedding_ops
 from . import image_ops
 from . import localized_attention_nd
 from . import pad_ops
