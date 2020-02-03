@@ -46,9 +46,9 @@ def reshape_like(a, b):
     return ret
 
 
-def gather(params, indices, dtype=tf.float32):
+def gather(params, indices, dtype=tf.float32, force_one_hot_lookup=False):
     """Version of tf.gather that works faster on tpu."""
-    if not tf.config.optimizer.get_jit():
+    if not tf.config.optimizer.get_jit() and not force_one_hot_lookup:
         return tf.gather(params, indices)
     vocab_size = params.get_shape().as_list()[0]
     indices_flat = tf.reshape(indices, [-1])
@@ -62,13 +62,14 @@ def embedding_lookup(x,
                      name='embedding_lookup',
                      multiplier=1.0,
                      symbol_dropout_rate=0.0,
+                     force_one_hot_lookup=False,
                      dtype=tf.float32):
     """Embed x of type int64 into dense vectors, reducing to max 4 dimensions."""
     with tf.name_scope(name):
         # On the backwards pass, we want to convert the gradient from
         # an indexed-slices to a regular tensor before sending it back to the
         # parameter server. This avoids excess computation on the parameter server.
-        if not tf.executing_eagerly():
+        if not tf.executing_eagerly() and not force_one_hot_lookup:
             embedding_matrix = convert_gradient_to_tensor(embedding_matrix)
         x = dropout_no_scaling(x, 1.0 - symbol_dropout_rate)
         emb_x = gather(embedding_matrix, x, dtype)

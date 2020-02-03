@@ -406,6 +406,7 @@ class DynastesEmbedding(DynastesBaseLayer):
                  mask_zero=False,
                  input_length=None,
                  symbol_dropout_rate=0.,
+                 force_one_hot_lookup=False,
                  **kwargs):
         if 'input_shape' not in kwargs:
             if input_length:
@@ -434,6 +435,7 @@ class DynastesEmbedding(DynastesBaseLayer):
         self.supports_masking = mask_zero
         self.input_length = input_length
         self._supports_ragged_inputs = True
+        self.force_one_hot_lookup = force_one_hot_lookup
 
     @tf_utils.shape_type_conversion
     def build(self, input_shape):
@@ -443,18 +445,16 @@ class DynastesEmbedding(DynastesBaseLayer):
         # When eager execution is enabled, the placement decision has to be made
         # right now. Checking for the presence of GPUs to avoid complicating the
         # TPU codepaths which can handle sparse optimizers.
-        # if context.executing_eagerly() and context.context().num_gpus():
-        #    with ops.device('cpu:0'):
-        self.embedding = self.add_weight(
-            name='embedding',
-            shape=(self.input_dim, self.output_dim))
-        # else:
-        #    self.embeddings = self.add_weight(
-        #        shape=(self.input_dim, self.output_dim),
-        #        initializer=self.embeddings_initializer,
-        #        name='embeddings',
-        #        regularizer=self.embeddings_regularizer,
-        #        constraint=self.embeddings_constraint)
+        if context.executing_eagerly() and context.context().num_gpus() and not self.force_one_hot_lookup:
+            with tf.device('cpu:0'):
+                self.embedding = self.add_weight(
+                    name='embedding',
+                    shape=(self.input_dim, self.output_dim))
+        else:
+            self.embedding = self.add_weight(
+                shape=(self.input_dim, self.output_dim),
+                name='embedding')
+
         self.built = True
 
     def compute_mask(self, inputs, mask=None):
@@ -493,6 +493,7 @@ class DynastesEmbedding(DynastesBaseLayer):
             inputs = math_ops.cast(inputs, 'int32')
         out = embedding_ops.embedding_lookup(inputs, self.get_weight('embedding', training=training),
                                              symbol_dropout_rate=self.symbol_dropout_rate,
+                                             force_one_hot_lookup=self.force_one_hot_lookup,
                                              dtype=self.dtype)
         return out
 
