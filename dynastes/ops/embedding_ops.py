@@ -1,14 +1,12 @@
 import tensorflow as tf
-from tensorflow.python.framework import function
 
 from dynastes.ops.t2t_common import cast_like
 
-
-@function.Defun(
+"""@function.Defun(
     python_grad_func=lambda x, dy: tf.convert_to_tensor(dy),
     shape_func=lambda op: [op.inputs[0].get_shape()])
 def convert_gradient_to_tensor(x):
-    """Identity operation whose gradient is converted to a `Tensor`.
+    Identity operation whose gradient is converted to a `Tensor`.
     Currently, the gradient to `tf.concat` is particularly expensive to
     compute if dy is an `IndexedSlices` (a lack of GPU implementation
     forces the gradient operation onto CPU).  This situation occurs when
@@ -20,8 +18,16 @@ def convert_gradient_to_tensor(x):
       x: A `Tensor`.
     Returns:
       The input `Tensor`.
-    """
     return x
+"""
+
+
+@tf.custom_gradient
+def convert_gradient_to_tensor(x):
+    def grad(dy):
+        return tf.convert_to_tensor(dy)
+
+    return x, grad
 
 
 def dropout_no_scaling(x, keep_prob):
@@ -46,9 +52,9 @@ def reshape_like(a, b):
     return ret
 
 
-def gather(params, indices, dtype=tf.float32, force_one_hot_lookup=False):
+def gather(params, indices, dtype=tf.float32):
     """Version of tf.gather that works faster on tpu."""
-    if not tf.config.optimizer.get_jit() and not force_one_hot_lookup:
+    if not tf.config.optimizer.get_jit():
         return tf.gather(params, indices)
     vocab_size = params.get_shape().as_list()[0]
     indices_flat = tf.reshape(indices, [-1])
@@ -62,14 +68,13 @@ def embedding_lookup(x,
                      name='embedding_lookup',
                      multiplier=1.0,
                      symbol_dropout_rate=0.0,
-                     force_one_hot_lookup=False,
                      dtype=tf.float32):
     """Embed x of type int64 into dense vectors, reducing to max 4 dimensions."""
     with tf.name_scope(name):
         # On the backwards pass, we want to convert the gradient from
         # an indexed-slices to a regular tensor before sending it back to the
         # parameter server. This avoids excess computation on the parameter server.
-        if not tf.executing_eagerly() and not force_one_hot_lookup:
+        if not tf.executing_eagerly():
             embedding_matrix = convert_gradient_to_tensor(embedding_matrix)
         x = dropout_no_scaling(x, 1.0 - symbol_dropout_rate)
         emb_x = gather(embedding_matrix, x, dtype)
