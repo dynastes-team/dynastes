@@ -108,5 +108,14 @@ class LshSimilarityTest(tf.test.TestCase):
         dq, dk, dv = tape.gradient(loss, [q, k, v])
 
 
+class ZeroAbsGtTest(tf.test.TestCase):
+
+    @test_util.use_deterministic_cudnn
+    def test_simple(self):
+        t = tf.convert_to_tensor(1., dtype=tf.float32) / tf.convert_to_tensor(0., dtype=tf.float32)
+        r = math_ops.zero_abs_gt(t, 200.)
+        print(r)
+
+
 if __name__ == '__main__':
     tf.test.main()

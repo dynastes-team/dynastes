@@ -32,5 +32,6 @@ class DynastesEmbeddingTest(tf.test.TestCase):
             grads = t.gradient(l, emb.trainable_weights)
             return grads
         grads = grads_fn(inps, targ)
-        print(grads[0])
+        c_grad = tf.clip_by_global_norm(grads, clip_norm=15.)
+        print(grads[0], c_grad)
         assert grads[0] is not None

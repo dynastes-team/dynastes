@@ -1,4 +1,5 @@
 import copy
+import math
 
 import numpy as np
 import tensorflow as tf
@@ -22,6 +23,7 @@ from dynastes import activations
 from dynastes import regularizers
 from dynastes import weight_normalizers
 from dynastes.ops import embedding_ops
+from dynastes.ops.t2t_common import shape_list
 
 
 @tf.keras.utils.register_keras_serializable(package='Dynastes')
@@ -504,3 +506,40 @@ class DynastesEmbedding(DynastesBaseLayer):
         }
         base_config = super(DynastesEmbedding, self).get_config()
         return {**base_config, **config}
+
+
+class PadDivisibleBy(tfkl.Layer):
+
+    def __init__(self,
+                 divisor,
+                 location='end',
+                 axis=1,
+                 **kwargs):
+        super(PadDivisibleBy, self).__init__(**kwargs)
+
+        self.divisor = divisor
+        self.location = location
+        self.axis = axis
+        self.supports_masking = True
+
+    def compute_output_shape(self, input_shape):
+        output_shape = input_shape
+        output_shape[self.axis] = math.ceil(output_shape[self.axis] / self.divisor) * self.divisor
+
+    def compute_mask(self, inputs, mask=None):
+        if mask is not None:
+            shape = shape_list(mask)
+
+            pad_len = self.divisor - (shape[self.axis] % self.divisor)
+            paddings = [[0, 0]] * len(shape)
+            paddings[self.axis] = [pad_len, 0] if self.location == 'start' else [0, pad_len]
+            return tf.pad(mask, paddings, constant_values=False)
+        return mask
+
+    def call(self, inputs, **kwargs):
+        shape = shape_list(inputs)
+
+        pad_len = self.divisor - (shape[self.axis] % self.divisor)
+        paddings = [[0, 0]] * len(shape)
+        paddings[self.axis] = [pad_len, 0] if self.location == 'start' else [0, pad_len]
+        return tf.pad(inputs, paddings)

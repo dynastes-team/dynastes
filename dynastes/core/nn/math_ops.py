@@ -178,3 +178,8 @@ def lsh_attention(q, k, v, t_vectors_q, t_group, bucket_length, threshold=0.5, d
         return sparse_dense_matmul(attention_weights, v)
     else:
         return tf.matmul(tf.sparse.to_dense(attention_weights), v)
+
+
+def zero_abs_gt(t: tf.Tensor, value):
+    mask = tf.cast(tf.abs(t) > value, t.dtype)
+    return (1-mask) * tf.clip_by_value(t, -value, value) + tf.zeros_like(t) * mask
