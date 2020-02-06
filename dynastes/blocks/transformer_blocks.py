@@ -10,6 +10,7 @@ import tensorflow.keras.layers as tfkl
 from dynastes import activations
 from dynastes.blocks import layer_factory
 from dynastes.layers.base_layers import DynastesBaseLayer
+from dynastes.layers import GatingLayer
 from dynastes.util import cache_context
 from dynastes.util.layer_util import call_masked as cm
 
@@ -23,6 +24,7 @@ class PointWiseFeedForwardBlock(DynastesBaseLayer):
                  kernel_size=1,
                  ff_type='Dense',
                  d_type='Dense',
+                 inner_self_gate_fn=None,
                  depth_multiplier=1,
                  strides=1,
                  dilation_rate=1,
@@ -41,7 +43,10 @@ class PointWiseFeedForwardBlock(DynastesBaseLayer):
         self.activation = activations.get(activation)
         self.use_bias = use_bias
         self.supports_masking = True
-
+        self.inner_gate = inner_self_gate_fn is not None
+        self.inner_self_gate_fn = inner_self_gate_fn
+        if inner_self_gate_fn is not None:
+            self.gating_layer = GatingLayer(inner_self_gate_fn)
         self.kernel_size = kernel_size
         self.strides = strides
         self.dilation_rate = dilation_rate
@@ -78,11 +83,15 @@ class PointWiseFeedForwardBlock(DynastesBaseLayer):
 
     def call_masked(self, inputs, training=None, mask=None):
         x, x_mask = cm(self.dff_layer, inputs, training=training, mask=mask)
+        if self.inner_gate:
+            x, x_mask = cm(self.inner_gate, x, training=training, mask=mask)
         x, x_mask = cm(self.out_layer, x, training=training, mask=x_mask)
         return x, x_mask
 
     def call(self, inputs, training=None, mask=None):
         x, x_mask = cm(self.dff_layer, inputs, training=training, mask=mask)
+        if self.inner_gate:
+            x, x_mask = cm(self.inner_gate, x, training=training, mask=mask)
         x = self.out_layer(x, training=training, mask=x_mask)
         return x
 
@@ -90,12 +99,16 @@ class PointWiseFeedForwardBlock(DynastesBaseLayer):
         if mask is not None:
             if self.dff_layer.supports_masking:
                 mask = self.dff_layer.compute_mask(inputs, mask=mask)
+            if self.inner_gate:
+                mask = self.gating_layer.compute_mask(inputs, mask=mask)
             if self.out_layer.supports_masking:
                 mask = self.out_layer.compute_mask(inputs, mask=mask)
         return mask
 
     def compute_output_shape(self, input_shape):
         shape = self.dff_layer.compute_output_shape(input_shape)
+        if self.inner_gate:
+            shape = self.gating_layer.compute_output_shape(shape)
         shape = self.out_layer.compute_output_shape(shape)
         return shape
 
@@ -106,6 +119,7 @@ class PointWiseFeedForwardBlock(DynastesBaseLayer):
             'ff_type': self.ff_type,
             'd_type': self.d_type,
             'activation': activations.serialize(self.activation),
+            'inner_self_gate_fn': self.inner_self_gate_fn,
             'use_bias': self.use_bias,
             'depth_multiplier': self.depth_multiplier,
             'kernel_size': self.kernel_size,
