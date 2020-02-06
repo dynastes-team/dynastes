@@ -102,7 +102,7 @@ class FeaturewiseLinearModulation(ModulationLayer):
             beta = tf.matmul(beta_gamma, self.get_weight('beta_kernel', training=training))
             beta = tf.nn.bias_add(beta, self.get_weight('beta_bias', training=training))
             gamma = tf.matmul(beta_gamma, self.get_weight('gamma_kernel', training=training))
-            gamma = tf.nn.bias_add(gamma, self.get_weight('beta_bias', training=training))
+            gamma = tf.nn.bias_add(gamma, self.get_weight('gamma_bias', training=training))
             beta_gamma = tf.concat([beta, gamma], axis=-1)
         elif self.mode != 'provided_meanvar_fused':
             raise ValueError('Something is wrong')
