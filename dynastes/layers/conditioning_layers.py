@@ -36,7 +36,14 @@ class FeaturewiseLinearModulation(ModulationLayer):
         https://distill.pub/2018/feature-wise-transformations/
     """
 
-    def __init__(self, method=tf.image.ResizeMethod.BILINEAR, antialias=True, mode=None, **kwargs):
+    def __init__(self,
+                 method=tf.image.ResizeMethod.BILINEAR,
+                 antialias=True,
+                 mode=None,
+                 gamma_initializer='zeros',
+                 gamma_beta_initializer='ones',
+                 beta_initializer='zeros',
+                 **kwargs):
 
         """
         @param method: Method used for scaling conditioning in case rank(input) == rank(modulation)
@@ -47,6 +54,9 @@ class FeaturewiseLinearModulation(ModulationLayer):
                      leave blank to infer on build
         @type mode: str
         """
+        kwargs['gamma_initializer'] = gamma_initializer
+        kwargs['gamma_beta_initializer'] = gamma_beta_initializer
+        kwargs['beta_initializer'] = beta_initializer
         super(FeaturewiseLinearModulation, self).__init__(**kwargs)
         self.method = method
         self.antialias = antialias
@@ -66,7 +76,9 @@ class FeaturewiseLinearModulation(ModulationLayer):
                     assert self.mode == 'mapped'
                 else:
                     self.mode = 'mapped'
-                self.add_weight('map_kernel', shape=[input_shape[1][-1], input_shape[0][-1] * 2])
+                self.add_weight('gamma', shape=[input_shape[1][-1], input_shape[0][-1]])
+                self.add_weight('gamma_beta', shape=[input_shape[0][-1]])
+                self.add_weight('beta', shape=[input_shape[1][-1], input_shape[0][-1]])
             else:
                 if self.mode is not None:
                     assert self.mode == 'provided_meanvar_fused'
@@ -84,7 +96,10 @@ class FeaturewiseLinearModulation(ModulationLayer):
             mean_var = tf.concat([mean_var], axis=-1)
         elif self.mode == 'mapped':
             x, mean_var = x
-            mean_var = tf.matmul(mean_var, self.get_weight('map_kernel', training=training))
+            _mean = tf.matmul(mean_var, self.get_weight('gamma', training=training))
+            _mean += self.get_weight('gamma_beta', training=training)
+            _var = tf.matmul(mean_var, self.get_weight('beta', training=training))
+            mean_var = tf.concat([_mean, _var], axis=-1)
         elif self.mode != 'provided_meanvar_fused':
             raise ValueError('Something is wrong')
         else:

@@ -5,6 +5,7 @@ from __future__ import print_function
 from functools import partial
 
 import tensorflow as tf
+import tensorflow.keras as tfk
 
 from dynastes import activations
 from dynastes.blocks import layer_factory
@@ -102,7 +103,6 @@ class _AttentionBlock1D(DynastesBaseLayer):
                                padding=padding,
                                activation=activation,
                                use_bias=use_bias,
-                               kernel_initializer=self.get_initializer('kernel'),
                                bias_initializer=self.get_initializer('bias'),
                                kernel_regularizer=self.get_regularizer('kernel'),
                                bias_regularizer=self.get_regularizer('bias'),
@@ -129,15 +129,21 @@ class _AttentionBlock1D(DynastesBaseLayer):
             attn_strides = strides
             attn_dilation_rate = dilation_rate
 
+        init_stddev = output_dim ** -0.5
+
+
         self.q_layer = conv_partial(type=self.q_type,
+                                    kernel_initializer=tfk.initializers.RandomNormal(stddev=init_stddev * (k_filters ** -0.5)),
                                     filters=q_filters,
                                     strides=q_strides,
                                     dilation_rate=dilation_rate, name='Conv-Q')
         self.k_layer = conv_partial(type=self.k_type,
+                                    kernel_initializer=tfk.initializers.RandomNormal(stddev=init_stddev),
                                     filters=k_filters,
                                     strides=kv_strides,
                                     dilation_rate=kv_dilation_rate, name='Conv-K')
         self.v_layer = conv_partial(type=self.v_type,
+                                    kernel_initializer=tfk.initializers.RandomNormal(stddev=init_stddev),
                                     filters=v_filters,
                                     strides=kv_strides,
                                     dilation_rate=kv_dilation_rate, name='Conv-V')

@@ -49,6 +49,14 @@ class _WscaleInitializer(tfk.initializers.Initializer):
         return {**base_config, **config}
 
 
+def _get_initializer(name):
+    if name in ['vs_fan_avg_uniform', 'trfk_init']:
+        return initializers.VarianceScaling(mode='fan_avg', distribution='uniform')
+    elif name == 'vs_fan_avg_normal':
+        return initializers.VarianceScaling(mode='fan_avg', distribution='normal')
+    return initializers.get(name)
+
+
 def _get_regularizers_from_keywords(kwargs):
     _initializers = {}
     _regularizers = {}
@@ -59,7 +67,7 @@ def _get_regularizers_from_keywords(kwargs):
 
     for kwarg in kwarg_keys:
         if kwarg.endswith('initializer'):
-            _initializers[kwarg.split('_initializer')[0]] = initializers.get(kwargs.pop(kwarg, None))
+            _initializers[kwarg.split('_initializer')[0]] = _get_initializer(kwargs.pop(kwarg, None))
         elif kwarg.endswith('regularizer'):
             if kwarg != 'activity_regularizer':
                 _regularizers[kwarg.split('_regularizer')[0]] = regularizers.get(kwargs.pop(kwarg, None))
@@ -105,8 +113,10 @@ class DynastesBaseLayer(tfkl.Layer):
         if name not in self.initializers:
             if name == 'kernel':
                 self.initializers['kernel'] = initializers.get('he_uniform')
-            elif name == 'bias':
-                self.initializers['bias'] = initializers.get('zeros')
+            elif name in ['bias', 'beta', 'gamma_beta']:
+                self.initializers[name] = initializers.get('zeros')
+            elif name == 'gamma':
+                self.initializers[name] = initializers.get('ones')
             else:
                 self.initializers[name] = initializers.get('glorot_uniform')
 
