@@ -18,6 +18,7 @@ from .convolutional_layers import DynastesDepthwiseConv2D
 from .convolutional_layers import Upsampling1D
 from .convolutional_layers import Upsampling2D
 from .data_augmentation import SpecAugmentLayer
+from .gating_layers import GatingLayer
 from .normalization_layers import AdaptiveGroupNormalization
 from .normalization_layers import AdaptiveInstanceNormalization
 from .normalization_layers import AdaptiveLayerInstanceNormalization
