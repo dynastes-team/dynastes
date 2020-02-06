@@ -83,7 +83,7 @@ class GatingLayer(tfkl.Layer):
             x, g = inputs
             d_x = shape_list(x)[-1]
             d_g = shape_list(g)[-1]
-            if d_g * 2 == d_x:
+            if d_g // 2 == d_x:
                 y, g = tf.split(g, num_or_size_splits=2, axis=-1)
             else:
                 assert d_g == d_x
