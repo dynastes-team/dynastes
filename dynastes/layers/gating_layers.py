@@ -22,7 +22,7 @@ def GLUM(x, g, y=None):
     return _y
 
 
-@tf.keras.utils.register_keras_serializable(package='Dynastes', name='GLUM')
+@tf.keras.utils.register_keras_serializable(package='Dynastes', name='GDOT')
 def GDOT(x, g, y=None):
     _g = tf.matmul(x, g)
     _y = x * _g
