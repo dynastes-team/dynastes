@@ -40,9 +40,10 @@ class FeaturewiseLinearModulation(ModulationLayer):
                  method=tf.image.ResizeMethod.BILINEAR,
                  antialias=True,
                  mode=None,
-                 gamma_initializer='zeros',
-                 gamma_beta_initializer='ones',
-                 beta_initializer='zeros',
+                 gamma_kernel_initializer='zeros',
+                 gamma_bias_initializer='ones',
+                 beta_kernel_initializer='zeros',
+                 beta_bias_initializer='zeros',
                  **kwargs):
 
         """
@@ -54,9 +55,10 @@ class FeaturewiseLinearModulation(ModulationLayer):
                      leave blank to infer on build
         @type mode: str
         """
-        kwargs['gamma_initializer'] = gamma_initializer
-        kwargs['gamma_beta_initializer'] = gamma_beta_initializer
-        kwargs['beta_initializer'] = beta_initializer
+        kwargs['gamma_kernel_initializer'] = gamma_kernel_initializer
+        kwargs['gamma_bias_initializer'] = gamma_bias_initializer
+        kwargs['beta_initializer'] = beta_kernel_initializer
+        kwargs['beta_bias_initializer'] = beta_bias_initializer
         super(FeaturewiseLinearModulation, self).__init__(**kwargs)
         self.method = method
         self.antialias = antialias
@@ -76,9 +78,10 @@ class FeaturewiseLinearModulation(ModulationLayer):
                     assert self.mode == 'mapped'
                 else:
                     self.mode = 'mapped'
-                self.add_weight('gamma', shape=[input_shape[1][-1], input_shape[0][-1]])
-                self.add_weight('gamma_beta', shape=[input_shape[0][-1]])
-                self.add_weight('beta', shape=[input_shape[1][-1], input_shape[0][-1]])
+                self.add_weight('gamma_kernel', shape=[input_shape[1][-1], input_shape[0][-1]])
+                self.add_weight('gamma_bias', shape=[input_shape[0][-1]])
+                self.add_weight('beta_kernel', shape=[input_shape[1][-1], input_shape[0][-1]])
+                self.add_weight('beta_bias', shape=[input_shape[0][-1]])
             else:
                 if self.mode is not None:
                     assert self.mode == 'provided_meanvar_fused'
@@ -91,43 +94,45 @@ class FeaturewiseLinearModulation(ModulationLayer):
     def call(self, x, training=None, mask=None):
         assert isinstance(x, list)
         if self.mode == 'provided_mean_var':
-            x, mean, var = x
-            mean_var = [mean, var]
-            mean_var = tf.concat([mean_var], axis=-1)
+            x, beta, gamma = x
+            beta_gamma = [beta, gamma]
+            beta_gamma = tf.concat([beta_gamma], axis=-1)
         elif self.mode == 'mapped':
-            x, mean_var = x
-            _mean = tf.matmul(mean_var, self.get_weight('gamma', training=training))
-            _mean += self.get_weight('gamma_beta', training=training)
-            _var = tf.matmul(mean_var, self.get_weight('beta', training=training))
-            mean_var = tf.concat([_mean, _var], axis=-1)
+            x, beta_gamma = x
+            beta = tf.matmul(beta_gamma, self.get_weight('beta_kernel', training=training))
+            beta = tf.nn.bias_add(beta, self.get_weight('beta_bias', training=training))
+            gamma = tf.matmul(beta_gamma, self.get_weight('gamma_kernel', training=training))
+            gamma = tf.nn.bias_add(gamma, self.get_weight('beta_bias', training=training))
+            beta_gamma = tf.concat([beta, gamma], axis=-1)
         elif self.mode != 'provided_meanvar_fused':
             raise ValueError('Something is wrong')
         else:
-            x, mean_var = x
-        mean_var_shape = shape_list(mean_var)
+            x, beta_gamma = x
+        beta_gamma_shape = shape_list(beta_gamma)
         x_shape = shape_list(x)
-        if len(mean_var_shape) != len(x_shape):
-            mean_var = tf.reshape(mean_var, [-1, ] + ([1] * (len(x.shape) - 2)) + [2, x_shape[-1]])
+        if len(beta_gamma_shape) != len(x_shape):
+            beta_gamma = tf.reshape(beta_gamma, [-1, ] + ([1] * (len(x.shape) - 2)) + [2, x_shape[-1]])
         else:
-            mean_var_shape_npa = np.array(mean_var_shape[1:-1])
+            beta_gamma_shape_npa = np.array(beta_gamma_shape[1:-1])
             x_shape_npa = np.array(x_shape[1:-1])
-            compatible = np.all(np.logical_or(mean_var_shape_npa == 1, mean_var_shape_npa == x_shape_npa))
+            compatible = np.all(np.logical_or(beta_gamma_shape_npa == 1, beta_gamma_shape_npa == x_shape_npa))
             if not compatible:
-                size = np.where(mean_var_shape_npa == 1, mean_var_shape_npa, x_shape_npa).tolist()
-                if len(mean_var_shape) == 4:
-                    mean_var = tf.image.resize(mean_var, size, method=self.method)
-                elif len(mean_var_shape) == 3:
-                    mean_var = tf.squeeze(tf.image.resize(tf.expand_dims(mean_var, 1), [1] + size, method=self.method,
-                                                          antialias=self.antialias), axis=1)
+                size = np.where(beta_gamma_shape_npa == 1, beta_gamma_shape_npa, x_shape_npa).tolist()
+                if len(beta_gamma_shape) == 4:
+                    beta_gamma = tf.image.resize(beta_gamma, size, method=self.method)
+                elif len(beta_gamma_shape) == 3:
+                    beta_gamma = tf.squeeze(
+                        tf.image.resize(tf.expand_dims(beta_gamma, 1), [1] + size, method=self.method,
+                                        antialias=self.antialias), axis=1)
                 else:
                     raise ValueError('Only works for 1D or 2D tensors')
 
-            shape = [mean_var_shape[0]] + np.where(mean_var_shape_npa == 1, mean_var_shape_npa,
-                                                   x_shape_npa).tolist() + [2, x_shape[-1]]
-            mean_var = tf.reshape(mean_var, shape)
-        mean, var = tf.unstack(mean_var, axis=-2)
+            shape = [beta_gamma_shape[0]] + np.where(beta_gamma_shape_npa == 1, beta_gamma_shape_npa,
+                                                     x_shape_npa).tolist() + [2, x_shape[-1]]
+            beta_gamma = tf.reshape(beta_gamma, shape)
+        beta, gamma = tf.unstack(beta_gamma, axis=-2)
 
-        return (x * var) + mean
+        return (x * gamma) + beta
 
     def get_config(self):
         config = {

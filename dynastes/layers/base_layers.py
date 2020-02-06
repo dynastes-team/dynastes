@@ -111,9 +111,9 @@ class DynastesBaseLayer(tfkl.Layer):
 
     def get_initializer(self, name):
         if name not in self.initializers:
-            if name == 'kernel':
-                self.initializers['kernel'] = initializers.get('he_uniform')
-            elif name in ['bias', 'beta', 'gamma_beta']:
+            if name in ['kernel', 'embedding'] or name.endswith('kernel'):
+                self.initializers[name] = initializers.get('he_uniform')
+            elif name in ['bias', 'beta'] or name.endswith('bias'):
                 self.initializers[name] = initializers.get('zeros')
             elif name == 'gamma':
                 self.initializers[name] = initializers.get('ones')

@@ -5,6 +5,7 @@ from __future__ import print_function
 from functools import partial
 
 import tensorflow as tf
+import tensorflow.keras as tfk
 import tensorflow.keras.layers as tfkl
 
 from dynastes import activations
@@ -25,6 +26,7 @@ class PointWiseFeedForwardBlock(DynastesBaseLayer):
                  ff_type='Dense',
                  d_type='Dense',
                  inner_self_gate_fn=None,
+                 kernel_initializer='vs_fan_avg_uniform',
                  depth_multiplier=1,
                  strides=1,
                  dilation_rate=1,
@@ -35,6 +37,7 @@ class PointWiseFeedForwardBlock(DynastesBaseLayer):
                  use_bias=False,
                  dropout_rate=0.,
                  **kwargs):
+        kwargs['kernel_initializer'] = kernel_initializer
         super(PointWiseFeedForwardBlock, self).__init__(**kwargs)
         self.dff = dff
         self.d_model = d_model

@@ -54,9 +54,9 @@ class DecoderBlockTest(tf.test.TestCase):
             dec_sablock = SelfAttentionBlock1D(d_model // 4, d_model, num_heads=num_heads,
                                                attention_type='Attention1D',
                                                relative=False,
-                                               local=True,
+                                               local=False,
                                                masked=True,
-                                               mask_right=False,
+                                               mask_right=True,
                                                multiquery_attention=True)
             dec_cablock = AttentionBlock1D(d_model // 4, d_model, num_heads=num_heads,
                                            attention_type='Attention1D',
