@@ -84,14 +84,14 @@ class PointWiseFeedForwardBlock(DynastesBaseLayer):
     def call_masked(self, inputs, training=None, mask=None):
         x, x_mask = cm(self.dff_layer, inputs, training=training, mask=mask)
         if self.inner_gate:
-            x, x_mask = cm(self.inner_gate, x, training=training, mask=mask)
+            x, x_mask = cm(self.gating_layer, x, training=training, mask=mask)
         x, x_mask = cm(self.out_layer, x, training=training, mask=x_mask)
         return x, x_mask
 
     def call(self, inputs, training=None, mask=None):
         x, x_mask = cm(self.dff_layer, inputs, training=training, mask=mask)
         if self.inner_gate:
-            x, x_mask = cm(self.inner_gate, x, training=training, mask=mask)
+            x, x_mask = cm(self.gating_layer, x, training=training, mask=mask)
         x = self.out_layer(x, training=training, mask=x_mask)
         return x
 
