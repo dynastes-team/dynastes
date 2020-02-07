@@ -305,8 +305,8 @@ def safe_ctc_beam_search_decoder_v2(inputs,
       merge_repeated=False)
 
 
-ops.NotDifferentiable("CTCGreedyDecoder")
-ops.NotDifferentiable("CTCBeamSearchDecoder")
+ops.NotDifferentiable("SafeCTCGreedyDecoder")
+ops.NotDifferentiable("SafeCTCBeamSearchDecoder")
 
 
 def _ctc_state_trans(label_seq):
