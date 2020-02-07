@@ -10,12 +10,12 @@ from dynastes.layers.t2t_attention_layers import Attention1D, Attention2D, Pseud
 from dynastes.probability.pseudoblocksparse_bijectors import BlockSparseStridedRoll1D
 
 
-def _test_grads(testCase: tf.test.TestCase, func, input):
+def _test_grads(testCase: tf.test.TestCase, func, input, max_range=50.):
     _, grads = tf.test.compute_gradient(func, input)
     for grad in grads:
         tf.debugging.check_numerics(grad, '')
         testCase.assertNotAllClose(grad, np.zeros_like(grad))
-        testCase.assertAllInRange(grad, -50., 50.)
+        testCase.assertAllInRange(grad, -max_range, max_range)
 
 
 to_tensor = tf.convert_to_tensor
@@ -35,6 +35,14 @@ class T2TAttention1DTest(tf.test.TestCase):
 
         layers = [
             (
+                'PsuedoBlockSparse Multiquery Masked',
+                PseudoBlockSparseAttention1D(num_heads=num_heads, block_size=8,
+                                             multiquery_attention=True,
+                                             blocksparse_bijector=BlockSparseStridedRoll1D(block_size=8),
+                                             mask_right=True),
+                {'self': True, 'steps_q': 64, 'steps_kv': 64, 'dim_q': dim_mq, 'dim_k': dim_mq // num_heads,
+                 'dim_v': dim_mq // num_heads}),
+            (
                 'Local Masked',
                 Attention1D(num_heads=num_heads, self_attention=True, local=True, masked=True, block_length=8,
                             mask_right=True,
@@ -45,6 +53,7 @@ class T2TAttention1DTest(tf.test.TestCase):
                 Attention1D(num_heads=num_heads, multiquery_attention=True, self_attention=True, local=True,
                             mask_right=True,
                             masked=True, block_length=8,
+                            scaled=True,
                             filter_width=6),
                 {'self': True, 'steps_q': 57, 'steps_kv': 57, 'dim_q': dim_mq, 'dim_k': dim_mq // num_heads,
                  'dim_v': dim_mq // num_heads}),
@@ -54,7 +63,7 @@ class T2TAttention1DTest(tf.test.TestCase):
                 'Sparse Unmasked',
                 Attention1D(num_heads=num_heads, self_attention=True, sparse=True, lsh_bucket_length=3,
                             mask_right=True),
-                {'self': True, 'steps_q': 32, 'steps_kv': 32, 'dim_q': dim, 'dim_k': dim, 'dim_v': dim}),
+                {'self': True, 'steps_q': 32, 'steps_kv': 32, 'dim_q': dim, 'dim_k': dim, 'dim_v': dim, 'max_grad': 600.}),
             (
                 'Normal',
                 Attention1D(num_heads=num_heads, self_attention=False),
@@ -112,14 +121,7 @@ class T2TAttention1DTest(tf.test.TestCase):
                                              blocksparse_bijector=BlockSparseStridedRoll1D(block_size=8),
                                              mask_right=True),
                 {'self': True, 'steps_q': 64, 'steps_kv': 64, 'dim_q': dim, 'dim_k': dim, 'dim_v': dim}),
-            (
-                'PsuedoBlockSparse Multiquery Masked',
-                PseudoBlockSparseAttention1D(num_heads=num_heads, block_size=8,
-                                             multiquery_attention=True,
-                                             blocksparse_bijector=BlockSparseStridedRoll1D(block_size=8),
-                                             mask_right=True),
-                {'self': True, 'steps_q': 64, 'steps_kv': 64, 'dim_q': dim_mq, 'dim_k': dim_mq // num_heads,
-                 'dim_v': dim_mq // num_heads}),
+
         ]
 
         def test_layer(layer, params):
@@ -161,7 +163,7 @@ class T2TAttention1DTest(tf.test.TestCase):
             time = timeit.timeit(fn, number=2) / (params['steps_q'] * params['steps_kv'] * params['dim_q'])
             time *= 8192
 
-            _test_grads(self, test_fn, [q, k, v])
+            _test_grads(self, test_fn, [q, k, v], max_range=params.get('max_grad', 50.))
             return time
 
         for (type, layer, params) in layers:
