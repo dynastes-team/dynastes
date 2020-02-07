@@ -18,6 +18,7 @@ from __future__ import absolute_import
 from __future__ import division
 from __future__ import print_function
 
+import tensorflow as tf
 from tensorflow.python.eager import context
 
 from tensorflow.python.framework import constant_op
@@ -42,14 +43,14 @@ from tensorflow.python.util import deprecation
 from tensorflow.python.util import nest
 
 
-def ctc_loss(labels,
-             inputs=None,
-             sequence_length=None,
-             preprocess_collapse_repeated=False,
-             ctc_merge_repeated=True,
-             ignore_longer_outputs_than_inputs=False,
-             time_major=True,
-             logits=None):
+def safe_ctc_loss(labels,
+                  inputs=None,
+                  sequence_length=None,
+                  preprocess_collapse_repeated=False,
+                  ctc_merge_repeated=True,
+                  ignore_longer_outputs_than_inputs=False,
+                  time_major=True,
+                  logits=None):
   """Computes the CTC (Connectionist Temporal Classification) Loss.
   This op implements the CTC loss as presented in the article:
   [A. Graves, S. Fernandez, F. Gomez, J. Schmidhuber.
@@ -151,8 +152,8 @@ def ctc_loss(labels,
 
 
 # pylint: disable=unused-argument
-@ops.RegisterGradient("CTCLoss")
-def _CTCLossGrad(op, grad_loss, _):
+@ops.RegisterGradient("SafeCTCLoss")
+def _SafeCTCLossGrad(op, grad_loss, _):
   """The derivative provided by CTC Loss.
   Args:
      op: the CTCLoss op.
@@ -176,7 +177,7 @@ def _CTCLossGrad(op, grad_loss, _):
   return [_BroadcastMul(grad_loss, grad_without_gradient), None, None, None]
 
 
-def ctc_greedy_decoder(inputs, sequence_length, merge_repeated=True):
+def safe_ctc_greedy_decoder(inputs, sequence_length, merge_repeated=True):
   """Performs greedy decoding on the logits given in input (best path).
   Note: Regardless of the value of merge_repeated, if the maximum index of a
   given time and batch corresponds to the blank index `(num_classes - 1)`, no
@@ -214,11 +215,11 @@ def ctc_greedy_decoder(inputs, sequence_length, merge_repeated=True):
                                       decoded_shape)], log_probabilities)
 
 
-def ctc_beam_search_decoder(inputs,
-                            sequence_length,
-                            beam_width=100,
-                            top_paths=1,
-                            merge_repeated=True):
+def safe_ctc_beam_search_decoder(inputs,
+                                 sequence_length,
+                                 beam_width=100,
+                                 top_paths=1,
+                                 merge_repeated=True):
   """Performs beam search decoding on the logits given in input.
   **Note** The `ctc_greedy_decoder` is a special case of the
   `ctc_beam_search_decoder` with `top_paths=1` and `beam_width=1` (but
@@ -265,10 +266,10 @@ def ctc_beam_search_decoder(inputs,
   ], log_probabilities)
 
 
-def ctc_beam_search_decoder_v2(inputs,
-                               sequence_length,
-                               beam_width=100,
-                               top_paths=1):
+def safe_ctc_beam_search_decoder_v2(inputs,
+                                    sequence_length,
+                                    beam_width=100,
+                                    top_paths=1):
   """Performs beam search decoding on the logits given in input.
   **Note** The `ctc_greedy_decoder` is a special case of the
   `ctc_beam_search_decoder` with `top_paths=1` and `beam_width=1` (but
@@ -296,7 +297,7 @@ def ctc_beam_search_decoder_v2(inputs,
 
   # Note, merge_repeated is an invalid optimization that is removed from the
   # public API: it returns low probability paths.
-  return ctc_beam_search_decoder(
+  return safe_ctc_beam_search_decoder(
       inputs,
       sequence_length=sequence_length,
       beam_width=beam_width,
@@ -362,7 +363,7 @@ def _ctc_state_trans(label_seq):
     return array_ops.expand_dims(trans, 0) + label_to_label
 
 
-def ctc_state_log_probs(seq_lengths, max_seq_length):
+def safe_ctc_state_log_probs(seq_lengths, max_seq_length):
   """Computes CTC alignment initial and final state log probabilities.
   Create the initial/final state values directly as log values to avoid
   having to take a float64 log on tpu (which does not exist).
@@ -469,7 +470,7 @@ def _state_to_olabel_unique(labels, num_labels, states, unique):
   return array_ops.concat([blank_olabels, label_olabels], axis=-1)
 
 
-def ctc_loss_and_grad(logits, labels, label_length, logit_length, unique=None):
+def safe_ctc_loss_and_grad(logits, labels, label_length, logit_length, unique=None):
   """Computes the CTC loss and gradients.
   Most users will want fwd_bwd.ctc_loss
   This function returns the computed gradient, it does not have a gradient
@@ -495,7 +496,7 @@ def ctc_loss_and_grad(logits, labels, label_length, logit_length, unique=None):
   ilabel_log_probs = nn_ops.log_softmax(logits)
   state_log_probs = _ilabel_to_state(labels, num_labels, ilabel_log_probs)
   state_trans_probs = _ctc_state_trans(labels)
-  initial_state_log_probs, final_state_log_probs = ctc_state_log_probs(
+  initial_state_log_probs, final_state_log_probs = safe_ctc_state_log_probs(
       label_length, max_label_seq_length)
   fwd_bwd_log_probs, log_likelihood = _forward_backward_log(
       state_trans_log_probs=math_ops.xlogy(state_trans_probs),
@@ -515,7 +516,7 @@ def ctc_loss_and_grad(logits, labels, label_length, logit_length, unique=None):
   return loss, grad
 
 
-def _ctc_loss_grad(op, grad_loss, _):
+def _safe_ctc_loss_grad(op, grad_loss, _):
   grad = op.outputs[1]
   grad = [array_ops.reshape(grad_loss, [1, -1, 1]) * grad]
   grad += [None] * (len(op.inputs) - len(grad))
@@ -526,14 +527,14 @@ def _ctc_loss_shape(op):
   return [op.inputs[2].get_shape(), op.inputs[0].get_shape()]
 
 
-def ctc_loss_v2(labels,
-                logits,
-                label_length,
-                logit_length,
-                logits_time_major=True,
-                unique=None,
-                blank_index=None,
-                name=None):
+def safe_ctc_loss_v2(labels,
+                     logits,
+                     label_length,
+                     logit_length,
+                     logits_time_major=True,
+                     unique=None,
+                     blank_index=None,
+                     name=None):
   """Computes CTC (Connectionist Temporal Classification) loss.
   This op implements the CTC loss as presented in the article:
   [A. Graves, S. Fernandez, F. Gomez, J. Schmidhuber.
@@ -592,7 +593,7 @@ def ctc_loss_v2(labels,
           array_ops.where(labels.values < blank_index, labels.values,
                           labels.values - 1), labels.dense_shape)
 
-    return ctc_loss(
+    return safe_ctc_loss(
         labels=labels,
         inputs=logits,
         sequence_length=logit_length,
@@ -601,7 +602,7 @@ def ctc_loss_v2(labels,
   if blank_index is None:
     blank_index = 0
 
-  return ctc_loss_dense(
+  return safe_ctc_loss_dense(
       labels=labels,
       logits=logits,
       label_length=label_length,
@@ -612,14 +613,14 @@ def ctc_loss_v2(labels,
       name=name)
 
 
-def ctc_loss_dense(labels,
-                   logits,
-                   label_length,
-                   logit_length,
-                   logits_time_major=True,
-                   unique=None,
-                   blank_index=0,
-                   name=None):
+def safe_ctc_loss_dense(labels,
+                        logits,
+                        label_length,
+                        logit_length,
+                        logits_time_major=True,
+                        unique=None,
+                        blank_index=0,
+                        name=None):
   """Computes CTC (Connectionist Temporal Classification) loss.
   This op implements the CTC loss as presented in the article:
   [A. Graves, S. Fernandez, F. Gomez, J. Schmidhuber.
@@ -714,7 +715,7 @@ def ctc_loss_dense(labels,
           logit_length=logit_length_t)
       if unique_t:
         kwargs["unique"] = unique_t
-      result = ctc_loss_and_grad(**kwargs)
+      result = safe_ctc_loss_and_grad(**kwargs)
       def grad(grad_loss):
         grad = [array_ops.reshape(grad_loss, [1, -1, 1]) * result[1]]
         grad += [None] * (len(args) - len(grad))
