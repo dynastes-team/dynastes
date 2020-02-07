@@ -181,5 +181,22 @@ def lsh_attention(q, k, v, t_vectors_q, t_group, bucket_length, threshold=0.5, d
 
 
 def zero_abs_gt(t: tf.Tensor, value):
-    mask = tf.cast(tf.abs(t) > value, t.dtype)
-    return (1-mask) * tf.clip_by_value(t, -value, value) + tf.zeros_like(t) * mask
+    mask = tf.math.is_finite(t)
+    return tf.where(mask, tf.clip_by_value(t, -value, value), tf.zeros_like(t))
+
+
+def zero_abs_gt_grad(t: tf.Tensor, value):
+    with tf.name_scope('zero_abs_gt_grad'):
+        @tf.custom_gradient
+        def func(x):
+            y = zero_abs_gt(x, value)
+
+            @tf.custom_gradient
+            def grad(dy):
+                with tf.name_scope('zero_abs_gt_grad_grad'):
+                    dx = zero_abs_gt(dy, value)
+                    return dx, lambda ddx: zero_abs_gt(ddx, value)
+
+            return y, grad
+
+        return func(t)

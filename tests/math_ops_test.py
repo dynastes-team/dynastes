@@ -113,9 +113,20 @@ class ZeroAbsGtTest(tf.test.TestCase):
     @test_util.use_deterministic_cudnn
     def test_simple(self):
         t = tf.convert_to_tensor(1., dtype=tf.float32) / tf.convert_to_tensor(0., dtype=tf.float32)
+        nant = tf.convert_to_tensor(np.nan, dtype=tf.float32)
         r = math_ops.zero_abs_gt(t, 200.)
-        print(r)
+        print(t, r)
+        t_m = 1-t
+        r = math_ops.zero_abs_gt(t_m, 200.)
+        print(t_m, r)
 
+        r = math_ops.zero_abs_gt(nant, 200.)
+        print(nant, r)
+
+        okt = tf.convert_to_tensor(1., dtype=tf.float32)
+
+        r = math_ops.zero_abs_gt(okt, 200.)
+        print(okt, r)
 
 if __name__ == '__main__':
     tf.test.main()
