@@ -26,6 +26,17 @@ from dynastes.ops import embedding_ops
 from dynastes.ops.t2t_common import shape_list
 
 
+def get_training_value(layer: tfkl.Layer, training=None):
+    if training is None:
+        training = K.learning_phase()
+    else:
+        if isinstance(training, int):
+            training = bool(training)
+        else:
+            training = math_ops.logical_and(training, layer.trainable)
+    return training
+
+
 @tf.keras.utils.register_keras_serializable(package='Dynastes')
 class _WscaleInitializer(tfk.initializers.Initializer):
 
@@ -106,6 +117,17 @@ class DynastesBaseLayer(tfkl.Layer):
             **kwargs)
         self.supports_masking = True
 
+    def get_training_value(self, training=None):
+
+        if training is None:
+            training = K.learning_phase()
+        else:
+            if isinstance(training, int):
+                training = bool(training)
+            else:
+                training = math_ops.logical_and(training, self.trainable)
+        return training
+
     def request_cache(self, batch_size, **kwargs):
         pass
 
@@ -176,6 +198,7 @@ class DynastesBaseLayer(tfkl.Layer):
         return weight
 
     def get_weight(self, name, training=None):
+        training = self.get_training_value(training)
         w = self.weights_dict[name]
         if name in self.normalizers and self.normalizers[name] is not None:
             w = self.normalizers[name](w, training=training)

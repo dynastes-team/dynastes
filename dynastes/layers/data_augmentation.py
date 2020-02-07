@@ -27,7 +27,7 @@ class SpecAugmentLayer(DynastesBaseLayer):
         self.roll_mask = roll_mask
 
     def call(self, inputs, training=None):
-        if training:
+        if self.get_training_value(training):
             return spec_augment(inputs,
                                 time_warping_para=self.time_warping_para,
                                 time_masking_para=self.time_masking_para,

@@ -3,6 +3,8 @@ import tensorflow as tf
 import tensorflow.keras as tfk
 import tensorflow.keras.layers as tfkl
 
+from dynastes.layers import base_layers as dlb
+
 
 @tf.keras.utils.register_keras_serializable(package='Dynastes')
 class SpectralNormalization(tfkl.Layer):
@@ -53,7 +55,7 @@ class SpectralNormalization(tfkl.Layer):
             u = tf.nn.l2_normalize(tf.matmul(w, v))
 
         # Update persisted approximation.
-        if training:
+        if dlb.get_training_value(self, training):
             with tf.control_dependencies([self.u.assign(u, name='update_u')]):
                 u = tf.identity(u)
 

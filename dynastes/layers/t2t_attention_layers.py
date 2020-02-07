@@ -282,7 +282,7 @@ class Attention1D(DynastesBaseLayer):
         q = t2t_attention.split_heads(q, self.num_heads)
         k = t2t_attention.split_heads(k, self.num_heads_kv)
         v = t2t_attention.split_heads(v, self.num_heads_kv)
-        if training:
+        if self.get_training_value(training):
             rate = self.dropout_rate
         else:
             rate = 0.
@@ -417,7 +417,7 @@ class PseudoBlockSparseAttention1D(DynastesBaseLayer):
         q = t2t_attention.split_heads(q, self.num_heads)
         k = t2t_attention.split_heads(k, self.num_heads_kv)
         v = t2t_attention.split_heads(v, self.num_heads_kv)
-        if training:
+        if self.get_training_value(training):
             rate = self.dropout_rate
         else:
             rate = 0.
@@ -600,7 +600,7 @@ class Attention2D(DynastesBaseLayer):
         k = t2t_attention.split_heads_2d(k, self.num_heads_kv)
         v = t2t_attention.split_heads_2d(v, self.num_heads_kv)
 
-        if training:
+        if self.get_training_value(training):
             rate = self.dropout_rate
         else:
             rate = 0.
