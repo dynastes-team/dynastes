@@ -5,7 +5,6 @@ from __future__ import print_function
 from functools import partial
 
 import tensorflow as tf
-import tensorflow.keras as tfk
 import tensorflow.keras.layers as tfkl
 
 from dynastes import activations
@@ -148,6 +147,7 @@ class EncoderBlock(tfkl.Layer):
                  mha_skip_adapt: tfkl.Layer = tfkl.Activation('linear'),
                  ffn_skip_adapt: tfkl.Layer = tfkl.Activation('linear'),
                  dropout_rate=0.0,
+                 layerdrop_rate=0.0,
                  prenorm=False,
                  **kwargs):
         super(EncoderBlock, self).__init__(**kwargs)
@@ -159,6 +159,7 @@ class EncoderBlock(tfkl.Layer):
         self.ffn_skip_adapt = ffn_skip_adapt
         self.dropout_rate = dropout_rate
         self.prenorm = prenorm
+        self.layerdrop_rate = layerdrop_rate
 
     def request_cache(self, batch_size=1, max_length=1):
         try:
@@ -169,6 +170,8 @@ class EncoderBlock(tfkl.Layer):
     def call_masked(self, inputs, training=None, mask=None, cache=None, decode_loop_step=None):
         with cache_context.SubContext(self.name):
             x = inputs
+            ldf = tf.cast(tf.random.uniform([], maxval=1., dtype=inputs.dtype) > self.layerdrop_rate,
+                          inputs.dtype) if training else tf.convert_to_tensor(1., dtype=inputs.dtype)
             if self.prenorm:
                 x, x_mask = cm(self.norm0, x, training=training, mask=mask)
             else:
@@ -184,10 +187,10 @@ class EncoderBlock(tfkl.Layer):
                 n_mask = tf.math.logical_and(x_mask, res_mask)
             x = tfkl.Dropout(self.dropout_rate)(x, training=training)
             if self.prenorm:
-                x = x + res
+                x = (ldf * x) + res
                 x_mask = n_mask
             else:
-                x, x_mask = cm(self.norm0, x + res, training=training, mask=n_mask)
+                x, x_mask = cm(self.norm0, (ldf * x) + res, training=training, mask=n_mask)
 
             res, res_mask = cm(self.ffn_skip_adapt, x, training=training, mask=x_mask)
             if self.prenorm:
@@ -202,15 +205,17 @@ class EncoderBlock(tfkl.Layer):
                 n_mask = tf.math.logical_and(f_mask, res_mask)
             f = tfkl.Dropout(self.dropout_rate)(f, training=training)
             if self.prenorm:
-                x = f + res
+                x = (ldf * f) + res
                 mask = n_mask
             else:
-                x, mask = cm(self.norm1, f + res, training=training, mask=n_mask)
+                x, mask = cm(self.norm1, (ldf * f) + res, training=training, mask=n_mask)
             return x, mask
 
     def call(self, inputs, training=None, mask=None, cache=None, decode_loop_step=None):
         with cache_context.SubContext(self.name):
             x = inputs
+            ldf = tf.cast(tf.random.uniform([], maxval=1., dtype=inputs.dtype) > self.layerdrop_rate,
+                          inputs.dtype) if training else tf.convert_to_tensor(1., dtype=inputs.dtype)
             if self.prenorm:
                 x, x_mask = cm(self.norm0, x, training=training, mask=mask)
             else:
@@ -226,10 +231,10 @@ class EncoderBlock(tfkl.Layer):
                 n_mask = tf.math.logical_and(x_mask, res_mask)
             x = tfkl.Dropout(self.dropout_rate)(x, training=training)
             if self.prenorm:
-                x = x + res
+                x = (x * ldf) + res
                 x_mask = n_mask
             else:
-                x, x_mask = cm(self.norm0, x + res, training=training, mask=n_mask)
+                x, x_mask = cm(self.norm0, (x * ldf) + res, training=training, mask=n_mask)
 
             res, res_mask = cm(self.ffn_skip_adapt, x, training=training, mask=x_mask)
             if self.prenorm:
@@ -243,9 +248,9 @@ class EncoderBlock(tfkl.Layer):
                 n_mask = tf.math.logical_and(f_mask, res_mask)
             f = tfkl.Dropout(self.dropout_rate)(f, training=training)
             if self.prenorm:
-                x = f + res
+                x = (ldf * f) + res
             else:
-                x, _ = cm(self.norm1, f + res, training=training, mask=n_mask)
+                x, _ = cm(self.norm1, (ldf * f) + res, training=training, mask=n_mask)
             return x
 
     def compute_mask(self, inputs, mask=None):
@@ -368,6 +373,7 @@ class DecoderBlock(tfkl.Layer):
                  mha_skip_adapt: tfkl.Layer = tfkl.Activation('linear'),
                  ffn_skip_adapt: tfkl.Layer = tfkl.Activation('linear'),
                  dropout_rate=0.,
+                 layerdrop_rate=0.,
                  prenorm=False,
                  **kwargs):
         super(DecoderBlock, self).__init__(**kwargs)
@@ -380,6 +386,7 @@ class DecoderBlock(tfkl.Layer):
         self.mha_skip_adapt = mha_skip_adapt
         self.ffn_skip_adapt = ffn_skip_adapt
         self.dropout_rate = dropout_rate
+        self.layerdrop_rate = layerdrop_rate
         self.prenorm = prenorm
 
     def request_cache(self, batch_size=1, max_length_sa=1, max_length_ca=1):
@@ -391,6 +398,8 @@ class DecoderBlock(tfkl.Layer):
 
     def _call(self, inputs, training=None, mask=None, cache=None, decode_loop_step=None, pad_q_to_kv=False):
         x, enc_in = inputs
+        ldf = tf.cast(tf.random.uniform([], maxval=1., dtype=inputs.dtype) > self.layerdrop_rate,
+                      inputs.dtype) if training else tf.convert_to_tensor(1., dtype=inputs.dtype)
         _x = x
         if mask is not None:
             x_mask, enc_mask = mask
@@ -420,10 +429,10 @@ class DecoderBlock(tfkl.Layer):
             n_mask = tf.math.logical_and(x_mask, res_mask)
         x = tfkl.Dropout(self.dropout_rate)(x, training=training)
         if self.prenorm:
-            x = x + res
+            x = (ldf*x) + res
             x_mask = n_mask
         else:
-            x, x_mask = cm(self.norm0, x + res, training=training, mask=n_mask)
+            x, x_mask = cm(self.norm0, (ldf*x) + res, training=training, mask=n_mask)
         _x = x
         ## Attend to encoding
         if mask is not None:
@@ -453,10 +462,10 @@ class DecoderBlock(tfkl.Layer):
             n_mask = tf.math.logical_and(x_mask, res_mask)
         x = tfkl.Dropout(self.dropout_rate)(x, training=training)
         if self.prenorm:
-            x = x + res
+            x = (ldf*x) + res
             x_mask = n_mask
         else:
-            x, x_mask = cm(self.norm1, x + res, training=training, mask=n_mask)
+            x, x_mask = cm(self.norm1, (ldf*x) + res, training=training, mask=n_mask)
         _x = x
         res, res_mask = cm(self.ffn_skip_adapt, _x, training=training, mask=x_mask)
         ## FF-net
@@ -472,10 +481,10 @@ class DecoderBlock(tfkl.Layer):
             n_mask = tf.math.logical_and(f_mask, res_mask)
         f = tfkl.Dropout(self.dropout_rate)(f, training=training)
         if self.prenorm:
-            x = f + res
+            x = (ldf*f) + res
             mask = n_mask
         else:
-            x, mask = cm(self.norm2, f + res, training=training, mask=n_mask)
+            x, mask = cm(self.norm2, (ldf*f) + res, training=training, mask=n_mask)
         if attn_weights_ca is not None or attn_weights_sa is not None:
             return x, mask, {'sa': attn_weights_sa, 'ca': attn_weights_ca}
         return x, mask
