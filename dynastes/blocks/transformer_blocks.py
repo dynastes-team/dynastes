@@ -398,8 +398,8 @@ class DecoderBlock(tfkl.Layer):
 
     def _call(self, inputs, training=None, mask=None, cache=None, decode_loop_step=None, pad_q_to_kv=False):
         x, enc_in = inputs
-        ldf = tf.cast(tf.random.uniform([], maxval=1., dtype=inputs.dtype) > self.layerdrop_rate,
-                      inputs.dtype) if training else tf.convert_to_tensor(1., dtype=inputs.dtype)
+        ldf = tf.cast(tf.random.uniform([], maxval=1., dtype=inputs[0].dtype) > self.layerdrop_rate,
+                      inputs[0].dtype) if training else tf.convert_to_tensor(1., dtype=inputs[0].dtype)
         _x = x
         if mask is not None:
             x_mask, enc_mask = mask
