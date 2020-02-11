@@ -3,6 +3,7 @@ from __future__ import division
 from __future__ import print_function
 
 from . import attention_blocks
+from . import causal_blocks
 from . import transformer_blocks
 
 # Cleanup symbols to avoid polluting namespace.
