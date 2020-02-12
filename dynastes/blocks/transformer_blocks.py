@@ -87,19 +87,35 @@ class PointWiseFeedForwardBlock(DynastesBaseLayer):
             filters=d_model,
             activation=None)
 
-    def call_masked(self, inputs, training=None, mask=None):
+    def request_cache(self, batch_size, max_length=None, **kwargs):
+        max_req_len = max(self.first_kernel_size * self.dilation_rate, self.second_kernel_size * self.dilation_rate)
+        return {'input_queue': tf.zeros([batch_size, max_req_len, self.d_model]),
+                'mask_queue': tf.cast(tf.zeros([batch_size, max_req_len]), tf.bool)}
+
+    def _call(self, inputs, training=None, cache=None, mask=None, **kwargs):
+        max_req_len = max(self.first_kernel_size * self.dilation_rate, self.second_kernel_size * self.dilation_rate)
+        if cache is not None:
+            inputs = tf.concat([cache['input_queue'], inputs], axis=1)
+            if mask is not None:
+                mask = tf.concat([cache['mask_queue'], mask], axis=1)
         x, x_mask = cm(self.dff_layer, inputs, training=training, mask=mask)
         if self.inner_gate:
             x, x_mask = cm(self.gating_layer, x, training=training, mask=mask)
         x, x_mask = cm(self.out_layer, x, training=training, mask=x_mask)
-        return x, x_mask
+        if cache is not None:
+            cache['input_queue'] = inputs[:, -max_req_len:, :]
+            if mask is not None:
+                cache['mask_queue'] = mask[:, -max_req_len:]
+                mask = mask[:, -1:]
+            return x[:, -1:, :], mask
+        return x, mask
 
-    def call(self, inputs, training=None, mask=None):
-        x, x_mask = cm(self.dff_layer, inputs, training=training, mask=mask)
-        if self.inner_gate:
-            x, x_mask = cm(self.gating_layer, x, training=training, mask=mask)
-        x = self.out_layer(x, training=training, mask=x_mask)
+    def call(self, inputs, training=None, cache=None, mask=None, **kwargs):
+        x, _ = self._call(inputs, training=training, cache=cache, mask=mask, **kwargs)
         return x
+
+    def call_masked(self, inputs, training=None, cache=None, mask=None, **kwargs):
+        return self._call(inputs, training=training, cache=cache, mask=mask, **kwargs)
 
     def compute_mask(self, inputs, mask=None):
         if mask is not None:
@@ -169,11 +185,12 @@ class EncoderBlock(tfkl.Layer):
 
     def request_cache(self, batch_size=1, max_length=1):
         try:
-            return self.sa_layer.request_cache(batch_size=batch_size, max_length=max_length)
+            return {'sa': self.sa_layer.request_cache(batch_size=batch_size, max_length=max_length),
+                    'ffn': self.ffn.request_cache(batch_size=batch_size, max_length=max_length)}
         except:
             return None
 
-    def call_masked(self, inputs, training=None, mask=None, cache=None, decode_loop_step=None):
+    def call_masked(self, inputs, training=None, mask=None, cache={}, decode_loop_step=None):
         with cache_context.SubContext(self.name):
             x = inputs
             ldf = tf.cast(tf.random.uniform([], maxval=1., dtype=inputs.dtype) > self.layerdrop_rate,
@@ -182,7 +199,7 @@ class EncoderBlock(tfkl.Layer):
                 x, x_mask = cm(self.norm0, x, training=training, mask=mask)
             else:
                 x_mask = mask
-            x, x_mask = cm(self.sa_layer, x, training=training, mask=x_mask, cache=cache,
+            x, x_mask = cm(self.sa_layer, x, training=training, mask=x_mask, cache=cache.get('sa', None),
                            decode_loop_step=decode_loop_step)
             res, res_mask = cm(self.mha_skip_adapt, inputs, training=training, mask=mask)
             if x_mask is None:
@@ -202,7 +219,7 @@ class EncoderBlock(tfkl.Layer):
             if self.prenorm:
                 x, x_mask = cm(self.norm1, x, training=training, mask=x_mask)
 
-            f, f_mask = cm(self.ffn, x, training=training, mask=x_mask)
+            f, f_mask = cm(self.ffn, x, training=training, mask=x_mask, cache=cache.get('ffn', None))
             if f_mask is None:
                 n_mask = f_mask
             elif res_mask is None:
@@ -218,6 +235,8 @@ class EncoderBlock(tfkl.Layer):
             return x, mask
 
     def call(self, inputs, training=None, mask=None, cache=None, decode_loop_step=None):
+        if cache is None:
+            cache={}
         with cache_context.SubContext(self.name):
             x = inputs
             ldf = tf.cast(tf.random.uniform([], maxval=1., dtype=inputs.dtype) > self.layerdrop_rate,
@@ -226,7 +245,7 @@ class EncoderBlock(tfkl.Layer):
                 x, x_mask = cm(self.norm0, x, training=training, mask=mask)
             else:
                 x_mask = mask
-            x, x_mask = cm(self.sa_layer, x, training=training, mask=x_mask, cache=cache,
+            x, x_mask = cm(self.sa_layer, x, training=training, mask=x_mask, cache=cache.get('sa', None),
                            decode_loop_step=decode_loop_step)
             res, res_mask = cm(self.mha_skip_adapt, inputs, training=training, mask=mask)
             if x_mask is None:
@@ -245,7 +264,7 @@ class EncoderBlock(tfkl.Layer):
             res, res_mask = cm(self.ffn_skip_adapt, x, training=training, mask=x_mask)
             if self.prenorm:
                 x, x_mask = cm(self.norm1, x, training=training, mask=x_mask)
-            f, f_mask = cm(self.ffn, x, training=training, mask=x_mask)
+            f, f_mask = cm(self.ffn, x, training=training, mask=x_mask, cache=cache.get('ffn', None))
             if f_mask is None:
                 n_mask = f_mask
             elif res_mask is None:
@@ -322,16 +341,18 @@ class EncoderBlockStack(tfkl.Layer):
             try:
                 block_cache = block.request_cache(batch_size=batch_size, max_length=max_length)
             except:
-                block_cache = None
+                block_cache = {}
             cache[i] = block_cache
         return cache
 
     def call_masked(self, inputs, training=None, mask=None, cache=None, decode_loop_step=None, **kwargs):
+        if cache is None:
+            cache={}
         with cache_context.SubContext(self.name):
             x = inputs
             for i, block in enumerate(self.blocks):
                 if cache is not None:
-                    block_cache = cache[i]
+                    block_cache = cache.get(i, {})
                 else:
                     block_cache = None
                 x, mask = cm(block, x, training=training, mask=mask, cache=block_cache,
@@ -340,11 +361,13 @@ class EncoderBlockStack(tfkl.Layer):
             return x, mask
 
     def call(self, inputs, training=None, mask=None, cache=None, decode_loop_step=None, **kwargs):
+        if cache is None:
+            cache={}
         with cache_context.SubContext(self.name):
             x = inputs
             for i, block in enumerate(self.blocks):
                 if cache is not None:
-                    block_cache = cache[i]
+                    block_cache = cache.get(i, {})
                 else:
                     block_cache = None
                 x = block(x, training=training, mask=mask, cache=block_cache, decode_loop_step=decode_loop_step,
@@ -396,13 +419,13 @@ class DecoderBlock(tfkl.Layer):
         self.prenorm = prenorm
 
     def request_cache(self, batch_size=1, max_length_sa=1, max_length_ca=1):
-        try:
-            return {'sa': self.sa_layer.request_cache(batch_size=batch_size, max_length=max_length_sa),
-                    'ca': self.ca_layer.request_cache(batch_size=batch_size, max_length=max_length_ca)}
-        except:
-            return None
+        return {'sa': self.sa_layer.request_cache(batch_size=batch_size, max_length=max_length_sa),
+                'ca': self.ca_layer.request_cache(batch_size=batch_size, max_length=max_length_ca),
+                'ffn': self.ffn.request_cache(batch_size=batch_size, max_length=None)}
 
     def _call(self, inputs, training=None, mask=None, cache=None, decode_loop_step=None, pad_q_to_kv=False):
+        if cache is None:
+            cache={}
         x, enc_in = inputs
         ldf = tf.cast(tf.random.uniform([], maxval=1., dtype=inputs[0].dtype) > self.layerdrop_rate,
                       inputs[0].dtype) if training else tf.convert_to_tensor(1., dtype=inputs[0].dtype)
@@ -415,13 +438,9 @@ class DecoderBlock(tfkl.Layer):
             enc_mask = None
         _x_mask = x_mask
         ## Self-attention
-        if cache is not None:
-            sa_cache = cache['sa']
-        else:
-            sa_cache = None
         if self.prenorm:
             x, x_mask = cm(self.norm0, x, training=training, mask=x_mask)
-        x, x_mask = cm(self.sa_layer, x, training=training, mask=x_mask, cache=sa_cache,
+        x, x_mask = cm(self.sa_layer, x, training=training, mask=x_mask, cache=cache.get('sa', None),
                        decode_loop_step=decode_loop_step, pad_q_to_kv=pad_q_to_kv)
         attn_weights_sa = None
         if type(x) in [list, tuple]:
@@ -435,10 +454,10 @@ class DecoderBlock(tfkl.Layer):
             n_mask = tf.math.logical_and(x_mask, res_mask)
         x = tfkl.Dropout(self.dropout_rate)(x, training=training)
         if self.prenorm:
-            x = (ldf*x) + res
+            x = (ldf * x) + res
             x_mask = n_mask
         else:
-            x, x_mask = cm(self.norm0, (ldf*x) + res, training=training, mask=n_mask)
+            x, x_mask = cm(self.norm0, (ldf * x) + res, training=training, mask=n_mask)
         _x = x
         ## Attend to encoding
         if mask is not None:
@@ -446,16 +465,12 @@ class DecoderBlock(tfkl.Layer):
         else:
             assert False
             ca_mask = None
-        if cache is not None:
-            ca_cache = cache['ca']
-        else:
-            ca_cache = None
 
         res, res_mask = cm(self.mha_skip_adapt, _x, training=training, mask=x_mask)
         if self.prenorm:
             x, x_mask = cm(self.norm1, x, training=training, mask=x_mask)
 
-        x, x_mask = cm(self.ca_layer, (x, enc_in), training=training, mask=ca_mask, cache=ca_cache)
+        x, x_mask = cm(self.ca_layer, (x, enc_in), training=training, mask=ca_mask, cache=cache.get('ca', None))
         attn_weights_ca = None
         if type(x) in [list, tuple]:
             x, attn_weights_ca = x
@@ -468,17 +483,17 @@ class DecoderBlock(tfkl.Layer):
             n_mask = tf.math.logical_and(x_mask, res_mask)
         x = tfkl.Dropout(self.dropout_rate)(x, training=training)
         if self.prenorm:
-            x = (ldf*x) + res
+            x = (ldf * x) + res
             x_mask = n_mask
         else:
-            x, x_mask = cm(self.norm1, (ldf*x) + res, training=training, mask=n_mask)
+            x, x_mask = cm(self.norm1, (ldf * x) + res, training=training, mask=n_mask)
         _x = x
         res, res_mask = cm(self.ffn_skip_adapt, _x, training=training, mask=x_mask)
         ## FF-net
         if self.prenorm:
             x, x_mask = cm(self.norm2, x, training=training, mask=x_mask)
 
-        f, f_mask = cm(self.ffn, x, training=training, mask=x_mask)
+        f, f_mask = cm(self.ffn, x, training=training, mask=x_mask, cache=cache.get('ffn', None))
         if f_mask is None:
             n_mask = f_mask
         elif res_mask is None:
@@ -487,15 +502,17 @@ class DecoderBlock(tfkl.Layer):
             n_mask = tf.math.logical_and(f_mask, res_mask)
         f = tfkl.Dropout(self.dropout_rate)(f, training=training)
         if self.prenorm:
-            x = (ldf*f) + res
+            x = (ldf * f) + res
             mask = n_mask
         else:
-            x, mask = cm(self.norm2, (ldf*f) + res, training=training, mask=n_mask)
+            x, mask = cm(self.norm2, (ldf * f) + res, training=training, mask=n_mask)
         if attn_weights_ca is not None or attn_weights_sa is not None:
             return x, mask, {'sa': attn_weights_sa, 'ca': attn_weights_ca}
         return x, mask
 
     def call_masked(self, inputs, training=None, mask=None, cache=None, decode_loop_step=None, pad_q_to_kv=False):
+        if cache is None:
+            cache={}
         rets = self._call(inputs, training=training, mask=mask, cache=cache, decode_loop_step=decode_loop_step,
                           pad_q_to_kv=pad_q_to_kv)
         if len(rets) == 3:
@@ -503,6 +520,8 @@ class DecoderBlock(tfkl.Layer):
         return rets
 
     def call(self, inputs, training=None, mask=None, cache=None, decode_loop_step=None, pad_q_to_kv=False):
+        if cache is None:
+            cache={}
         rets = self._call(inputs, training=training, mask=mask, cache=cache, decode_loop_step=decode_loop_step,
                           pad_q_to_kv=pad_q_to_kv)
         if len(rets) == 3:
@@ -531,19 +550,19 @@ class DecoderBlockStack(tfkl.Layer):
     def request_cache(self, batch_size=1, max_length_ca=1, max_length_sa=1):
         cache = {}
         for i, block in enumerate(self.blocks):
-            try:
-                block_cache = block.request_cache(batch_size=batch_size, max_length_ca=max_length_ca,
-                                                  max_length_sa=max_length_sa)
-            except:
-                block_cache = None
+            block_cache = block.request_cache(batch_size=batch_size, max_length_ca=max_length_ca,
+                                              max_length_sa=max_length_sa)
+
             cache[i] = block_cache
         return cache
 
     def call_masked(self, inputs, training=None, mask=None, cache=None, decode_loop_step=None, **kwargs):
+        if cache is None:
+            cache={}
         x = inputs
         for i, block in enumerate(self.blocks):
             if cache is not None:
-                block_cache = cache[i]
+                block_cache = cache.get(i, {})
             else:
                 block_cache = None
             x, mask = cm(block, x, training=training, mask=mask, cache=block_cache, decode_loop_step=decode_loop_step,
@@ -551,10 +570,12 @@ class DecoderBlockStack(tfkl.Layer):
         return x, mask
 
     def call(self, inputs, training=None, mask=None, cache=None, decode_loop_step=None, pad_q_to_kv=False, **kwargs):
+        if cache is None:
+            cache={}
         x, enc = inputs
         for i, block in enumerate(self.blocks):
             if cache is not None:
-                block_cache = cache[i]
+                block_cache = cache.get(i, {})
             else:
                 block_cache = None
             x = block((x, enc), training=training, mask=mask, cache=block_cache, decode_loop_step=decode_loop_step,

@@ -66,13 +66,12 @@ class DecoderBlockTest(tf.test.TestCase):
                                            multiquery_attention=True,
                                            cache_kv=True)
             dec_norm = tfkl.LayerNormalization(epsilon=1e-6)
-            dec_df_net = PointWiseFeedForwardBlock(dff=dff, d_model=d_model)
+            dec_df_net = PointWiseFeedForwardBlock(dff=dff, first_kernel_size=3, d_model=d_model)
             dec_block = DecoderBlock(sa_layer=dec_sablock, ca_layer=dec_cablock, norm0=dec_norm, ffn=dec_df_net,
                                      norm1=dec_norm, norm2=dec_norm)
 
             stack = DecoderBlockStack([dec_block] * 3)
             cache = stack.request_cache(batch_size=batch_size, max_length_sa=max_length, max_length_ca=32)
-
             dec_input = tf.convert_to_tensor(normal(size=(batch_size, 1, d_model)).astype(np.float32)).numpy()
 
             self.assertEqual(encoded_out.shape, comp_out_shape)
@@ -94,8 +93,7 @@ class DecoderBlockTest(tf.test.TestCase):
             ret = inc_encode(dec_input, encoded_out, enc_mask)
             check_input = tf.concat([dec_input, ret[:, :-1, :]], axis=1)
             # Call sanity check outside of cache_context to make sure we're getting the same-ish result
-        sanity_check = stack((check_input, encoded_out), training=None, mask=(
-        tf.cast(tf.ones((batch_size, max_length)), tf.bool), enc_mask))  # , cache=cache, decode_loop_step=0)
+        sanity_check = stack((check_input, encoded_out), training=None, mask=(tf.cast(tf.ones((batch_size, max_length)), tf.bool), enc_mask))  # , cache=cache, decode_loop_step=0)
 
         print(tf.reduce_max(ret - sanity_check), tf.reduce_mean(ret - sanity_check))
         self.assertAllClose(ret, sanity_check, atol=5, rtol=36633)

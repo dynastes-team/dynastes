@@ -28,7 +28,7 @@ class CausalDilatedWrapper1D(DynastesBaseLayer):
     def request_cache(self, batch_size, **kwargs):
 
         return {'input_queue': tf.zeros([batch_size, self.kernel_size * self.dilation_rate, self.d_in]),
-                'mask_queue': tf.zeros([batch_size, self.kernel_size * self.dilation_rate])}
+                'mask_queue': tf.cast(tf.zeros([batch_size, self.kernel_size * self.dilation_rate]), tf.bool)}
 
     def _call(self, inputs, training=None, cache=None, mask=None, **kwargs):
 
@@ -42,7 +42,7 @@ class CausalDilatedWrapper1D(DynastesBaseLayer):
         if cache is not None:
             cache['input_queue'] = inputs[:, -(self.kernel_size * self.dilation_rate):, :]
             if mask is not None:
-                cache['mask_queue'] = mask[:, -(self.kernel_size * self.dilation_rate):, :]
+                cache['mask_queue'] = mask[:, -(self.kernel_size * self.dilation_rate):]
                 mask = mask[:, -1:]
             return x[:, -1:, :], mask
         return x, mask
