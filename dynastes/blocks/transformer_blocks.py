@@ -190,7 +190,9 @@ class EncoderBlock(tfkl.Layer):
         except:
             return None
 
-    def call_masked(self, inputs, training=None, mask=None, cache={}, decode_loop_step=None):
+    def call_masked(self, inputs, training=None, mask=None, cache=None, decode_loop_step=None):
+        if cache is None:
+            cache = {}
         with cache_context.SubContext(self.name):
             x = inputs
             ldf = tf.cast(tf.random.uniform([], maxval=1., dtype=inputs.dtype) > self.layerdrop_rate,
@@ -236,7 +238,7 @@ class EncoderBlock(tfkl.Layer):
 
     def call(self, inputs, training=None, mask=None, cache=None, decode_loop_step=None):
         if cache is None:
-            cache={}
+            cache = {}
         with cache_context.SubContext(self.name):
             x = inputs
             ldf = tf.cast(tf.random.uniform([], maxval=1., dtype=inputs.dtype) > self.layerdrop_rate,
@@ -347,7 +349,7 @@ class EncoderBlockStack(tfkl.Layer):
 
     def call_masked(self, inputs, training=None, mask=None, cache=None, decode_loop_step=None, **kwargs):
         if cache is None:
-            cache={}
+            cache = {}
         with cache_context.SubContext(self.name):
             x = inputs
             for i, block in enumerate(self.blocks):
@@ -362,7 +364,7 @@ class EncoderBlockStack(tfkl.Layer):
 
     def call(self, inputs, training=None, mask=None, cache=None, decode_loop_step=None, **kwargs):
         if cache is None:
-            cache={}
+            cache = {}
         with cache_context.SubContext(self.name):
             x = inputs
             for i, block in enumerate(self.blocks):
@@ -425,7 +427,7 @@ class DecoderBlock(tfkl.Layer):
 
     def _call(self, inputs, training=None, mask=None, cache=None, decode_loop_step=None, pad_q_to_kv=False):
         if cache is None:
-            cache={}
+            cache = {}
         x, enc_in = inputs
         ldf = tf.cast(tf.random.uniform([], maxval=1., dtype=inputs[0].dtype) > self.layerdrop_rate,
                       inputs[0].dtype) if training else tf.convert_to_tensor(1., dtype=inputs[0].dtype)
@@ -512,7 +514,7 @@ class DecoderBlock(tfkl.Layer):
 
     def call_masked(self, inputs, training=None, mask=None, cache=None, decode_loop_step=None, pad_q_to_kv=False):
         if cache is None:
-            cache={}
+            cache = {}
         rets = self._call(inputs, training=training, mask=mask, cache=cache, decode_loop_step=decode_loop_step,
                           pad_q_to_kv=pad_q_to_kv)
         if len(rets) == 3:
@@ -521,7 +523,7 @@ class DecoderBlock(tfkl.Layer):
 
     def call(self, inputs, training=None, mask=None, cache=None, decode_loop_step=None, pad_q_to_kv=False):
         if cache is None:
-            cache={}
+            cache = {}
         rets = self._call(inputs, training=training, mask=mask, cache=cache, decode_loop_step=decode_loop_step,
                           pad_q_to_kv=pad_q_to_kv)
         if len(rets) == 3:
@@ -558,7 +560,7 @@ class DecoderBlockStack(tfkl.Layer):
 
     def call_masked(self, inputs, training=None, mask=None, cache=None, decode_loop_step=None, **kwargs):
         if cache is None:
-            cache={}
+            cache = {}
         x = inputs
         for i, block in enumerate(self.blocks):
             if cache is not None:
@@ -571,7 +573,7 @@ class DecoderBlockStack(tfkl.Layer):
 
     def call(self, inputs, training=None, mask=None, cache=None, decode_loop_step=None, pad_q_to_kv=False, **kwargs):
         if cache is None:
-            cache={}
+            cache = {}
         x, enc = inputs
         for i, block in enumerate(self.blocks):
             if cache is not None:
