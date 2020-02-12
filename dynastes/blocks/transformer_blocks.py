@@ -21,7 +21,8 @@ class PointWiseFeedForwardBlock(DynastesBaseLayer):
     def __init__(self,
                  dff,
                  d_model,
-                 kernel_size=1,
+                 first_kernel_size=1,
+                 second_kernel_size=1,
                  ff_type='Dense',
                  d_type='Dense',
                  inner_self_gate_fn=None,
@@ -49,7 +50,8 @@ class PointWiseFeedForwardBlock(DynastesBaseLayer):
         self.inner_self_gate_fn = inner_self_gate_fn
         if inner_self_gate_fn is not None:
             self.gating_layer = GatingLayer(inner_self_gate_fn)
-        self.kernel_size = kernel_size
+        self.first_kernel_size = first_kernel_size
+        self.second_kernel_size = second_kernel_size
         self.strides = strides
         self.dilation_rate = dilation_rate
         self.depth_multiplier = depth_multiplier
@@ -58,7 +60,7 @@ class PointWiseFeedForwardBlock(DynastesBaseLayer):
         self.group_size = group_size
         self.dropout_rate = dropout_rate
 
-        conv_partial = partial(layer_factory.get_1d_layer, kernel_size=kernel_size,
+        conv_partial = partial(layer_factory.get_1d_layer,
                                grouped=grouped,
                                group_size=group_size,
                                depth_multiplier=depth_multiplier,
@@ -75,10 +77,12 @@ class PointWiseFeedForwardBlock(DynastesBaseLayer):
                                bias_constraint=self.get_constraint('bias'))
 
         self.dff_layer = conv_partial(
+            kernel_size=first_kernel_size,
             type=ff_type,
             filters=dff,
             activation=self.activation)
         self.out_layer = conv_partial(
+            kernel_size=second_kernel_size,
             type=d_type,
             filters=d_model,
             activation=None)
@@ -120,6 +124,8 @@ class PointWiseFeedForwardBlock(DynastesBaseLayer):
             'd_model': self.d_model,
             'ff_type': self.ff_type,
             'd_type': self.d_type,
+            'first_kernel_size': self.first_kernel_size,
+            'second_kernel_size': self.second_kernel_size,
             'activation': activations.serialize(self.activation),
             'inner_self_gate_fn': self.inner_self_gate_fn,
             'use_bias': self.use_bias,
