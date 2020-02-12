@@ -32,7 +32,7 @@ class PointWiseFeedForwardBlock(DynastesBaseLayer):
                  dilation_rate=1,
                  grouped=False,
                  group_size=1,
-                 padding='same',
+                 padding='causal',
                  activation=None,
                  use_bias=False,
                  dropout_rate=0.,
