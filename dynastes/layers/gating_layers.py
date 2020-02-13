@@ -36,7 +36,7 @@ def _get(gating_function):
         if gating_function in ['Dynastes>GLUM', 'GLUM']:
             return GLUM
         elif gating_function in ['Dynastes>GLU', 'GLU']:
-            return GLUM
+            return GLU
         elif gating_function in ['Dynastes>GDOT', 'GDOT']:
             return GDOT
     return _deserialize(gating_function)

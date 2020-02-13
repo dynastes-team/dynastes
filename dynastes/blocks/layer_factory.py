@@ -4,9 +4,19 @@ from __future__ import print_function
 
 from dynastes import layers
 from dynastes.probability.pseudoblocksparse_bijectors import BlockSparseStridedRoll1D
-
+from tensorflow.keras import Sequential
+import tensorflow.keras.layers as tfkl
+from dynastes import activations
 
 def get_1d_layer(type,
+                 **kwargs):
+    types = type.split('|')
+    if len(types) == 1:
+        return _get_1d_layer(type, **kwargs)
+    else:
+        return Sequential([_get_1d_layer(t, **kwargs) for t in types])
+
+def _get_1d_layer(type,
                  filters,
                  depth_multiplier,
                  kernel_size,
@@ -124,6 +134,10 @@ def get_1d_layer(type,
                                     activity_regularizer=activity_regularizer,
                                     kernel_constraint=kernel_constraint,
                                     bias_constraint=bias_constraint, **kwargs)
+    elif type.lower() in ['relu', 'mish', 'swish', 'None', 'sigmoid']:
+        return tfkl.Activation(activations.get(type))
+    else:
+        return tfkl.Activation('linear')
 
 
 def get_1D_attention_layer(type,
