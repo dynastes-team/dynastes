@@ -181,7 +181,8 @@ class DynastesBaseLayer(tfkl.Layer):
                                                                              gain=self.gain)
             else:
                 self.normalizers[name] = weight_normalizers.WscaleNormalizer(lrmul=self.lrmul, gain=self.gain)
-
+        if dtype is None:
+            dtype = self.dtype or K.floatx()
         weight = super(DynastesBaseLayer, self).add_weight(name=name,
                                                            shape=shape,
                                                            initializer=_initializer,
@@ -190,6 +191,7 @@ class DynastesBaseLayer(tfkl.Layer):
                                                            constraint=self.get_constraint(name),
                                                            partitioner=partitioner,
                                                            use_resource=use_resource,
+                                                           dtype=dtype,
                                                            **kwargs)
         if name in self.normalizers:
             if self.normalizers[name] is not None:

@@ -6,7 +6,7 @@ from tensorflow.python.framework import test_util
 
 from dynastes.layers.spectral_layers import Wave2STFTLayer, STFT2MelspectrogramLayer
 from dynastes.util.test_utils import layer_test
-
+import tensorflow.keras.backend as K
 
 class SpectralLayersTest(tf.test.TestCase):
     @test_util.use_deterministic_cudnn
@@ -81,4 +81,4 @@ class STFT2MelSpecLayerTest(tf.test.TestCase):
             STFT2MelspectrogramLayer, kwargs={'n_mels': 128},
             input_shape=(5, 32, 128, 2),
             input_dtype=tf.complex128,
-            expected_output_dtype=tf.float32)
+            expected_output_dtype=K.floatx)

@@ -198,7 +198,7 @@ def dot_product_attention(q,
     Returns:
       Tensor with shape [..., length_q, depth_v].
     """
-    dk = tf.cast(t2t_common.shape_list(k)[-1], tf.float32)
+    dk = tf.cast(t2t_common.shape_list(k)[-1], k.dtype)
     logits = tf.matmul(q, k, transpose_b=True)  # [..., length_q, length_kv]
     if scaled:
         logits /= tf.math.sqrt(dk)

@@ -1,10 +1,11 @@
 import numpy as np
 import tensorflow as tf
+import tensorflow.keras.backend as K
 
 
 def to_float(x):
     """Cast x to float; created because tf.to_float is deprecated."""
-    return tf.cast(x, tf.float32)
+    return tf.cast(x, K.floatx)
 
 
 def cast_like(x, y):

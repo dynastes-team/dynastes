@@ -52,13 +52,13 @@ def reshape_like(a, b):
     return ret
 
 
-def gather(params, indices, dtype=tf.float32):
+def gather(params, indices):
     """Version of tf.gather that works faster on tpu."""
     if not tf.config.optimizer.get_jit():
         return tf.gather(params, indices)
     vocab_size = params.get_shape().as_list()[0]
     indices_flat = tf.reshape(indices, [-1])
-    out = tf.matmul(tf.one_hot(indices_flat, vocab_size, dtype=dtype), params)
+    out = tf.matmul(tf.one_hot(indices_flat, vocab_size, dtype=params.dtype), params)
     out = reshape_like(out, tf.expand_dims(indices, -1))
     return out
 
@@ -67,8 +67,7 @@ def embedding_lookup(x,
                      embedding_matrix=None,
                      name='embedding_lookup',
                      multiplier=1.0,
-                     symbol_dropout_rate=0.0,
-                     dtype=tf.float32):
+                     symbol_dropout_rate=0.0):
     """Embed x of type int64 into dense vectors, reducing to max 4 dimensions."""
     with tf.name_scope(name):
         # On the backwards pass, we want to convert the gradient from
@@ -77,7 +76,7 @@ def embedding_lookup(x,
         if not tf.executing_eagerly():
             embedding_matrix = convert_gradient_to_tensor(embedding_matrix)
         x = dropout_no_scaling(x, 1.0 - symbol_dropout_rate)
-        emb_x = gather(embedding_matrix, x, dtype)
+        emb_x = gather(embedding_matrix, x)
         if multiplier != 1.0:
             emb_x *= multiplier
         static_shape = emb_x.shape.as_list()

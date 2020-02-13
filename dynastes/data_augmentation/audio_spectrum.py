@@ -1,5 +1,6 @@
 import tensorflow as tf
 import tensorflow_addons as tfa
+import tensorflow.keras.backend as K
 
 if tfa.__version__ == '0.7.0':
     from dynastes.ops.image_ops import sparse_image_warp
@@ -30,18 +31,18 @@ def sparse_warp(mel_spectrograms, time_warping_para: float = 80.):
     # Image warping control point setting.
     # Source
     pt = tf.random.uniform([], 0, n - (time_warping_para * 2),
-                           tf.float32) + time_warping_para  # radnom point along the time axis
-    src_ctr_pt_freq = tf.cast(tf.range(n_mels // 2), tf.float32)  # control points on freq-axis
+                           K.floatx) + time_warping_para  # radnom point along the time axis
+    src_ctr_pt_freq = tf.cast(tf.range(n_mels // 2), K.floatx)  # control points on freq-axis
     src_ctr_pt_time = tf.ones_like(src_ctr_pt_freq) * pt  # control points on time-axis
     src_ctr_pts = tf.stack((src_ctr_pt_time, src_ctr_pt_freq), -1)
-    src_ctr_pts = tf.cast(src_ctr_pts, dtype=tf.float32)
+    src_ctr_pts = tf.cast(src_ctr_pts, dtype=K.floatx)
 
     # Destination
-    w = tf.random.uniform([], -time_warping_para, time_warping_para, tf.float32)  # distance
+    w = tf.random.uniform([], -time_warping_para, time_warping_para, K.floatx)  # distance
     dest_ctr_pt_freq = src_ctr_pt_freq
     dest_ctr_pt_time = src_ctr_pt_time + w
     dest_ctr_pts = tf.stack((dest_ctr_pt_time, dest_ctr_pt_freq), -1)
-    dest_ctr_pts = tf.cast(dest_ctr_pts, dtype=tf.float32)
+    dest_ctr_pts = tf.cast(dest_ctr_pts, dtype=K.floatx)
 
     # warp
     source_control_point_locations = tf.expand_dims(src_ctr_pts, 0)  # (1, v//2, 2)
@@ -87,7 +88,7 @@ def frequency_masking(mel_spectrograms, frequency_masking_para: int = 100, frequ
             mel_spectrograms = (mel_spectrograms * mask) + (roll_mel_spectrograms * (1 - mask))
         else:
             mel_spectrograms = mel_spectrograms * mask
-    return tf.cast(mel_spectrograms, dtype=tf.float32)
+    return tf.cast(mel_spectrograms, dtype=K.floatx)
 
 
 def time_masking(mel_spectrograms, time_masking_para: int = 27, time_mask_num: int = 1, roll_mask=None):
@@ -124,7 +125,7 @@ def time_masking(mel_spectrograms, time_masking_para: int = 27, time_mask_num: i
         else:
             mel_spectrograms = mel_spectrograms * mask
 
-    return tf.cast(mel_spectrograms, dtype=tf.float32)
+    return tf.cast(mel_spectrograms, dtype=K.floatx)
 
 
 def spec_augment(mel_spectrograms: tf.Tensor,
