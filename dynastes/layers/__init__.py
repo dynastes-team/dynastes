@@ -15,6 +15,7 @@ from .convolutional_layers import DynastesConv2DTranspose
 from .convolutional_layers import DynastesConv3D
 from .convolutional_layers import DynastesDepthwiseConv1D
 from .convolutional_layers import DynastesDepthwiseConv2D
+from .convolutional_layers import DynastesSeparableConv1D
 from .convolutional_layers import Upsampling1D
 from .convolutional_layers import Upsampling2D
 from .data_augmentation import SpecAugmentLayer

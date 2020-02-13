@@ -10,6 +10,7 @@ from tensorflow.python.keras.utils import tf_utils
 from tensorflow.python.ops import array_ops
 from tensorflow.python.ops import nn_ops
 
+from dynastes import activations
 from dynastes import regularizers
 from dynastes.layers.base_layers import DynastesBaseLayer, ActivatedKernelBiasBaseLayer
 from dynastes.ops import scale_ops
@@ -1038,6 +1039,95 @@ class DynastesDepthwiseConv1D(DynastesDepthwiseConv2D):
             'dilation_rate': self.dilation_rate[0],
         }
         base_config = super(DynastesDepthwiseConv1D, self).get_config()
+        return {**base_config, **config}
+
+
+@tf.keras.utils.register_keras_serializable(package='Dynastes')
+class DynastesSeparableConv1D(DynastesBaseLayer):
+    def __init__(self,
+                 filters,
+                 kernel_size: int = 1,
+                 strides: int = 1,
+                 padding='valid',
+                 dilation_rate: int = 1,
+                 activation=None,
+                 use_bias=True,
+                 name='DynastesSeparableConv1D',
+                 **kwargs):
+        depthwise_kwargs = {k.split('depthwise_')[1]: v for k, v in kwargs.items() if k.startswith('depthwise_')}
+        pointwise_kwargs = {k.split('pointwise_')[1]: v for k, v in kwargs.items() if k.startswith('pointwise_')}
+        for k, _ in depthwise_kwargs.items():
+            kwargs.pop('depthwise_' + k)
+        for k, _ in pointwise_kwargs.items():
+            kwargs.pop('pointwise_' + k)
+        super(DynastesSeparableConv1D, self).__init__(name=name, **kwargs)
+        self.filters = filters
+        self.kernel_size = kernel_size
+        self.strides = strides
+        self.padding = padding
+        self.dilation_rate = dilation_rate
+        self.activation = activations.get(activation)
+        self.use_bias = use_bias
+
+        self.depthwise_layer = DynastesDepthwiseConv1D(kernel_size=kernel_size,
+                                                       strides=strides,
+                                                       padding=padding,
+                                                       dilation_rate=dilation_rate,
+                                                       use_bias=False,
+                                                       use_wscale=self.use_wscale,
+                                                       wlrmul=self.lrmul,
+                                                       wgain=self.gain,
+                                                       mask_threshold=self.mask_threshold,
+                                                       name=name + '/depthwise_conv',
+                                                       **depthwise_kwargs)
+
+        self.pointwise_layer = DynastesConv1D(filters=filters,
+                                              kernel_size=1,
+                                              strides=1,
+                                              use_bias=use_bias,
+                                              activation=self.activation,
+                                              use_wscale=self.use_wscale,
+                                              wlrmul=self.lrmul,
+                                              wgain=self.gain,
+                                              mask_threshold=self.mask_threshold,
+                                              padding='same',
+                                              dilation_rate=1,
+                                              name=name + '/pointwise_conv',
+                                              **pointwise_kwargs)
+
+    def call(self, inputs, training=None, mask=None, **kwargs):
+        x = self.depthwise_layer(inputs, training=training, mask=mask)
+        x_mask = self.depthwise_layer.compute_mask(inputs, mask=mask)
+        x = self.pointwise_layer(x, training=training, mask=x_mask)
+        return x
+
+    def call_masked(self, inputs, training=None, mask=None, **kwargs):
+        x = self.depthwise_layer(inputs, training=training, mask=mask)
+        x_mask = self.depthwise_layer.compute_mask(inputs, mask=mask)
+        _x = x
+        x = self.pointwise_layer(x, training=training, mask=x_mask)
+        x_mask = self.pointwise_layer.compute_mask(_x, x_mask)
+        return x, x_mask
+
+    def compute_mask(self, inputs, mask=None):
+        mask = self.depthwise_layer.compute_mask(inputs, mask)
+        mask = self.pointwise_layer.compute_mask(inputs, mask)
+        return mask
+
+    def compute_output_shape(self, input_shape):
+        output_shape = self.depthwise_layer.compute_output_shape(input_shape)
+        output_shape = self.pointwise_layer.compute_output_shape(output_shape)
+        return output_shape
+
+    def get_config(self):
+        config = {
+            'kernel_size': self.kernel_size,
+            'strides': self.strides,
+            'padding': self.padding,
+            'dilation_rate': self.dilation_rate,
+            'activation': activations.serialize(self.activation),
+        }
+        base_config = super(DynastesSeparableConv1D, self).get_config()
         return {**base_config, **config}
 
 

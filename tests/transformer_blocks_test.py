@@ -66,7 +66,10 @@ class DecoderBlockTest(tf.test.TestCase):
                                            multiquery_attention=True,
                                            cache_kv=True)
             dec_norm = tfkl.LayerNormalization(epsilon=1e-6)
-            dec_df_net = PointWiseFeedForwardBlock(dff=dff, first_kernel_size=3, d_model=d_model)
+            dec_df_net = PointWiseFeedForwardBlock(dff=dff, first_kernel_size=7,
+                                                   ff_type='SeparableConvolution1D',
+                                                   inner_self_gate_fn='GLUM',
+                                                   d_model=d_model)
             dec_block = DecoderBlock(sa_layer=dec_sablock, ca_layer=dec_cablock, norm0=dec_norm, ffn=dec_df_net,
                                      norm1=dec_norm, norm2=dec_norm)
 
@@ -93,7 +96,9 @@ class DecoderBlockTest(tf.test.TestCase):
             ret = inc_encode(dec_input, encoded_out, enc_mask)
             check_input = tf.concat([dec_input, ret[:, :-1, :]], axis=1)
             # Call sanity check outside of cache_context to make sure we're getting the same-ish result
-        sanity_check = stack((check_input, encoded_out), training=None, mask=(tf.cast(tf.ones((batch_size, max_length)), tf.bool), enc_mask))  # , cache=cache, decode_loop_step=0)
+        sanity_check = stack((check_input, encoded_out), training=None, mask=(
+            tf.cast(tf.ones((batch_size, max_length)), tf.bool), enc_mask))  # , cache=cache, decode_loop_step=0)
 
         print(tf.reduce_max(ret - sanity_check), tf.reduce_mean(ret - sanity_check))
+        print(dec_df_net.trainable_weights)
         self.assertAllClose(ret, sanity_check, atol=5, rtol=36633)
