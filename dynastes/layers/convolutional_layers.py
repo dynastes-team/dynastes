@@ -1052,7 +1052,6 @@ class DynastesSeparableConv1D(DynastesBaseLayer):
                  dilation_rate: int = 1,
                  activation=None,
                  use_bias=True,
-                 name='DynastesSeparableConv1D',
                  **kwargs):
         depthwise_kwargs = {k.split('depthwise_')[1]: v for k, v in kwargs.items() if k.startswith('depthwise_')}
         pointwise_kwargs = {k.split('pointwise_')[1]: v for k, v in kwargs.items() if k.startswith('pointwise_')}
@@ -1060,7 +1059,7 @@ class DynastesSeparableConv1D(DynastesBaseLayer):
             kwargs.pop('depthwise_' + k)
         for k, _ in pointwise_kwargs.items():
             kwargs.pop('pointwise_' + k)
-        super(DynastesSeparableConv1D, self).__init__(name=name, **kwargs)
+        super(DynastesSeparableConv1D, self).__init__(**kwargs)
         self.filters = filters
         self.kernel_size = kernel_size
         self.strides = strides
@@ -1078,7 +1077,7 @@ class DynastesSeparableConv1D(DynastesBaseLayer):
                                                        wlrmul=self.lrmul,
                                                        wgain=self.gain,
                                                        mask_threshold=self.mask_threshold,
-                                                       name=name + '/depthwise_conv',
+                                                       name=self.name + '/depthwise_conv',
                                                        **depthwise_kwargs)
 
         self.pointwise_layer = DynastesConv1D(filters=filters,
@@ -1092,7 +1091,7 @@ class DynastesSeparableConv1D(DynastesBaseLayer):
                                               mask_threshold=self.mask_threshold,
                                               padding='same',
                                               dilation_rate=1,
-                                              name=name + '/pointwise_conv',
+                                              name=self.name + '/pointwise_conv',
                                               **pointwise_kwargs)
 
     def call(self, inputs, training=None, mask=None, **kwargs):
