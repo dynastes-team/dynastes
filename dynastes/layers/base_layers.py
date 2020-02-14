@@ -249,10 +249,14 @@ class ActivatedKernelBiasBaseLayer(DynastesBaseLayer):
             dtype=self.dtype)
 
     def build_bias(self, output_dim):
+        if type(output_dim) not in [list, tuple]:
+            shape = (output_dim,)
+        else:
+            shape = output_dim
         if self.use_bias:
             return self.add_weight(
                 name='bias',
-                shape=(output_dim,),
+                shape=shape,
                 trainable=True,
                 dtype=self.dtype)
         return None
@@ -527,8 +531,7 @@ class DynastesEmbedding(DynastesBaseLayer):
         if dtype != 'int32' and dtype != 'int64':
             inputs = math_ops.cast(inputs, 'int32')
         out = embedding_ops.embedding_lookup(inputs, self.get_weight('embedding', training=training),
-                                             symbol_dropout_rate=self.symbol_dropout_rate,
-                                             dtype=self.dtype)
+                                             symbol_dropout_rate=self.symbol_dropout_rate)
         return out
 
     def get_config(self):

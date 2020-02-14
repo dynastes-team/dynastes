@@ -25,6 +25,7 @@ def GLUM(x, g, y=None):
 @tf.keras.utils.register_keras_serializable(package='Dynastes', name='GDOT')
 def GDOT(x, g, y=None):
     _g = tf.matmul(x, g)
+    _g = tf.broadcast_to(_g, x.shape)
     _y = x * _g
     if y is not None:
         _y += (1 - _g) * y

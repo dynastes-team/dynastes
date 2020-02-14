@@ -2,11 +2,13 @@ from __future__ import absolute_import
 from __future__ import division
 from __future__ import print_function
 
+import tensorflow.keras.layers as tfkl
+from tensorflow.keras import Sequential
+
+from dynastes import activations
 from dynastes import layers
 from dynastes.probability.pseudoblocksparse_bijectors import BlockSparseStridedRoll1D
-from tensorflow.keras import Sequential
-import tensorflow.keras.layers as tfkl
-from dynastes import activations
+
 
 def get_1d_layer(type,
                  **kwargs):
@@ -16,26 +18,28 @@ def get_1d_layer(type,
     else:
         return Sequential([_get_1d_layer(t, **kwargs) for t in types])
 
+
 def _get_1d_layer(type,
-                 filters,
-                 depth_multiplier,
-                 kernel_size,
-                 strides=1,
-                 dilation_rate=1,
-                 grouped=False,
-                 group_size=1,
-                 padding='same',
-                 activation=None,
-                 use_bias=True,
-                 kernel_initializer='glorot_uniform',
-                 bias_initializer='zeros',
-                 kernel_regularizer=None,
-                 kernel_normalizer=None,
-                 bias_regularizer=None,
-                 activity_regularizer=None,
-                 kernel_constraint=None,
-                 bias_constraint=None,
-                 **kwargs):
+                  filters,
+                  depth_multiplier,
+                  kernel_size,
+                  strides=1,
+                  dilation_rate=1,
+                  grouped=False,
+                  group_size=1,
+                  padding='same',
+                  activation=None,
+                  use_bias=True,
+                  kernel_initializer='glorot_uniform',
+                  bias_initializer='zeros',
+                  kernel_regularizer=None,
+                  kernel_normalizer=None,
+                  bias_regularizer=None,
+                  activity_regularizer=None,
+                  kernel_constraint=None,
+                  bias_constraint=None,
+                  prepointwise=False,
+                  **kwargs):
     if type.lower() == 'TimeDelayLayer1D'.lower():
         return layers.TimeDelayLayer1D(filters=filters,
                                        kernel_size=kernel_size,
@@ -94,6 +98,14 @@ def _get_1d_layer(type,
                                               padding=padding,
                                               activation=activation,
                                               use_bias=use_bias,
+                                              prepointwise_kernel_initializer=kernel_initializer,
+                                              prepointwise_kernel_normalizer=kernel_normalizer,
+                                              prepointwise_bias_initializer=bias_initializer,
+                                              prepointwise_kernel_regularizer=kernel_regularizer,
+                                              prepointwise_bias_regularizer=bias_regularizer,
+                                              prepointwise_activity_regularizer=activity_regularizer,
+                                              prepointwise_kernel_constraint=kernel_constraint,
+                                              prepointwise_bias_constraint=bias_constraint,
                                               pointwise_kernel_initializer=kernel_initializer,
                                               pointwise_kernel_normalizer=kernel_normalizer,
                                               pointwise_bias_initializer=bias_initializer,
@@ -106,6 +118,7 @@ def _get_1d_layer(type,
                                               depthwise_kernel_normalizer=kernel_normalizer,
                                               depthwise_kernel_regularizer=kernel_regularizer,
                                               depthwise_kernel_constraint=kernel_constraint,
+                                              prepointwise=prepointwise,
                                               **kwargs)
     elif type.lower() in ['DepthwiseConv1D'.lower(), 'DepthwiseConvolution1D'.lower()]:
         return layers.DynastesDepthwiseConv1D(kernel_size=kernel_size,

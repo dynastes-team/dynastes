@@ -5,6 +5,7 @@ from .base_layers import DynastesDense
 from .base_layers import DynastesEmbedding
 from .base_layers import PadDivisibleBy
 from .base_layers import _WscaleInitializer
+from .conditioning_layers import EmbeddingKernelDense
 from .conditioning_layers import FeaturewiseLinearModulation
 from .convolutional_layers import Downsampling1D
 from .convolutional_layers import Downsampling2D

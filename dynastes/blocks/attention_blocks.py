@@ -53,6 +53,7 @@ class _AttentionBlock1D(DynastesBaseLayer):
                  scaled=False,
                  return_attn_weights=False,
                  cache_kv=False,
+                 separable_prepointwise=False,
                  **kwargs):
         kwargs['supports_caching'] = True
         super(_AttentionBlock1D, self).__init__(**kwargs)
@@ -96,6 +97,7 @@ class _AttentionBlock1D(DynastesBaseLayer):
         self.supports_masking = True
         self.cache_kv = cache_kv
         self.scaled = scaled
+        self.separable_prepointwise = separable_prepointwise
         conv_partial = partial(layer_factory.get_1d_layer, kernel_size=kernel_size,
                                grouped=grouped,
                                group_size=group_size,
@@ -108,7 +110,8 @@ class _AttentionBlock1D(DynastesBaseLayer):
                                bias_regularizer=self.get_regularizer('bias'),
                                activity_regularizer=None,
                                kernel_constraint=self.get_constraint('kernel'),
-                               bias_constraint=self.get_constraint('bias'))
+                               bias_constraint=self.get_constraint('bias'),
+                               separable_prepointwise=separable_prepointwise)
         q_filters = attention_dim
         k_filters = attention_dim
         v_filters = output_dim
@@ -131,9 +134,9 @@ class _AttentionBlock1D(DynastesBaseLayer):
 
         init_stddev = output_dim ** -0.5
 
-
         self.q_layer = conv_partial(type=self.q_type,
-                                    kernel_initializer=tfk.initializers.RandomNormal(stddev=init_stddev * (k_filters ** -0.5)),
+                                    kernel_initializer=tfk.initializers.RandomNormal(
+                                        stddev=init_stddev * (k_filters ** -0.5)),
                                     filters=q_filters,
                                     strides=q_strides,
                                     dilation_rate=dilation_rate, name='Conv-Q')
@@ -207,7 +210,8 @@ class _AttentionBlock1D(DynastesBaseLayer):
             'mask_right': self.mask_right,
             'add_relative_to_values': self.add_relative_to_values,
             'cache_kv': self.cache_kv,
-            'scaled': self.scaled
+            'scaled': self.scaled,
+            'separable_prepointwise': self.separable_prepointwise,
         }
         base_config = super(_AttentionBlock1D, self).get_config()
         return {**base_config, **config}

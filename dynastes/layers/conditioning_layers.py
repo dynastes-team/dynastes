@@ -3,9 +3,85 @@ import abc
 import numpy as np
 import tensorflow as tf
 
-from dynastes.layers.base_layers import DynastesBaseLayer
+from dynastes.layers.base_layers import DynastesBaseLayer, ActivatedKernelBiasBaseLayer
+from dynastes.ops import embedding_ops
 from dynastes.ops.t2t_common import shape_list
 
+def split_last_dimension(x, n):
+    """Reshape x so that the last dimension becomes two dimensions.
+    The first of these two dimensions is n.
+    Args:
+      x: a Tensor with shape [..., m]
+      n: an integer.
+    Returns:
+      a Tensor with shape [..., n, m/n]
+    """
+    x_shape = shape_list(x)
+    m = x_shape[-1]
+    if isinstance(m, int) and isinstance(n, int):
+        assert m % n == 0
+    return tf.reshape(x, x_shape[:-1] + [n, m // n])
+
+
+class EmbeddingKernelDense(ActivatedKernelBiasBaseLayer):
+
+    """
+        Valid inputs are for example:
+
+        d: [2,3,4,16]
+        c: [2,3,4]
+
+        or
+
+        d: [2,3,4,5,16]
+        c: [2,3]
+
+    """
+
+    def __init__(self,
+                 depth,
+                 n_kernels,
+                 **kwargs):
+        super(EmbeddingKernelDense, self).__init__(**kwargs)
+        self.depth = depth
+        self.n_kernels = n_kernels
+
+    def build(self, input_shape):
+        assert (type(input_shape) == list)
+        kernel_shape = [self.n_kernels, input_shape[0][-1] * self.depth]
+        bias_shape = [self.n_kernels, self.depth]
+        self.build_kernel(kernel_shape)
+        self.build_bias(bias_shape)
+
+    def call(self, inputs, training=None, mask=None, **kwargs):
+        x, n_s = inputs
+        x_shape = shape_list(x)
+        embed_v_shape = shape_list(n_s)
+        extra_dims_needed = len(x_shape) - len(embed_v_shape)
+        kernels = embedding_ops.embedding_lookup(n_s, self.get_weight('kernel', training=training),
+                                                 symbol_dropout_rate=0.)
+        ks_shape = shape_list(kernels)
+        kernels = tf.reshape(kernels, ks_shape[:-1] + [1]*extra_dims_needed + [x_shape[-1], self.depth])
+        biases = embedding_ops.embedding_lookup(n_s, self.get_weight('bias', training=training),
+                                                symbol_dropout_rate=0.)
+        bs_shape = shape_list(biases)
+        biases = tf.reshape(biases, bs_shape[:-1] + [1] * extra_dims_needed + [self.depth])
+        x = tf.matmul(x, kernels)
+        x += biases
+        return self.activation(x)
+
+    def compute_output_shape(self, input_shape):
+        output_shape = input_shape[0]
+        output_shape[-1] = self.depth
+        return output_shape
+
+    def get_config(self):
+        config = {
+            'depth': self.depth,
+            'n_kernels': self.n_kernels,
+        }
+        base_config = super(EmbeddingKernelDense, self).get_config()
+        return {**base_config, **config}
 
 @tf.keras.utils.register_keras_serializable(package='Dynastes')
 class ModulationLayer(DynastesBaseLayer, abc.ABC):
