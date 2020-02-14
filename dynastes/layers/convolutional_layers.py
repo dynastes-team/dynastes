@@ -1126,7 +1126,6 @@ class DynastesSeparableConv1D(DynastesBaseLayer):
                                                      dilation_rate=1,
                                                      name=self.name + '/prepointwise_conv',
                                                      **self.pointwise_kwargs)
-        self.built = True
 
     def call(self, inputs, training=None, mask=None, **kwargs):
         x = inputs
@@ -1140,17 +1139,9 @@ class DynastesSeparableConv1D(DynastesBaseLayer):
         return x
 
     def call_masked(self, inputs, training=None, mask=None, **kwargs):
-        x = inputs
-        x_mask = mask
-        if self.prepointwise:
-            x = self.prepointwise_layer(x, training=training, mask=x_mask)
-        _x = x
-        x = self.depthwise_layer(x, training=training, mask=x_mask)
-        x_mask = self.depthwise_layer.compute_mask(_x, mask=x_mask)
-        _x = x
-        x = self.pointwise_layer(x, training=training, mask=x_mask)
-        x_mask = self.pointwise_layer.compute_mask(_x, x_mask)
-        return x, x_mask
+        x = self(inputs, training=training, mask=mask)
+        mask = self.compute_mask(inputs, mask=mask)
+        return x, mask
 
     def compute_mask(self, inputs, mask=None):
         if self.prepointwise:

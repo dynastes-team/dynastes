@@ -38,7 +38,7 @@ def _get_1d_layer(type,
                   activity_regularizer=None,
                   kernel_constraint=None,
                   bias_constraint=None,
-                  prepointwise=False,
+                  separable_prepointwise=False,
                   **kwargs):
     if type.lower() == 'TimeDelayLayer1D'.lower():
         return layers.TimeDelayLayer1D(filters=filters,
@@ -118,7 +118,7 @@ def _get_1d_layer(type,
                                               depthwise_kernel_normalizer=kernel_normalizer,
                                               depthwise_kernel_regularizer=kernel_regularizer,
                                               depthwise_kernel_constraint=kernel_constraint,
-                                              prepointwise=prepointwise,
+                                              prepointwise=separable_prepointwise,
                                               **kwargs)
     elif type.lower() in ['DepthwiseConv1D'.lower(), 'DepthwiseConvolution1D'.lower()]:
         return layers.DynastesDepthwiseConv1D(kernel_size=kernel_size,

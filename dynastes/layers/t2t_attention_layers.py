@@ -249,8 +249,6 @@ class Attention1D(DynastesBaseLayer):
         q_shape = shape_list(q)
 
         if mask is not None and self.attention_type != 'masked_local_attention_1d':
-            mask_0_shape = shape_list(mask[0])
-            mask_1_shape = shape_list(mask[1])
             q_mask = (1. - tf.cast(mask[0], tf.float32))[:, tf.newaxis, :, tf.newaxis]
             if self.mask_right and q_shape[1] is not None:
                 # TODO: Reenable this somehow

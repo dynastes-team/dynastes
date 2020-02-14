@@ -1,10 +1,13 @@
+import inspect
+
+
 def call_masked(layer, inputs, training=None, mask=None, **kwargs):
-    try:
+    if hasattr(layer, 'call_masked'):
         return layer.call_masked(inputs, training=training, mask=mask, **kwargs)
-    except AttributeError:
-        try:
+    else:
+        if 'mask' in inspect.signature(layer.call).parameters:
             out = layer(inputs, training=training, mask=mask, **kwargs)
-        except Exception as e:
+        else:
             out = layer(inputs, training=training, **kwargs)
         out_mask = compute_mask_if_possible(layer, inputs, mask=mask)
         return out, out_mask

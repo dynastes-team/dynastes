@@ -24,11 +24,14 @@ from .gating_layers import GatingLayer
 from .normalization_layers import AdaptiveGroupNormalization
 from .normalization_layers import AdaptiveInstanceNormalization
 from .normalization_layers import AdaptiveLayerInstanceNormalization
+from .normalization_layers import AdaptiveLayerInstanceNormalization1D
+from .normalization_layers import AdaptiveLayerInstanceNormalization2D
 from .normalization_layers import AdaptiveLayerNormalization
 from .normalization_layers import AdaptiveMultiNormalization
-from .normalization_layers import InstanceNormalization
+from .normalization_layers import BatchNormalization
 from .normalization_layers import InstanceNormalization1D
 from .normalization_layers import InstanceNormalization2D
+from .normalization_layers import LayerNormalization
 from .normalization_layers import MultiNormalization
 from .normalization_layers import PoolNormalization2D
 from .random_layers import StatelessRandomNormalLike
