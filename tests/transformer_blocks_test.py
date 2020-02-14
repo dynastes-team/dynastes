@@ -1,12 +1,11 @@
 import numpy as np
 import tensorflow as tf
-import tensorflow.keras.layers as tfkl
 from tensorflow.python.framework import test_util
 
 from dynastes.blocks.attention_blocks import SelfAttentionBlock1D, AttentionBlock1D
 from dynastes.blocks.transformer_blocks import PointWiseFeedForwardBlock, EncoderBlock, DecoderBlock, EncoderBlockStack, \
     DecoderBlockStack
-from dynastes.layers import BatchNormalization
+from dynastes.layers import BatchNormalization, LayerNormalization
 from dynastes.util import cache_context
 
 
@@ -19,6 +18,9 @@ def _test_grads(testCase: tf.test.TestCase, func, input):
 
 to_tensor = tf.convert_to_tensor
 normal = np.random.normal
+
+BatchNormalization
+LayerNormalization
 
 
 class DecoderBlockTest(tf.test.TestCase):
@@ -38,7 +40,7 @@ class DecoderBlockTest(tf.test.TestCase):
                                                masked=True,
                                                mask_right=False,
                                                multiquery_attention=True, )
-            enc_norm = tfkl.LayerNormalization(epsilon=1e-6)
+            enc_norm = LayerNormalization(epsilon=1e-6)
             enc_df_net = PointWiseFeedForwardBlock(dff=dff, d_model=d_model)
             enc_block = EncoderBlock(sa_layer=enc_sablock, norm0=enc_norm, ffn=enc_df_net, norm1=enc_norm)
 
@@ -71,9 +73,9 @@ class DecoderBlockTest(tf.test.TestCase):
                                                    d_model=d_model)
             dec_blocks = []
             for i in range(5):
-                dec_norm_0 = BatchNormalization(epsilon=1e-9, momentum=0.85)
-                dec_norm_1 = BatchNormalization(epsilon=1e-9, momentum=0.85)
-                dec_norm_2 = BatchNormalization(epsilon=1e-9, momentum=0.85)
+                dec_norm_0 = LayerNormalization(epsilon=1e-9)#, momentum=0.85)
+                dec_norm_1 = LayerNormalization(epsilon=1e-9)#, momentum=0.85)
+                dec_norm_2 = LayerNormalization(epsilon=1e-9)#, momentum=0.85)
                 dec_block = DecoderBlock(sa_layer=dec_sablock, ca_layer=dec_cablock, norm0=dec_norm_0, ffn=dec_df_net,
                                          norm1=dec_norm_1, norm2=dec_norm_2)
                 dec_blocks.append(dec_block)
@@ -82,7 +84,7 @@ class DecoderBlockTest(tf.test.TestCase):
             cache = stack.request_cache(batch_size=batch_size, max_length_sa=max_length, max_length_ca=32)
             dec_input = tf.convert_to_tensor(normal(size=(batch_size, 1, d_model)).astype(np.float32)).numpy()
 
-            for i in range(256):
+            for i in range(10):
                 inp = tf.convert_to_tensor(normal(size=(batch_size, 32, d_model)).astype(np.float32)).numpy()
                 n_mask = np.random.randint(28, 32)
                 msk = to_tensor([True] * n_mask + [False] * (32 - n_mask))

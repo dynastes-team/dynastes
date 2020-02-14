@@ -27,12 +27,13 @@ def masked_moments(x, axes, mask=None, keepdims=False, epsilon=1e-15):
     if mask is None:
         return tf.nn.moments(x, axes=axes, keepdims=keepdims)
     else:
-        _mask = tf.maximum(tf.cast(mask, x.dtype), epsilon)
+        x_shape = shape_list(x)
+        mask_shape = shape_list(mask)
+        _mask = tf.reshape(tf.cast(mask, x.dtype), mask_shape + [1] * (len(x_shape) - len(mask_shape)))
     n_mask_indices = tf.reduce_sum(_mask, axis=axes, keepdims=True)
     _mean = tf.reduce_sum(x, axis=axes, keepdims=True) / tf.maximum(1, n_mask_indices)
-    var = tf.reduce_sum(tf.math.squared_difference(x, _mean), axis=axes, keepdims=keepdims) / tf.maximum(1, n_mask_indices - 1)
-    return tf.reduce_sum(_mean, axis=axes, keepdims=keepdims), var
-
+    var = tf.reduce_sum(tf.math.squared_difference(x, _mean), axis=axes, keepdims=True) / tf.maximum(1, n_mask_indices - 1)
+    return tf.reduce_sum(_mean, axis=axes, keepdims=keepdims), tf.reduce_sum(var, axis=axes, keepdims=keepdims)
 
 @tf.keras.utils.register_keras_serializable(package='Dynastes')
 class PoolNormalization2D(DynastesBaseLayer):
@@ -183,8 +184,8 @@ class BatchNormalization(DynastesBaseLayer):
             mean, variance = self.moving_mean, self.moving_variance
         else:
             mean, variance = masked_moments(x, mask=mask, axes=axes, keepdims=False)
-            mean = tf.reduce_mean(mean, axis=0)
-            variance = tf.reduce_mean(variance, axis=0)
+            mean = tf.squeeze(mean)
+            variance = tf.squeeze(variance)
             moving_mean = self.moving_mean
             moving_variance = self.moving_variance
 
