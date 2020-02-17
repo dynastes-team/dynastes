@@ -7,6 +7,7 @@ from dynastes.layers.base_layers import DynastesBaseLayer, ActivatedKernelBiasBa
 from dynastes.ops import embedding_ops
 from dynastes.ops.t2t_common import shape_list
 
+
 def split_last_dimension(x, n):
     """Reshape x so that the last dimension becomes two dimensions.
     The first of these two dimensions is n.
@@ -24,7 +25,6 @@ def split_last_dimension(x, n):
 
 
 class EmbeddingKernelDense(ActivatedKernelBiasBaseLayer):
-
     """
         Valid inputs are for example:
 
@@ -55,18 +55,18 @@ class EmbeddingKernelDense(ActivatedKernelBiasBaseLayer):
 
     def call(self, inputs, training=None, mask=None, **kwargs):
         x, n_s = inputs
+        n_s = tf.squeeze(n_s)
         x_shape = shape_list(x)
-        embed_v_shape = shape_list(n_s)
-        extra_dims_needed = len(x_shape) - len(embed_v_shape)
         kernels = embedding_ops.embedding_lookup(n_s, self.get_weight('kernel', training=training),
                                                  symbol_dropout_rate=0.)
         ks_shape = shape_list(kernels)
-        kernels = tf.reshape(kernels, ks_shape[:-1] + [1]*extra_dims_needed + [x_shape[-1], self.depth])
+        extra_dims_needed = max(0, (len(x_shape) - len(ks_shape)) - 1)
+        kernels = tf.reshape(kernels, ks_shape[:-1] + [1] * (extra_dims_needed) + [x_shape[-1], self.depth])
         biases = embedding_ops.embedding_lookup(n_s, self.get_weight('bias', training=training),
                                                 symbol_dropout_rate=0.)
         bs_shape = shape_list(biases)
-        biases = tf.reshape(biases, bs_shape[:-1] + [1] * extra_dims_needed + [self.depth])
-        x = tf.matmul(x, kernels)
+        biases = tf.reshape(biases, bs_shape[:-1] + [1] * (extra_dims_needed + 1) + [self.depth])
+        x = tf.matmul(x, tf.linalg.matrix_transpose(kernels), transpose_b=True)
         x += biases
         return self.activation(x)
 
@@ -82,6 +82,7 @@ class EmbeddingKernelDense(ActivatedKernelBiasBaseLayer):
         }
         base_config = super(EmbeddingKernelDense, self).get_config()
         return {**base_config, **config}
+
 
 @tf.keras.utils.register_keras_serializable(package='Dynastes')
 class ModulationLayer(DynastesBaseLayer, abc.ABC):
