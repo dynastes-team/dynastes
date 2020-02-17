@@ -62,12 +62,13 @@ class EmbeddingKernelDense(ActivatedKernelBiasBaseLayer):
         ks_shape = shape_list(kernels)
         extra_dims_needed = max(0, (len(x_shape) - len(ks_shape)) - 1)
         kernels = tf.reshape(kernels, ks_shape[:-1] + [1] * (extra_dims_needed) + [x_shape[-1], self.depth])
-        biases = embedding_ops.embedding_lookup(n_s, self.get_weight('bias', training=training),
-                                                symbol_dropout_rate=0.)
-        bs_shape = shape_list(biases)
-        biases = tf.reshape(biases, bs_shape[:-1] + [1] * (extra_dims_needed + 1) + [self.depth])
         x = tf.matmul(x, tf.linalg.matrix_transpose(kernels), transpose_b=True)
-        x += biases
+        if self.use_bias:
+            biases = embedding_ops.embedding_lookup(n_s, self.get_weight('bias', training=training),
+                                                    symbol_dropout_rate=0.)
+            bs_shape = shape_list(biases)
+            biases = tf.reshape(biases, bs_shape[:-1] + [1] * (extra_dims_needed + 1) + [self.depth])
+            x += biases
         return self.activation(x)
 
     def compute_output_shape(self, input_shape):
