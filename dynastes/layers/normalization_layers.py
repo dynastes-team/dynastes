@@ -4,7 +4,6 @@ import numpy as np
 import tensorflow as tf
 import tensorflow.keras.backend as K
 from tensorflow.python.framework import ops
-from tensorflow.python.keras.engine import base_layer_utils
 from tensorflow.python.keras.utils import tf_utils
 from tensorflow.python.ops import array_ops
 from tensorflow.python.ops import math_ops
@@ -31,9 +30,11 @@ def masked_moments(x, axes, mask=None, keepdims=False, epsilon=1e-15):
         mask_shape = shape_list(mask)
         _mask = tf.reshape(tf.cast(mask, x.dtype), mask_shape + [1] * (len(x_shape) - len(mask_shape)))
     n_mask_indices = tf.reduce_sum(_mask, axis=axes, keepdims=True)
-    _mean = tf.reduce_sum(x, axis=axes, keepdims=True) / tf.maximum(1, n_mask_indices)
-    var = tf.reduce_sum(tf.math.squared_difference(x, _mean), axis=axes, keepdims=True) / tf.maximum(1, n_mask_indices - 1)
+    _mean = tf.reduce_sum(x, axis=axes, keepdims=True) / tf.cast(tf.maximum(1, n_mask_indices), x.dtype)
+    var = tf.reduce_sum(tf.math.squared_difference(x, _mean), axis=axes, keepdims=True) / tf.cast(
+        tf.maximum(1, n_mask_indices - 1), x.dtype)
     return tf.reduce_sum(_mean, axis=axes, keepdims=keepdims), tf.reduce_sum(var, axis=axes, keepdims=keepdims)
+
 
 @tf.keras.utils.register_keras_serializable(package='Dynastes')
 class PoolNormalization2D(DynastesBaseLayer):
