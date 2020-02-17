@@ -12,7 +12,7 @@ normal = np.random.normal
 class DynastesConv1DTest(tf.test.TestCase):
 
     def test_masking(self):
-        layer = DynastesConv1D(32, kernel_size=3, strides=2, padding='same')
+        layer = DynastesConv1D(32, kernel_size=3, strides=2, padding='same', conv_mask=True)
 
         ts = to_tensor(normal(size=(8, 16, 32))
                        .astype(np.float32))
@@ -50,7 +50,7 @@ class DynastesConv2DTest(tf.test.TestCase):
             input_shape=(4, 16, 16, 3))
 
     def test_masking(self):
-        layer = DynastesConv2D(32, kernel_size=3, strides=2, padding='same')
+        layer = DynastesConv2D(32, kernel_size=3, strides=2, padding='same', conv_mask=True)
 
         ts = to_tensor(normal(size=(8, 16, 16, 32))
                        .astype(np.float32))
@@ -62,7 +62,7 @@ class DynastesConv2DTest(tf.test.TestCase):
         mask = tf.expand_dims(mask, axis=1)
         mask = tf.tile(mask, [1, 16, 1])
         layer(ts, mask=mask)
-        layer.compute_mask(ts, mask=mask)
+        out_mask = layer.compute_mask(ts, mask=mask)
 
         @tf.function
         def graph_test_fn(x, mask):
@@ -88,7 +88,7 @@ class DynastesConv1DTransposeTest(tf.test.TestCase):
         )
 
     def test_masking(self):
-        layer = DynastesConv1DTranspose(32, kernel_size=3, strides=2, padding='same')
+        layer = DynastesConv1DTranspose(32, kernel_size=3, strides=2, padding='same', conv_mask=True)
 
         ts = to_tensor(normal(size=(8, 16, 32))
                        .astype(np.float32))
@@ -128,7 +128,7 @@ class DynastesConv2DTransposeTest(tf.test.TestCase):
         )
 
     def test_masking(self):
-        layer = DynastesConv2DTranspose(32, kernel_size=3, strides=2, padding='same')
+        layer = DynastesConv2DTranspose(32, kernel_size=3, strides=2, padding='same', conv_mask=True)
 
         ts = to_tensor(normal(size=(8, 16, 16, 32))
                        .astype(np.float32))
@@ -166,7 +166,7 @@ class DynastesDepthwiseConv1DTest(tf.test.TestCase):
             DynastesDepthwiseConv1D, kwargs={'kernel_size': 3}, input_shape=(5, 32, 3))
 
     def test_masking(self):
-        layer = DynastesDepthwiseConv1D(kernel_size=3, strides=2, padding='same')
+        layer = DynastesDepthwiseConv1D(kernel_size=3, strides=2, padding='same', conv_mask=True)
 
         ts = to_tensor(normal(size=(8, 16, 32))
                        .astype(np.float32))
@@ -256,7 +256,7 @@ class DynastesDepthwiseConv2DTest(tf.test.TestCase):
             DynastesDepthwiseConv2D, kwargs={'kernel_size': (3, 3)}, input_shape=(4, 16, 16, 3))
 
     def test_masking(self):
-        layer = DynastesDepthwiseConv2D(kernel_size=3, strides=2, padding='same')
+        layer = DynastesDepthwiseConv2D(kernel_size=3, strides=2, padding='same', conv_mask=True)
 
         ts = to_tensor(normal(size=(8, 16, 16, 32))
                        .astype(np.float32))
