@@ -29,12 +29,10 @@ class EmbeddingKernelDense(ActivatedKernelBiasBaseLayer):
         Valid inputs are for example:
 
         d: [2,3,4,16]
-        c: [2,3,4]
+        c: [2,1]
 
-        or
-
-        d: [2,3,4,5,16]
-        c: [2,3]
+        d: [2,3,4,5,6,16]
+        c: [2,]
 
     """
 
@@ -52,22 +50,21 @@ class EmbeddingKernelDense(ActivatedKernelBiasBaseLayer):
         bias_shape = [self.n_kernels, self.depth]
         self.build_kernel(kernel_shape)
         self.build_bias(bias_shape)
-        self.extra_dims_needed =  max(0, (len(input_shape[0]) - len([s for s in input_shape[1] if s != 1])) - 2)
+        self.extra_dims_needed = max(0, (len(input_shape[0]) - len([s for s in input_shape[1] if s != 1])) - 2)
 
     def call(self, inputs, training=None, mask=None, **kwargs):
         x, n_s = inputs
-        n_s = tf.squeeze(n_s)
+        n_s = tf.squeeze(n_s, axis=1)
         x_shape = shape_list(x)
         kernels = embedding_ops.embedding_lookup(n_s, self.get_weight('kernel', training=training),
                                                  symbol_dropout_rate=0.)
         ks_shape = shape_list(kernels)
-        kernels = tf.reshape(kernels, ks_shape[:-1] + [1] * (self.extra_dims_needed) + [x_shape[-1], self.depth])
+        kernels = tf.reshape(kernels, [ks_shape[0]] + [1] * (self.extra_dims_needed) + [x_shape[-1], self.depth])
         x = tf.matmul(x, tf.linalg.matrix_transpose(kernels), transpose_b=True)
         if self.use_bias:
             biases = embedding_ops.embedding_lookup(n_s, self.get_weight('bias', training=training),
                                                     symbol_dropout_rate=0.)
-            bs_shape = shape_list(biases)
-            biases = tf.reshape(biases, bs_shape[:-1] + [1] * (self.extra_dims_needed + 1) + [self.depth])
+            biases = tf.reshape(biases, [ks_shape[0]] + [1] * (self.extra_dims_needed + 1) + [self.depth])
             x += biases
         return self.activation(x)
 
