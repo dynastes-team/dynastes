@@ -9,7 +9,7 @@ class DynastesEmbeddingTest(tf.test.TestCase):
     def test_grads(self):
         emb = EmbeddingKernelDense(16, 5)
         input_dense = tf.random.normal([2, 7, 3, 8], dtype=tf.float32)
-        input_indices = tf.convert_to_tensor([[[1]],[[2]]], dtype=tf.int32)
+        input_indices = tf.convert_to_tensor([[1],[2]], dtype=tf.int32)
         inps = [input_dense, input_indices]
         targ = tf.random.normal([2, 7, 3, 16], dtype=tf.float32)
 
