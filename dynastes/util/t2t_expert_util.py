@@ -3,7 +3,7 @@ import tensorflow.keras.backend as K
 
 def to_float(x):
     """Cast x to float; created because to_float is deprecated."""
-    return tf.cast(x, K.floatx)
+    return tf.cast(x, K.floatx())
 
 
 def to_int32(x):

@@ -123,7 +123,7 @@ class _l2melMatrixInitializer(tf.keras.initializers.Initializer):
     def __call__(self, shape,
                  dtype=None):
         if dtype is None:
-            dtype = K.floatx
+            dtype = K.floatx()
         lower_edge_hz, higher_edge_hz = _get_lower_and_upper_edges_l2mel(self.min_hz, self.max_hz, shape[1])
         num_spectrogram_bins = shape[0]
         if self.smooth_l2mel:

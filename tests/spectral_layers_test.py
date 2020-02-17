@@ -81,4 +81,4 @@ class STFT2MelSpecLayerTest(tf.test.TestCase):
             STFT2MelspectrogramLayer, kwargs={'n_mels': 128},
             input_shape=(5, 32, 128, 2),
             input_dtype=tf.complex128,
-            expected_output_dtype=K.floatx)
+            expected_output_dtype=K.floatx())
