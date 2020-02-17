@@ -82,6 +82,6 @@ def embedding_lookup(x,
         static_shape = shape_list(emb_x)
         if len(static_shape) < 5:
             return emb_x
-        assert len(static_shape) == 5
+        #assert len(static_shape) == 5
         # If we had an extra channel dimension, assume it's 1, i.e. shape[3] == 1.
         return tf.squeeze(emb_x, 3)
