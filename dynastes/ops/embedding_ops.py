@@ -1,6 +1,6 @@
 import tensorflow as tf
 
-from dynastes.ops.t2t_common import cast_like
+from dynastes.ops.t2t_common import cast_like, shape_list
 
 """@function.Defun(
     python_grad_func=lambda x, dy: tf.convert_to_tensor(dy),
@@ -79,7 +79,7 @@ def embedding_lookup(x,
         emb_x = gather(embedding_matrix, x)
         if multiplier != 1.0:
             emb_x *= multiplier
-        static_shape = emb_x.shape.as_list()
+        static_shape = shape_list(emb_x)
         if len(static_shape) < 5:
             return emb_x
         assert len(static_shape) == 5
