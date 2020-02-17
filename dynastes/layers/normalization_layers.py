@@ -30,9 +30,10 @@ def masked_moments(x, axes, mask=None, keepdims=False, epsilon=1e-15):
         mask_shape = shape_list(mask)
         _mask = tf.reshape(tf.cast(mask, x.dtype), mask_shape + [1] * (len(x_shape) - len(mask_shape)))
     n_mask_indices = tf.reduce_sum(_mask, axis=axes, keepdims=True)
-    _mean = tf.reduce_sum(x, axis=axes, keepdims=True) / tf.cast(tf.maximum(1, n_mask_indices), x.dtype)
+    _mean = tf.reduce_sum(x, axis=axes, keepdims=True) / tf.cast(
+        tf.maximum(tf.cast(1, n_mask_indices.dtype), n_mask_indices), x.dtype)
     var = tf.reduce_sum(tf.math.squared_difference(x, _mean), axis=axes, keepdims=True) / tf.cast(
-        tf.maximum(1, n_mask_indices - 1), x.dtype)
+        tf.maximum(tf.cast(1, n_mask_indices.dtype), n_mask_indices - 1), x.dtype)
     return tf.reduce_sum(_mean, axis=axes, keepdims=keepdims), tf.reduce_sum(var, axis=axes, keepdims=keepdims)
 
 
