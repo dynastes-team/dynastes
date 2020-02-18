@@ -1,6 +1,6 @@
 import tensorflow as tf
-import tensorflow_addons as tfa
 import tensorflow.keras.backend as K
+import tensorflow_addons as tfa
 
 if tfa.__version__ == '0.7.0':
     from dynastes.ops.image_ops import sparse_image_warp

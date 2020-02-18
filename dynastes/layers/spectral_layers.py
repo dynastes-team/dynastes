@@ -3,6 +3,7 @@ import math
 import tensorflow as tf
 import tensorflow.keras as tfk
 import tensorflow.keras.backend as K
+
 from dynastes.layers.base_layers import DynastesBaseLayer
 from dynastes.ops import spectral_ops
 

@@ -1,6 +1,7 @@
 import tensorflow as tf
 import tensorflow.keras.backend as K
 
+
 def to_float(x):
     """Cast x to float; created because to_float is deprecated."""
     return tf.cast(x, K.floatx())

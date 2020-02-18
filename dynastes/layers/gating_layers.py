@@ -1,6 +1,7 @@
 import tensorflow as tf
 import tensorflow.keras.layers as tfkl
 from tensorflow.python.keras.utils.generic_utils import serialize_keras_object, deserialize_keras_object
+
 from dynastes.ops.t2t_common import shape_list
 
 
@@ -11,6 +12,7 @@ def GTU(x, g, y=None):
     if y is not None:
         _y += (1 - _g) * tf.math.tanh(y)
     return _y
+
 
 @tf.keras.utils.register_keras_serializable(package='Dynastes', name='GLU')
 def GLU(x, g, y=None):
@@ -116,4 +118,3 @@ class GatingLayer(tfkl.Layer):
         }
         base_config = super(GatingLayer, self).get_config()
         return {**base_config, **config}
-

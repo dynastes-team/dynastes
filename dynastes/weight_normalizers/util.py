@@ -108,7 +108,7 @@ class WeightNormalizer(tfkl.Layer):
             trainable=False,
             aggregation=tf_variables.VariableAggregation.ONLY_FIRST_REPLICA,
         )"""
-        
+
         # For now it's a workaround, maybe works, who knows ¯\_(ツ)_/¯
 
         def get_weight_init(input_shape, original_init):
