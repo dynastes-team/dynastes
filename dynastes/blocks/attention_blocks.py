@@ -139,17 +139,29 @@ class _AttentionBlock1D(DynastesBaseLayer):
                                         stddev=init_stddev * (k_filters ** -0.5)),
                                     filters=q_filters,
                                     strides=q_strides,
-                                    dilation_rate=dilation_rate, name='Conv-Q')
+                                    dilation_rate=dilation_rate, name='Conv-Q',
+                                    wnorm=self.wnorm,
+                                    wlrmul=self.wlrmul,
+                                    wgain=self.wgain,
+                                    wscale=self.use_wscale)
         self.k_layer = conv_partial(type=self.k_type,
                                     kernel_initializer=tfk.initializers.RandomNormal(stddev=init_stddev),
                                     filters=k_filters,
                                     strides=kv_strides,
-                                    dilation_rate=kv_dilation_rate, name='Conv-K')
+                                    dilation_rate=kv_dilation_rate, name='Conv-K',
+                                    wnorm=self.wnorm,
+                                    wlrmul=self.wlrmul,
+                                    wgain=self.wgain,
+                                    wscale=self.use_wscale)
         self.v_layer = conv_partial(type=self.v_type,
                                     kernel_initializer=tfk.initializers.RandomNormal(stddev=init_stddev),
                                     filters=v_filters,
                                     strides=kv_strides,
-                                    dilation_rate=kv_dilation_rate, name='Conv-V')
+                                    dilation_rate=kv_dilation_rate, name='Conv-V',
+                                    wnorm=self.wnorm,
+                                    wlrmul=self.wlrmul,
+                                    wgain=self.wgain,
+                                    wscale=self.use_wscale)
 
         attention_padding = padding
         self.attention_layer = layer_factory.get_1D_attention_layer(

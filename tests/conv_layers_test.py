@@ -128,7 +128,7 @@ class DynastesConv2DTransposeTest(tf.test.TestCase):
         )
 
     def test_masking(self):
-        layer = DynastesConv2DTranspose(32, kernel_size=3, strides=2, padding='same', conv_mask=True)
+        layer = DynastesConv2DTranspose(32, kernel_size=3, strides=2, padding='same', wnorm=True, conv_mask=True)
 
         ts = to_tensor(normal(size=(8, 16, 16, 32))
                        .astype(np.float32))
@@ -141,6 +141,7 @@ class DynastesConv2DTransposeTest(tf.test.TestCase):
         mask = tf.tile(mask, [1, 16, 1])
         layer(ts, mask=mask)
         layer.compute_mask(ts, mask=mask)
+        print(layer.variables[-1])
 
         @tf.function
         def graph_test_fn(x, mask):
@@ -148,6 +149,8 @@ class DynastesConv2DTransposeTest(tf.test.TestCase):
             layer.compute_mask(x, mask=mask)
 
         graph_test_fn(x=ts, mask=mask)
+
+        print(layer.variables)
 
     def test_specnorm(self):
         layer_test(

@@ -40,6 +40,7 @@ class SpectralNormalization(tfkl.Layer):
                                  dtype=self.dtype,
                                  initializer=tfk.initializers.RandomNormal(),
                                  trainable=False,
+                                 synchronization=tf.VariableSynchronization.ON_READ,
                                  aggregation=aggregation)
         if self.transposed:
             input_shape = input_shape[:-2] + [input_shape[-1], input_shape[-2]]

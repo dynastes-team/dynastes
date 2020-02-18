@@ -99,6 +99,7 @@ class DynastesBaseLayer(tfkl.Layer):
                  use_wscale=False,
                  wlrmul=1.,
                  wgain=np.sqrt(2),
+                 wnorm=False,
                  supports_caching=False,
                  mask_threshold=0.5,
                  **kwargs):
@@ -108,6 +109,7 @@ class DynastesBaseLayer(tfkl.Layer):
         self.use_wscale = use_wscale
         self.lrmul = wlrmul
         self.gain = wgain
+        self.wnorm = wnorm
         self.supports_caching = supports_caching
         self.mask_threshold = mask_threshold
         super(DynastesBaseLayer, self).__init__(
@@ -163,6 +165,7 @@ class DynastesBaseLayer(tfkl.Layer):
                    regularizer=None,
                    constraint=None,
                    dtype=None,
+                   use_wnorm=False,
                    use_resource=None,
                    **kwargs):
         if initializer is not None:
@@ -172,6 +175,13 @@ class DynastesBaseLayer(tfkl.Layer):
         if constraint is not None:
             self.constraints[name] = constraints.get(constraint)
         _initializer = self.get_initializer(name)
+
+        if use_wnorm or (self.wnorm and (name in ['kernel', 'embedding'] or name.endswith('kernel'))):
+            if name in self.normalizers and self.normalizers[name] is not None:
+                self.normalizers[name] = weight_normalizers.WeightNormalizer(next_layer=self.normalizers[name])
+            else:
+                self.normalizers[name] = weight_normalizers.WeightNormalizer()
+
         if self.use_wscale:
             _initializer = _WscaleInitializer(_initializer, lrmul=self.lrmul)
             self.initializers[name] = _initializer
@@ -214,6 +224,7 @@ class DynastesBaseLayer(tfkl.Layer):
             'wgain': self.gain,
             'supports_caching': self.supports_caching,
             'mask_threshold': self.mask_threshold,
+            'wnorm': self.wnorm
         }
         for name, initializer in self.initializers.items():
             config[name + '_initializer'] = initializers.serialize(initializer)

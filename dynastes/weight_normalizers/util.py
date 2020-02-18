@@ -2,7 +2,9 @@ import numpy as np
 import six
 import tensorflow as tf
 import tensorflow.keras.layers as tfkl
+from tensorflow.python.keras.utils import tf_utils
 from tensorflow.python.keras.utils.generic_utils import serialize_keras_object, deserialize_keras_object
+from tensorflow.python.ops import variables as tf_variables
 
 from dynastes.ops.t2t_common import shape_list
 from dynastes.weight_normalizers.spectral import SpectralNormalization
@@ -32,6 +34,10 @@ def get(identifier):
             return SpectralNormalization()
         elif identifier == 'spectral_t':
             return SpectralNormalization(transposed=True)
+        elif identifier == 'wnorm':
+            return WeightNormalizer()
+        elif identifier == 'wscale':
+            return WscaleNormalizer()
     elif callable(identifier):
         return identifier
     else:
@@ -71,6 +77,58 @@ class WscaleNormalizer(tfkl.Layer):
             'next_layer': serialize(self.next_layer)
         }
         base_config = super(WscaleNormalizer, self).get_config()
+        return {**base_config, **config}
+
+
+class WeightNormalizer(tfkl.Layer):
+
+    def __init__(self,
+                 next_layer=tfkl.Activation('linear'),
+                 **kwargs):
+        super(WeightNormalizer, self).__init__(**kwargs)
+        self.next_layer = get(next_layer)
+
+    def build(self, input_shape):
+        self.layer_depth = int(input_shape[-1])
+        self.kernel_norm_axes = list(range(len(input_shape) - 1))
+
+        self.g = self.add_weight(
+            name="g",
+            shape=(self.layer_depth,),
+            initializer="ones",
+            trainable=True,
+        )
+        self._initialized_g = self.add_weight(
+            name='initialized_g',
+            shape=None,
+            initializer="zeros",
+            dtype=tf.dtypes.bool,
+            synchronization=tf_variables.VariableSynchronization.ON_READ,
+            trainable=False,
+            aggregation=tf_variables.VariableAggregation.ONLY_FIRST_REPLICA,
+            experimental_autocast=False
+        )
+        self.built = True
+
+    def call(self, inputs, training=None, **kwargs):
+        def _update_or_return_vars():
+            V_norm = tf.norm(tf.reshape(inputs, [-1, self.layer_depth]), axis=0)
+            scaler = tf.reshape(tf.math.divide_no_nan(self.g, V_norm),
+                                list([1] * len(self.kernel_norm_axes)) + [self.layer_depth])
+            return inputs * scaler
+
+        def _init_g():
+            V_norm = tf.norm(tf.reshape(inputs, [-1, self.layer_depth]), axis=0)
+            with tf.control_dependencies([self.g.assign(V_norm), self._initialized_g.assign(True)]):
+                return tf.identity(inputs)
+
+        return tf_utils.smart_cond(self._initialized_g, _update_or_return_vars, _init_g)
+
+    def get_config(self):
+        config = {
+            'next_layer': serialize(self.next_layer)
+        }
+        base_config = super(WeightNormalizer, self).get_config()
         return {**base_config, **config}
 
 
