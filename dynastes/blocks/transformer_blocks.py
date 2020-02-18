@@ -87,7 +87,7 @@ class PointWiseFeedForwardBlock(DynastesBaseLayer):
             wnorm=self.wnorm,
             wlrmul=self.lrmul,
             wgain=self.gain,
-            wscale=self.use_wscale)
+            use_wscale=self.use_wscale)
         self.out_layer = conv_partial(
             kernel_size=second_kernel_size,
             type=d_type,
@@ -96,7 +96,7 @@ class PointWiseFeedForwardBlock(DynastesBaseLayer):
             wnorm=self.wnorm,
             wlrmul=self.lrmul,
             wgain=self.gain,
-            wscale=self.use_wscale)
+            use_wscale=self.use_wscale)
 
     def request_cache(self, batch_size, max_length=None, **kwargs):
         max_req_len = max(self.first_kernel_size * self.dilation_rate, self.second_kernel_size * self.dilation_rate)

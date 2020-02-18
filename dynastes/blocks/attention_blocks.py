@@ -143,7 +143,7 @@ class _AttentionBlock1D(DynastesBaseLayer):
                                     wnorm=self.wnorm,
                                     wlrmul=self.lrmul,
                                     wgain=self.gain,
-                                    wscale=self.use_wscale)
+                                    use_wscale=self.use_wscale)
         self.k_layer = conv_partial(type=self.k_type,
                                     kernel_initializer=tfk.initializers.RandomNormal(stddev=init_stddev),
                                     filters=k_filters,
@@ -152,7 +152,7 @@ class _AttentionBlock1D(DynastesBaseLayer):
                                     wnorm=self.wnorm,
                                     wlrmul=self.lrmul,
                                     wgain=self.gain,
-                                    wscale=self.use_wscale)
+                                    use_wscale=self.use_wscale)
         self.v_layer = conv_partial(type=self.v_type,
                                     kernel_initializer=tfk.initializers.RandomNormal(stddev=init_stddev),
                                     filters=v_filters,
@@ -161,7 +161,7 @@ class _AttentionBlock1D(DynastesBaseLayer):
                                     wnorm=self.wnorm,
                                     wlrmul=self.lrmul,
                                     wgain=self.gain,
-                                    wscale=self.use_wscale)
+                                    use_wscale=self.use_wscale)
 
         attention_padding = padding
         self.attention_layer = layer_factory.get_1D_attention_layer(
