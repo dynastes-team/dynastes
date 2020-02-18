@@ -178,7 +178,7 @@ class DynastesBaseLayer(tfkl.Layer):
 
         if use_wnorm or (self.wnorm and (name in ['kernel', 'embedding'] or name.endswith('kernel'))):
             if name in self.normalizers and self.normalizers[name] is not None:
-                self.normalizers[name] = weight_normalizers.WeightNormalizer(next_layer=self.normalizers[name])
+                self.normalizers[name] = weight_normalizers.WeightNormalizer(_initializer, next_layer=self.normalizers[name])
             else:
                 self.normalizers[name] = weight_normalizers.WeightNormalizer(_initializer)
 
