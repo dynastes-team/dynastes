@@ -125,7 +125,7 @@ class WeightNormalizer(tfkl.Layer):
                 with tf.control_dependencies([self._initialized_g.assign(True)]):
                     return tf.identity(inputs)
 
-        return tf_utils.smart_cond(self._initialized_g, _update_or_return_vars, _init_g)
+        return tf.cond(self._initialized_g, _update_or_return_vars, _init_g)
 
     def get_config(self):
         config = {
