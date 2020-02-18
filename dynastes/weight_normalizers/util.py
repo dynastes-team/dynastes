@@ -105,7 +105,7 @@ class WeightNormalizer(tfkl.Layer):
             shape=None,
             initializer="zeros",
             dtype=tf.dtypes.bool,
-            synchronization=tf_variables.VariableSynchronization.ON_READ,
+            synchronization=tf_variables.VariableSynchronization.ON_WRITE,
             trainable=False,
             aggregation=tf_variables.VariableAggregation.ONLY_FIRST_REPLICA,
             experimental_autocast=False
@@ -121,8 +121,9 @@ class WeightNormalizer(tfkl.Layer):
 
         def _init_g():
             V_norm = tf.norm(tf.reshape(inputs, [-1, self.layer_depth]), axis=0)
-            with tf.control_dependencies([self.g.assign(V_norm), self._initialized_g.assign(True)]):
-                return tf.identity(inputs)
+            with tf.control_dependencies([self.g.assign(V_norm)]):
+                with tf.control_dependencies([self._initialized_g.assign(True)]):
+                    return tf.identity(inputs)
 
         return tf_utils.smart_cond(self._initialized_g, _update_or_return_vars, _init_g)
 
