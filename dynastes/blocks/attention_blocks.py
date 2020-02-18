@@ -141,8 +141,8 @@ class _AttentionBlock1D(DynastesBaseLayer):
                                     strides=q_strides,
                                     dilation_rate=dilation_rate, name='Conv-Q',
                                     wnorm=self.wnorm,
-                                    wlrmul=self.wlrmul,
-                                    wgain=self.wgain,
+                                    wlrmul=self.lrmul,
+                                    wgain=self.gain,
                                     wscale=self.use_wscale)
         self.k_layer = conv_partial(type=self.k_type,
                                     kernel_initializer=tfk.initializers.RandomNormal(stddev=init_stddev),
@@ -150,8 +150,8 @@ class _AttentionBlock1D(DynastesBaseLayer):
                                     strides=kv_strides,
                                     dilation_rate=kv_dilation_rate, name='Conv-K',
                                     wnorm=self.wnorm,
-                                    wlrmul=self.wlrmul,
-                                    wgain=self.wgain,
+                                    wlrmul=self.lrmul,
+                                    wgain=self.gain,
                                     wscale=self.use_wscale)
         self.v_layer = conv_partial(type=self.v_type,
                                     kernel_initializer=tfk.initializers.RandomNormal(stddev=init_stddev),
@@ -159,8 +159,8 @@ class _AttentionBlock1D(DynastesBaseLayer):
                                     strides=kv_strides,
                                     dilation_rate=kv_dilation_rate, name='Conv-V',
                                     wnorm=self.wnorm,
-                                    wlrmul=self.wlrmul,
-                                    wgain=self.wgain,
+                                    wlrmul=self.lrmul,
+                                    wgain=self.gain,
                                     wscale=self.use_wscale)
 
         attention_padding = padding
