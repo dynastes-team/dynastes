@@ -34,8 +34,6 @@ def get(identifier):
             return SpectralNormalization()
         elif identifier == 'spectral_t':
             return SpectralNormalization(transposed=True)
-        elif identifier == 'wnorm':
-            return WeightNormalizer()
         elif identifier == 'wscale':
             return WscaleNormalizer()
     elif callable(identifier):
@@ -83,6 +81,7 @@ class WscaleNormalizer(tfkl.Layer):
 cs = tf.CriticalSection(name='init_mutex')
 
 
+@tf.keras.utils.register_keras_serializable(package='Dynastes')
 class WeightNormalizer(tfkl.Layer):
 
     def __init__(self,
@@ -90,7 +89,7 @@ class WeightNormalizer(tfkl.Layer):
                  next_layer=tfkl.Activation('linear'),
                  **kwargs):
         super(WeightNormalizer, self).__init__(**kwargs)
-        self.orig_weight_initializer = weight_initializer
+        self.orig_weight_initializer = tfki.get(weight_initializer)
         self.next_layer = get(next_layer)
         self._init_critical_section = cs
         self.g = None
