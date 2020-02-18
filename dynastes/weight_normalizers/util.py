@@ -111,7 +111,6 @@ class WeightNormalizer(tfkl.Layer):
             synchronization=tf_variables.VariableSynchronization.AUTO,
             trainable=False,
             aggregation=tf_variables.VariableAggregation.ONLY_FIRST_REPLICA,
-            experimental_autocast=False
         )
         self.built = True
 
