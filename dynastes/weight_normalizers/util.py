@@ -98,9 +98,9 @@ class WeightNormalizer(tfkl.Layer):
         self.g = self.add_weight(
             name="g",
             shape=(self.layer_depth,),
-            synchronization=tf_variables.VariableSynchronization.AUTO,
+            synchronization=tf_variables.VariableSynchronization.ON_READ,
             initializer="ones",
-            aggregation=tf_variables.VariableAggregation.MEAN,
+            aggregation=tf_variables.VariableAggregation.ONLY_FIRST_REPLICA,
             trainable=True,
         )
         self._initialized_g = self.add_weight(
@@ -108,7 +108,7 @@ class WeightNormalizer(tfkl.Layer):
             shape=None,
             initializer="zeros",
             dtype=tf.dtypes.bool,
-            synchronization=tf_variables.VariableSynchronization.AUTO,
+            synchronization=tf_variables.VariableSynchronization.ON_READ,
             trainable=False,
             aggregation=tf_variables.VariableAggregation.ONLY_FIRST_REPLICA,
         )
