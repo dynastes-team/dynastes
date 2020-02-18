@@ -180,7 +180,7 @@ class DynastesBaseLayer(tfkl.Layer):
             if name in self.normalizers and self.normalizers[name] is not None:
                 self.normalizers[name] = weight_normalizers.WeightNormalizer(next_layer=self.normalizers[name])
             else:
-                self.normalizers[name] = weight_normalizers.WeightNormalizer()
+                self.normalizers[name] = weight_normalizers.WeightNormalizer(_initializer)
 
         if self.use_wscale:
             _initializer = _WscaleInitializer(_initializer, lrmul=self.lrmul)

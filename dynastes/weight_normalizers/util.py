@@ -1,6 +1,7 @@
 import numpy as np
 import six
 import tensorflow as tf
+import tensorflow.keras.initializers as tfki
 import tensorflow.keras.layers as tfkl
 from tensorflow.python.keras.utils.generic_utils import serialize_keras_object, deserialize_keras_object
 from tensorflow.python.ops import variables as tf_variables
@@ -85,9 +86,11 @@ cs = tf.CriticalSection(name='init_mutex')
 class WeightNormalizer(tfkl.Layer):
 
     def __init__(self,
+                 weight_initializer,
                  next_layer=tfkl.Activation('linear'),
                  **kwargs):
         super(WeightNormalizer, self).__init__(**kwargs)
+        self.orig_weight_initializer = weight_initializer
         self.next_layer = get(next_layer)
         self._init_critical_section = cs
         self.g = None
@@ -105,12 +108,24 @@ class WeightNormalizer(tfkl.Layer):
             trainable=False,
             aggregation=tf_variables.VariableAggregation.ONLY_FIRST_REPLICA,
         )"""
+        
+        # For now it's a workaround, maybe works, who knows ¯\_(ツ)_/¯
+
+        def get_weight_init(input_shape, original_init):
+            def weight_init(target_shape, dtype, input_shape, original_init):
+                var_init = original_init(input_shape, dtype)
+                var_norm = tf.norm(tf.reshape(var_init, [-1, target_shape[-1]]), axis=0)
+
+                return tf.random.normal(shape=target_shape, mean=tf.reduce_mean(var_norm),
+                                        stddev=tf.math.reduce_std(var_norm))
+
+            return lambda x, dtype: weight_init(x, dtype, input_shape, original_init)
 
         self.g = self.add_weight(
             name="g",
             shape=(self.layer_depth,),
             synchronization=tf_variables.VariableSynchronization.AUTO,
-            initializer='ones',
+            initializer=get_weight_init(input_shape, self.orig_weight_initializer),
             trainable=True,
         )
 
@@ -118,6 +133,8 @@ class WeightNormalizer(tfkl.Layer):
 
     def call(self, inputs, training=None, **kwargs):
         # TODO: Fix this when TensorFlow developers learn how to code if I haven't switched to PyTorch by that time
+
+        # For now it's a workaround, maybe works, who knows ¯\_(ツ)_/¯
 
         # def _update_or_return_vars():
         #    return tf.identity(self.g)
@@ -140,6 +157,7 @@ class WeightNormalizer(tfkl.Layer):
 
     def get_config(self):
         config = {
+            'weight_initializer': tfki.serialize(self.orig_weight_initializer),
             'next_layer': serialize(self.next_layer)
         }
         base_config = super(WeightNormalizer, self).get_config()
