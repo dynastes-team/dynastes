@@ -105,7 +105,7 @@ class WeightNormalizer(tfkl.Layer):
             shape=None,
             initializer="zeros",
             dtype=tf.dtypes.bool,
-            synchronization=tf_variables.VariableSynchronization.ON_WRITE,
+            synchronization=tf_variables.VariableSynchronization.AUTO,
             trainable=False,
             aggregation=tf_variables.VariableAggregation.ONLY_FIRST_REPLICA,
             experimental_autocast=False

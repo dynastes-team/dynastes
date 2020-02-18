@@ -139,9 +139,6 @@ class DynastesConv2DTransposeTest(tf.test.TestCase):
         mask = tf.tile(mask, [8, 1])
         mask = tf.expand_dims(mask, axis=1)
         mask = tf.tile(mask, [1, 16, 1])
-        layer(ts, mask=mask)
-        layer.compute_mask(ts, mask=mask)
-        print(layer.variables[-1])
 
         @tf.function
         def graph_test_fn(x, mask):
@@ -149,6 +146,11 @@ class DynastesConv2DTransposeTest(tf.test.TestCase):
             layer.compute_mask(x, mask=mask)
 
         graph_test_fn(x=ts, mask=mask)
+        print(layer.variables[-1])
+
+        layer(ts, mask=mask)
+        layer.compute_mask(ts, mask=mask)
+
 
         print(layer.variables)
 
