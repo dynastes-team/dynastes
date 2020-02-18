@@ -90,19 +90,12 @@ class WeightNormalizer(tfkl.Layer):
         super(WeightNormalizer, self).__init__(**kwargs)
         self.next_layer = get(next_layer)
         self._init_critical_section = cs
+        self.g = None
 
     def build(self, input_shape):
         self.layer_depth = int(input_shape[-1])
         self.kernel_norm_axes = list(range(len(input_shape) - 1))
 
-        self.g = self.add_weight(
-            name="g",
-            shape=(self.layer_depth,),
-            synchronization=tf_variables.VariableSynchronization.ON_READ,
-            initializer="ones",
-            aggregation=tf_variables.VariableAggregation.ONLY_FIRST_REPLICA,
-            trainable=True,
-        )
         self._initialized_g = self.add_weight(
             name='initialized_g',
             shape=None,
@@ -110,8 +103,17 @@ class WeightNormalizer(tfkl.Layer):
             dtype=tf.dtypes.bool,
             synchronization=tf_variables.VariableSynchronization.ON_READ,
             trainable=False,
-            aggregation=tf_variables.VariableAggregation.ONLY_FIRST_REPLICA,
+            aggregation=tf_variables.VariableAggregation.NONE,
         )
+        self.g = self.add_weight(
+            name="g",
+            shape=(self.layer_depth,),
+            synchronization=tf_variables.VariableSynchronization.ON_WRITE,
+            initializer='ones',
+            aggregation=tf_variables.VariableAggregation.NONE,
+            trainable=True,
+        )
+
         self.built = True
 
     def call(self, inputs, training=None, **kwargs):
@@ -120,9 +122,8 @@ class WeightNormalizer(tfkl.Layer):
 
         def _init_g():
             V_norm = tf.norm(tf.reshape(inputs, [-1, self.layer_depth]), axis=0)
-            with tf.control_dependencies([self.g.assign(V_norm)]):
-                with tf.control_dependencies([self._initialized_g.assign(True)]):
-                    return tf.identity(self.g)
+            with tf.control_dependencies([self.g.assign(V_norm), self._initialized_g.assign(True)]):
+                return tf.identity(self.g)
 
         g = self._init_critical_section.execute(lambda: tf.cond(self._initialized_g, _update_or_return_vars, _init_g))
 
@@ -130,6 +131,9 @@ class WeightNormalizer(tfkl.Layer):
         scaler = tf.reshape(tf.math.divide_no_nan(g, V_norm),
                             list([1] * len(self.kernel_norm_axes)) + [self.layer_depth])
         return inputs * scaler
+
+    def compute_output_shape(self, input_shape):
+        return input_shape
 
     def get_config(self):
         config = {
