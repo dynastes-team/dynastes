@@ -3,6 +3,15 @@ import tensorflow.keras.layers as tfkl
 from tensorflow.python.keras.utils.generic_utils import serialize_keras_object, deserialize_keras_object
 from dynastes.ops.t2t_common import shape_list
 
+
+@tf.keras.utils.register_keras_serializable(package='Dynastes', name='GTU')
+def GTU(x, g, y=None):
+    _g = tf.sigmoid(g)
+    _y = tf.math.tanh(x) * _g
+    if y is not None:
+        _y += (1 - _g) * tf.math.tanh(y)
+    return _y
+
 @tf.keras.utils.register_keras_serializable(package='Dynastes', name='GLU')
 def GLU(x, g, y=None):
     _g = tf.sigmoid(g)
@@ -40,6 +49,8 @@ def _get(gating_function):
             return GLU
         elif gating_function in ['Dynastes>GDOT', 'GDOT']:
             return GDOT
+        elif gating_function in ['Dynastes>GTU', 'GTU']:
+            return GTU
     return _deserialize(gating_function)
 
 
