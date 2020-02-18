@@ -25,15 +25,11 @@ def scaled_dot_product_attention(q, k, v, bias, multiquery_attention=False):
     Source:
     https://www.tensorflow.org/tutorials/text/transformer
     """
-    leading_dims = ['b', 'x', 'y', 'z', 'q', 'a', 'c']
-    shape = shape_list(q)
-    ldim = ''.join(leading_dims[:len(shape) - 3])
-    ld3 = (ldim, ldim, ldim)
 
     if multiquery_attention:
-        logits = tf.einsum("%shnk,%smk->%shnm" % ld3, q, k)
+        logits = tf.einsum("...hnk,...mk->...hnm", q, k)
     else:
-        logits = tf.einsum("%shnk,%shmk->%shnm" % ld3, q, k)
+        logits = tf.einsum("...hnk,...hmk->...hnm", q, k)
 
     # scale matmul_qk
     dk = tf.cast(tf.shape(k)[-1], tf.float32)
@@ -47,9 +43,9 @@ def scaled_dot_product_attention(q, k, v, bias, multiquery_attention=False):
     # add up to 1.
     attention_weights = tf.nn.softmax(scaled_attention_logits, axis=-1)  # (..., seq_len_q, seq_len_k)
     if multiquery_attention:
-        output = tf.einsum("%shnm,%smv->%shnv" % ld3, attention_weights, v)
+        output = tf.einsum("...hnm,...mv->...hnv", attention_weights, v)
     else:
-        output = tf.einsum("%shnm,%shmv->%shnv" % ld3, attention_weights, v)
+        output = tf.einsum("...hnm,...hmv->...hnv", attention_weights, v)
 
     return output, attention_weights
 
