@@ -29,6 +29,8 @@ class _AttentionBlock1D(DynastesBaseLayer):
                  q_type='Conv1D',
                  k_type=None,
                  v_type=None,
+                 out_type=None,
+                 skip_out=True,
                  num_heads=1,
                  multiquery_attention=False,
                  depth_multiplier=1,
@@ -72,6 +74,11 @@ class _AttentionBlock1D(DynastesBaseLayer):
         else:
             self.v_type = v_type
 
+        if out_type is None:
+            self.out_type = q_type
+        else:
+            self.out_type = out_type
+
         self.attention_dim = attention_dim
         self.output_dim = output_dim
         self.kernel_size = kernel_size
@@ -100,6 +107,8 @@ class _AttentionBlock1D(DynastesBaseLayer):
         self.scaled = scaled
         self.separable_prepointwise = separable_prepointwise
         self.separable_prepointwise_depth = separable_prepointwise_depth
+        self.skip_out = skip_out
+
         conv_partial = partial(layer_factory.get_1d_layer, kernel_size=kernel_size,
                                grouped=grouped,
                                group_size=group_size,
@@ -117,7 +126,10 @@ class _AttentionBlock1D(DynastesBaseLayer):
                                separable_prepointwise_depth=separable_prepointwise_depth)
         q_filters = attention_dim
         k_filters = attention_dim
-        v_filters = output_dim
+        if skip_out:
+            v_filters = output_dim
+        else:
+            v_filters = attention_dim
 
         if multiquery_attention:
             k_filters //= num_heads
@@ -166,6 +178,20 @@ class _AttentionBlock1D(DynastesBaseLayer):
                                     wgain=self.gain,
                                     use_wscale=self.use_wscale)
 
+        if self.skip_out:
+            self.out_layer = None
+        else:
+            self.out_layer = conv_partial(type=self.out_type,
+                                          kernel_initializer=tfk.initializers.RandomNormal(
+                                              stddev=init_stddev * (output_dim ** -0.5)),
+                                          filters=output_dim,
+                                          strides=1,
+                                          dilation_rate=1, name='Conv-Out',
+                                          wnorm=self.wnorm,
+                                          wlrmul=self.lrmul,
+                                          wgain=self.gain,
+                                          use_wscale=self.use_wscale)
+
         attention_padding = padding
         self.attention_layer = layer_factory.get_1D_attention_layer(
             type=attention_type,
@@ -200,6 +226,8 @@ class _AttentionBlock1D(DynastesBaseLayer):
             'q_type': self.q_type,
             'k_type': self.k_type,
             'v_type': self.v_type,
+            'out_type': self.out_type,
+            'skip_out': self.skip_out,
             'activation': activations.serialize(self.activation),
             'use_bias': self.use_bias,
             'multiquery_attention': self.multiquery_attention,
@@ -303,7 +331,8 @@ class AttentionBlock1D(_AttentionBlock1D):
         if mask is not None:
             mask = [q_mask, tf.logical_and(k_mask, v_mask)]
         x, weights = self.attention_layer([q, k, v], mask=mask, training=training)
-
+        if not self.skip_out:
+            x = self.out_layer(x, mask=mask, training=training)
         if self.return_attn_weights:
             return x, weights
         return x
@@ -403,6 +432,8 @@ class SelfAttentionBlock1D(AttentionBlock1D):
         if mask is not None:
             mask = [q_mask, tf.logical_and(k_mask, v_mask)]
         x, weights = self.attention_layer([q, k, v], mask=mask, training=training)
+        if not self.skip_out:
+            x = self.out_layer(x, mask=mask, training=training)
         x_shape = t2t_common.shape_list(x)
         if pad_q_to_kv:
             if q_shape[1] != kv_shape[1]:

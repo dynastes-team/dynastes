@@ -58,13 +58,16 @@ class DecoderBlockTest(tf.test.TestCase):
                                                attention_type='Attention1D',
                                                relative=False,
                                                local=False,
+                                               skip_out=False,
                                                masked=True,
                                                mask_right=True,
                                                multiquery_attention=True)
-            dec_cablock = AttentionBlock1D(d_model // 4, d_model, num_heads=num_heads,
+            dec_cablock = AttentionBlock1D(d_model // 4, d_model,
+                                           num_heads=num_heads,
                                            attention_type='Attention1D',
                                            relative=False,
                                            masked=True,
+                                           skip_out=False,
                                            mask_right=False,
                                            multiquery_attention=True,
                                            cache_kv=False)
@@ -73,9 +76,9 @@ class DecoderBlockTest(tf.test.TestCase):
                                                    d_model=d_model)
             dec_blocks = []
             for i in range(5):
-                dec_norm_0 = LayerNormalization(epsilon=1e-9)#, momentum=0.85)
-                dec_norm_1 = LayerNormalization(epsilon=1e-9)#, momentum=0.85)
-                dec_norm_2 = LayerNormalization(epsilon=1e-9)#, momentum=0.85)
+                dec_norm_0 = LayerNormalization(epsilon=1e-9)  # , momentum=0.85)
+                dec_norm_1 = LayerNormalization(epsilon=1e-9)  # , momentum=0.85)
+                dec_norm_2 = LayerNormalization(epsilon=1e-9)  # , momentum=0.85)
                 dec_block = DecoderBlock(sa_layer=dec_sablock, ca_layer=dec_cablock, norm0=dec_norm_0, ffn=dec_df_net,
                                          norm1=dec_norm_1, norm2=dec_norm_2)
                 dec_blocks.append(dec_block)
