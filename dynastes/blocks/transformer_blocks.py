@@ -80,7 +80,7 @@ class PointWiseFeedForwardBlock(DynastesBaseLayer):
                                kernel_constraint=self.get_constraint('kernel'),
                                bias_constraint=self.get_constraint('bias'),
                                separable_prepointwise=separable_prepointwise,
-                               separable_prepointwise_type=separable_prepointwise_depth)
+                               separable_prepointwise_depth=separable_prepointwise_depth)
 
         self.dff_layer = conv_partial(
             kernel_size=first_kernel_size,
