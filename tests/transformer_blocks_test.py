@@ -38,6 +38,7 @@ class DecoderBlockTest(tf.test.TestCase):
                                                attention_type='Attention1D',
                                                relative=True,
                                                masked=True,
+                                               skip_out=False,
                                                mask_right=False,
                                                multiquery_attention=True, )
             enc_norm = LayerNormalization(epsilon=1e-6)
@@ -57,7 +58,7 @@ class DecoderBlockTest(tf.test.TestCase):
             dec_sablock = SelfAttentionBlock1D(d_model // 4, d_model, num_heads=num_heads,
                                                attention_type='Attention1D',
                                                relative=False,
-                                               local=False,
+                                               local=True,
                                                skip_out=False,
                                                masked=True,
                                                mask_right=True,
@@ -119,4 +120,4 @@ class DecoderBlockTest(tf.test.TestCase):
             tf.cast(mask, tf.bool), enc_mask)).numpy()  # , cache=cache, decode_loop_step=0)
         print(tf.reduce_max(ret - sanity_check), tf.reduce_mean(ret - sanity_check))
         # print(dec_df_net.trainable_weights)
-        self.assertAllClose(ret, sanity_check, atol=5, rtol=36633)
+        self.assertAllClose(ret, sanity_check)
