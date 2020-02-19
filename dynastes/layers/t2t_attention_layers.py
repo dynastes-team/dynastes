@@ -340,7 +340,7 @@ class Attention1D(DynastesBaseLayer):
         depth_v = int(input_shape[2][-1]) // self.num_heads_kv
         output_shape = input_shape[0][:-1] + [depth_v * self.num_heads]
         attn_w_shape = [input_shape[0][0], input_shape[0][1], input_shape[1][1]]
-        return output_shape, attn_w_shape
+        return tf.TensorShape(output_shape), tf.TensorShape(attn_w_shape)
 
     def get_config(self):
         config = {

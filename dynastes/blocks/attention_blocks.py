@@ -265,9 +265,12 @@ class _AttentionBlock1D(DynastesBaseLayer):
         ks = self.k_layer.compute_output_shape(input_shape)
         vs = self.v_layer.compute_output_shape(input_shape)
         output_shape = self.attention_layer.compute_output_shape([qs, ks, vs])
+        output_shape, attn_weights_shape = output_shape
+        if not self.skip_out:
+            output_shape = self.out_layer.compute_output_shape(output_shape)
         if self.return_attn_weights:
-            return output_shape
-        return output_shape[0]
+            return [output_shape, attn_weights_shape]
+        return output_shape
 
 
 @tf.keras.utils.register_keras_serializable(package='Dynastes')
