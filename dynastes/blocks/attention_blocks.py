@@ -30,7 +30,7 @@ class _AttentionBlock1D(DynastesBaseLayer):
                  k_type=None,
                  v_type=None,
                  out_type=None,
-                 skip_out=True,
+                 skip_out=False,
                  num_heads=1,
                  multiquery_attention=False,
                  depth_multiplier=1,
