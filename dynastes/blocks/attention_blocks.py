@@ -54,6 +54,7 @@ class _AttentionBlock1D(DynastesBaseLayer):
                  return_attn_weights=False,
                  cache_kv=False,
                  separable_prepointwise=False,
+                 separable_prepointwise_depth='min',
                  **kwargs):
         kwargs['supports_caching'] = True
         super(_AttentionBlock1D, self).__init__(**kwargs)
@@ -98,6 +99,7 @@ class _AttentionBlock1D(DynastesBaseLayer):
         self.cache_kv = cache_kv
         self.scaled = scaled
         self.separable_prepointwise = separable_prepointwise
+        self.separable_prepointwise_depth = separable_prepointwise_depth
         conv_partial = partial(layer_factory.get_1d_layer, kernel_size=kernel_size,
                                grouped=grouped,
                                group_size=group_size,
@@ -111,7 +113,8 @@ class _AttentionBlock1D(DynastesBaseLayer):
                                activity_regularizer=None,
                                kernel_constraint=self.get_constraint('kernel'),
                                bias_constraint=self.get_constraint('bias'),
-                               separable_prepointwise=separable_prepointwise)
+                               separable_prepointwise=separable_prepointwise,
+                               separable_prepointwise_depth=separable_prepointwise_depth)
         q_filters = attention_dim
         k_filters = attention_dim
         v_filters = output_dim
@@ -224,6 +227,7 @@ class _AttentionBlock1D(DynastesBaseLayer):
             'cache_kv': self.cache_kv,
             'scaled': self.scaled,
             'separable_prepointwise': self.separable_prepointwise,
+            'separable_prepointwise_depth': self.separable_prepointwise_depth,
         }
         base_config = super(_AttentionBlock1D, self).get_config()
         return {**base_config, **config}

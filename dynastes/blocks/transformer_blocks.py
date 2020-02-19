@@ -37,6 +37,7 @@ class PointWiseFeedForwardBlock(DynastesBaseLayer):
                  use_bias=False,
                  dropout_rate=0.,
                  separable_prepointwise=True,
+                 separable_prepointwise_depth='min',
                  **kwargs):
         kwargs['kernel_initializer'] = kernel_initializer
         super(PointWiseFeedForwardBlock, self).__init__(**kwargs)
@@ -61,6 +62,7 @@ class PointWiseFeedForwardBlock(DynastesBaseLayer):
         self.group_size = group_size
         self.dropout_rate = dropout_rate
         self.separable_prepointwise = separable_prepointwise
+        self.separable_prepointwise_depth = separable_prepointwise_depth
 
         conv_partial = partial(layer_factory.get_1d_layer,
                                grouped=grouped,
@@ -77,7 +79,8 @@ class PointWiseFeedForwardBlock(DynastesBaseLayer):
                                activity_regularizer=None,
                                kernel_constraint=self.get_constraint('kernel'),
                                bias_constraint=self.get_constraint('bias'),
-                               separable_prepointwise=separable_prepointwise)
+                               separable_prepointwise=separable_prepointwise,
+                               separable_prepointwise_type=separable_prepointwise_depth)
 
         self.dff_layer = conv_partial(
             kernel_size=first_kernel_size,
@@ -164,7 +167,8 @@ class PointWiseFeedForwardBlock(DynastesBaseLayer):
             'grouped': self.grouped,
             'group_size': self.group_size,
             'dropout_rate': self.dropout_rate,
-            'separable_prepointwise': self.separable_prepointwise
+            'separable_prepointwise': self.separable_prepointwise,
+            'separable_prepointwise_depth': self.separable_prepointwise_depth
         }
         base_config = super(PointWiseFeedForwardBlock, self).get_config()
         return {**base_config, **config}
