@@ -1113,22 +1113,23 @@ class DynastesSeparableConv1D(DynastesBaseLayer):
                                               **self.pointwise_kwargs)
 
     def build(self, input_shape):
+        input_filters = input_shape.as_list()[-1]
         if self.prepointwise:
             if self.prepointwise_depth == 'in':
-                pp_filters = input_shape[-1]
+                pp_filters = input_filters
             elif self.prepointwise_depth == 'out':
                 pp_filters = self.filters
             elif self.prepointwise_depth == 'max':
-                pp_filters = max(self.filters, input_shape[-1])
+                pp_filters = max(self.filters, input_filters)
             elif self.prepointwise_depth == 'min':
-                pp_filters = min(self.filters, input_shape[-1])
+                pp_filters = min(self.filters, input_filters)
             elif self.prepointwise_depth == 'mmm':
-                pp_filters = min(max(self.filters // 2, input_shape), min(self.filters, input_shape[-1] * 2))
+                pp_filters = min(max(self.filters // 2, input_filters), min(self.filters, input_filters * 2))
             elif self.prepointwise_depth == 'amm-q8':
                 pp_filters = (int(
-                    max(self.filters // 2, input_shape) + min(self.filters, input_shape[-1] * 2) / 2) // 8) * 8
+                    max(self.filters // 2, input_filters) + min(self.filters, input_filters * 2) / 2) // 8) * 8
             elif self.prepointwise_depth == 'avg-q8':
-                pp_filters = (int((self.filters + input_shape[-1]) / 2) // 8) * 8
+                pp_filters = (int((self.filters + input_filters) / 2) // 8) * 8
             else:
                 pp_filters = input_shape[-1]
             self.prepointwise_layer = DynastesConv1D(filters=pp_filters,
