@@ -30,7 +30,6 @@ def should_run_eagerly():
     return _thread_local_data.run_eagerly and context.executing_eagerly()
 
 
-@test_util.use_deterministic_cudnn
 def layer_test(layer_cls, kwargs=None, input_shape=None, input_dtype=None,
                input_data=None, expected_output=None,
                expected_output_dtype=None, expected_output_shape=None,

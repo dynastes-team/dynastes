@@ -7,7 +7,7 @@ from dynastes.ops import spectral_ops
 
 
 class SpectralOpsTest(tf.test.TestCase):
-    @test_util.use_deterministic_cudnn
+
     def test_simple(self):
         print('### Running spectral ops tests ###')
 

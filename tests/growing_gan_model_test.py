@@ -44,7 +44,7 @@ class Simple2DGrowingGanGenerator(GrowingGanGenerator):
 
 
 class GrowingGanGeneratorTest(tf.test.TestCase):
-    @test_util.use_deterministic_cudnn
+
     def test_simple(self):
         in_z_hw = 2
         n_lods = 4
@@ -91,7 +91,7 @@ class Real2DGrowingGanGenerator(GrowingGanGenerator):
 
 
 class GrowingGanGeneratorTestReal(tf.test.TestCase):
-    @test_util.use_deterministic_cudnn
+
     def test_simple(self):
         in_z_hw = 2
         n_lods = 2
@@ -144,7 +144,7 @@ class Complex2DGrowingGanGenerator(GrowingGanGenerator):
 
 
 class GrowingGanGeneratorTestComplex(tf.test.TestCase):
-    @test_util.use_deterministic_cudnn
+
     def test_simple(self):
         print('GrowingGanGeneratorTestComplex - test_simple')
         in_z_hw = 1
@@ -195,7 +195,7 @@ class Simple2DGrowingGanClassifier(GrowingGanClassifier):
 
 
 class GrowingGanClassifierTest(tf.test.TestCase):
-    @test_util.use_deterministic_cudnn
+
     def test_simple(self):
         in_hw = 32
         n_lods = 3
@@ -207,7 +207,7 @@ class GrowingGanClassifierTest(tf.test.TestCase):
 
 
 class GrowingEndToEndTest(tf.test.TestCase):
-    @test_util.use_deterministic_cudnn
+
     def test_simple(self):
         n_lods = 3
         z = np.random.random(size=(1, 64, 48, 1)).astype(np.float32)
@@ -257,7 +257,7 @@ class Real2DGrowingGanClassifier(GrowingGanClassifier):
 
 
 class GrowingGanClassifierTestReal(tf.test.TestCase):
-    @test_util.use_deterministic_cudnn
+
     def test_simple(self):
         in_hw = 32
         n_lods = 4
@@ -312,7 +312,7 @@ class ComplexGanClassifier(GrowingGanClassifier):
 
 
 class GrowingGanClassifierTestComplex(tf.test.TestCase):
-    @test_util.use_deterministic_cudnn
+
     def test_simple(self):
         strides = [1, 3, 7, 5, 3]
         in_base = 1

@@ -25,7 +25,7 @@ LayerNormalization
 
 class DecoderBlockTest(tf.test.TestCase):
 
-    @test_util.use_deterministic_cudnn
+
     def test_simple(self):
         with cache_context.CacheContext():
             d_model = 16

@@ -17,7 +17,7 @@ normal = np.random.normal
 
 
 class AdaptiveMultiNormalizationTest(tf.test.TestCase):
-    @test_util.use_deterministic_cudnn
+
     def test_simple(self):
         normalizers = [
             GroupNormalization(groups=1, center=False, scale=False),

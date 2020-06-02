@@ -9,7 +9,7 @@ from dynastes.util.test_utils import layer_test
 import tensorflow.keras.backend as K
 
 class SpectralLayersTest(tf.test.TestCase):
-    @test_util.use_deterministic_cudnn
+
     def test_simple(self):
         print('### Running spectral ops tests ###')
         for fft_bins in [128, 256, 512]:

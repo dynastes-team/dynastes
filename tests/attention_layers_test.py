@@ -16,7 +16,7 @@ normal = np.random.normal
 
 
 class LocalizedAttentionLayer1DTest(tf.test.TestCase):
-    @test_util.use_deterministic_cudnn
+
     def test_simple(self):
         t_steps = 12
         bs = 2
@@ -51,7 +51,7 @@ class LocalizedAttentionLayer1DTest(tf.test.TestCase):
 
 
 class LocalizedAttentionLayer2DTest(tf.test.TestCase):
-    @test_util.use_deterministic_cudnn
+
     def test_simple(self):
         in_shape = [4, 4]
         bs = 1
@@ -84,7 +84,7 @@ class LocalizedAttentionLayer2DTest(tf.test.TestCase):
 
         _test_grads(self, test_func, [q, k, v])
 
-    @test_util.use_deterministic_cudnn
+
     def test_multiquery(self):
         in_shape = [4, 4]
         bs = 1

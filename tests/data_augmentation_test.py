@@ -9,7 +9,6 @@ from dynastes.ops import spectral_ops
 
 class SpecAugmentTest(tf.test.TestCase):
 
-    @test_util.use_deterministic_cudnn
     def test_simple(self):
         n_fft = 256
         hop_length = 64

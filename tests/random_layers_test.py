@@ -17,7 +17,7 @@ normal = np.random.normal
 
 
 class StatelessRandomNormalLikeTest(tf.test.TestCase):
-    @test_util.use_deterministic_cudnn
+
     def test_simple(self):
         layer_test(
             StatelessRandomNormalLike, input_shape=(5, 32, 3))

@@ -6,7 +6,6 @@ from . import backend
 from .nn import array_ops
 from .nn import math_ops
 from .nn import nn_ops
-from .nn import safe_ctc_ops
 
 # Cleanup symbols to avoid polluting namespace.
 del absolute_import

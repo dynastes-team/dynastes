@@ -6,7 +6,7 @@ from dynastes.core import math_ops
 
 
 class LshSimilarityTest(tf.test.TestCase):
-    @test_util.use_deterministic_cudnn
+
     def test_simple(self):
         n_items = 16
 
@@ -50,7 +50,7 @@ class LshSimilarityTest(tf.test.TestCase):
 
         dx, dy = tape.gradient(loss, [x, y])
 
-    @test_util.use_deterministic_cudnn
+
     def test_attn(self):
         n_items = 16
 
@@ -110,7 +110,6 @@ class LshSimilarityTest(tf.test.TestCase):
 
 class ZeroAbsGtTest(tf.test.TestCase):
 
-    @test_util.use_deterministic_cudnn
     def test_simple(self):
         t = tf.convert_to_tensor(1., dtype=tf.float32) / tf.convert_to_tensor(0., dtype=tf.float32)
         nant = tf.convert_to_tensor(np.nan, dtype=tf.float32)

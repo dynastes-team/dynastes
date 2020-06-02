@@ -23,7 +23,7 @@ normal = np.random.normal
 
 
 class T2TAttention1DTest(tf.test.TestCase):
-    @test_util.use_deterministic_cudnn
+
     def test_simple(self):
         tf.config.optimizer.set_jit(True)
         t_steps = 12
@@ -63,7 +63,7 @@ class T2TAttention1DTest(tf.test.TestCase):
                 'Sparse Unmasked',
                 Attention1D(num_heads=num_heads, self_attention=True, sparse=True, lsh_bucket_length=3,
                             mask_right=True),
-                {'self': True, 'steps_q': 32, 'steps_kv': 32, 'dim_q': dim, 'dim_k': dim, 'dim_v': dim, 'max_grad': 600.}),
+                {'self': True, 'steps_q': 32, 'steps_kv': 32, 'dim_q': dim, 'dim_k': dim, 'dim_v': dim, 'max_grad': 800.}),
             (
                 'Normal',
                 Attention1D(num_heads=num_heads, self_attention=False),
@@ -171,7 +171,7 @@ class T2TAttention1DTest(tf.test.TestCase):
 
 
 class T2TAttention2DTest(tf.test.TestCase):
-    @test_util.use_deterministic_cudnn
+
     def test_simple(self):
         tf.config.optimizer.set_jit(True)
         t_steps = 12
